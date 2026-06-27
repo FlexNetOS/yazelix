@@ -59,3 +59,12 @@ result-*
 .dolt/
 *.db
 .beads-credential-key
+
+# handoff continuity: binary ledger cache + migration artifacts are gitignored
+# (committed truth = .handoff/ledger.events.jsonl — ADR-0018 D1 / HFTASK-0067)
+.handoff/**/*.db-wal
+.handoff/**/*.db-shm
+.handoff/**/*.rvf
+.handoff/**/*.rvf.lock
+.handoff/**/*.sqlite.bak
+.handoff/**/*.redb.tmp
