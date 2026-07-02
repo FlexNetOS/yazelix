@@ -35,6 +35,11 @@
       "document_id": "019f2136-9ca2-7ea3-b9b9-5379e0cb2bc3",
       "slug": "tasks/nu-plugin-codedb-source-metadata-policy",
       "tip_commit_id": "019f2139-05a9-7e32-a83a-4d5824cbfddc"
+    },
+    {
+      "document_id": "019f213b-a33a-75b1-b468-21760ab2e502",
+      "slug": "tasks/nu-plugin-codedb-cargo-metadata",
+      "tip_commit_id": "019f213f-526f-78f1-9049-17f7e3c553a4"
     }
   ]
 }
