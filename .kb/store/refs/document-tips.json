@@ -285,6 +285,11 @@
       "document_id": "019f21f4-dc57-7443-9c14-1edc165ebae0",
       "slug": "tasks/nu-plugin-codedb-final-package-validation",
       "tip_commit_id": "019f21f8-65a6-70f3-b0bb-34f6b1ff13e3"
+    },
+    {
+      "document_id": "019f21f9-84cc-7cf0-b9f7-69114df2f654",
+      "slug": "tasks/nu-plugin-codedb-csv-source-of-truth-repair",
+      "tip_commit_id": "019f21fa-bf40-7d33-af5b-fc16c512b8b9"
     }
   ]
 }
