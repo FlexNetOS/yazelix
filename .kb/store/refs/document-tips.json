@@ -240,6 +240,11 @@
       "document_id": "019f21d9-4f63-7c01-b203-22192ff20c84",
       "slug": "tasks/nu-plugin-codedb-yazelix-disabled-smoke",
       "tip_commit_id": "019f21db-613b-77f3-a75e-cdef5e178eaf"
+    },
+    {
+      "document_id": "019f21dc-1ca8-7c51-b6f9-5d0fd73ee3bb",
+      "slug": "tasks/nu-plugin-codedb-yazelix-enabled-smoke",
+      "tip_commit_id": "019f21dd-a285-7742-b476-0fb83ce6628d"
     }
   ]
 }
