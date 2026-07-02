@@ -210,6 +210,11 @@
       "document_id": "019f21c7-100e-7061-b0d2-df05e751b55b",
       "slug": "tasks/nu-plugin-codedb-transient-nu-plugin-smoke",
       "tip_commit_id": "019f21c9-0d49-7870-bdc5-0dc7e148f662"
+    },
+    {
+      "document_id": "019f21ca-4799-79d0-9f2c-6c8274277ea6",
+      "slug": "tasks/nu-plugin-codedb-temp-home-plugin-registry",
+      "tip_commit_id": "019f21cc-78e6-72c2-a969-5f88f21a6ea3"
     }
   ]
 }
