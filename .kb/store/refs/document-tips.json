@@ -270,6 +270,11 @@
       "document_id": "019f21ef-3196-73f0-ba3e-99f366868b6f",
       "slug": "tasks/nu-plugin-codedb-extraction-proof",
       "tip_commit_id": "019f21f0-06e1-7e12-83b9-d635740bfe45"
+    },
+    {
+      "document_id": "019f21f1-0b77-7c53-b9bd-cf7b0ea70bee",
+      "slug": "tasks/nu-plugin-codedb-controlled-task-graph",
+      "tip_commit_id": "019f21f1-ef54-7343-abc6-236b9b2255ba"
     }
   ]
 }
