@@ -145,6 +145,11 @@
       "document_id": "019f2197-53a0-72f0-9d65-3105db643f61",
       "slug": "tasks/nu-plugin-codedb-tooling-boundary-docs",
       "tip_commit_id": "019f2199-0ea8-7360-9582-18f0517e52bf"
+    },
+    {
+      "document_id": "019f2199-e13c-7032-b528-9020b4c7c639",
+      "slug": "tasks/nu-plugin-codedb-rust-workspace-skeleton",
+      "tip_commit_id": "019f219b-3f11-74e3-a79f-807d16d6a1c1"
     }
   ]
 }
