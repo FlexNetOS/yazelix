@@ -115,6 +115,11 @@
       "document_id": "019f2177-8327-73c2-9c51-255af800d44c",
       "slug": "tasks/nu-plugin-codedb-build-capture-logs",
       "tip_commit_id": "019f217a-4a9b-7e13-889a-e74cb1992684"
+    },
+    {
+      "document_id": "019f217f-af05-7eb3-970b-482aa6a3b3eb",
+      "slug": "tasks/nu-plugin-codedb-envctl-export",
+      "tip_commit_id": "019f2188-2b73-7862-97e7-662104517177"
     }
   ]
 }
