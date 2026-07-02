@@ -135,6 +135,11 @@
       "document_id": "019f2191-63f3-7641-8065-6dcad836f5b6",
       "slug": "tasks/nu-plugin-codedb-yazelix-placement-docs",
       "tip_commit_id": "019f2193-04aa-75e2-b22d-53313653f99e"
+    },
+    {
+      "document_id": "019f2193-c418-7d11-97a1-abd137f2f6fb",
+      "slug": "tasks/nu-plugin-codedb-runner-proof-contract",
+      "tip_commit_id": "019f2196-9923-7b60-a948-2234bb386a8f"
     }
   ]
 }
