@@ -85,6 +85,11 @@
       "document_id": "019f2158-61a7-70d2-99e8-b63936bc3a43",
       "slug": "tasks/nu-plugin-codedb-no-mutation-proof",
       "tip_commit_id": "019f215a-7d5f-7d81-862c-0c5722b8319c"
+    },
+    {
+      "document_id": "019f215b-dda2-7641-8973-c5342c098ff9",
+      "slug": "tasks/nu-plugin-codedb-cli-scan-export-schema",
+      "tip_commit_id": "019f215f-a5d2-7662-bbc6-54ac98f30533"
     }
   ]
 }
