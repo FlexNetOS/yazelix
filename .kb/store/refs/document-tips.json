@@ -100,6 +100,11 @@
       "document_id": "019f216a-a04f-7501-9d0c-0296b73367d0",
       "slug": "tasks/nu-plugin-codedb-doctor-checks",
       "tip_commit_id": "019f216d-adaa-7d83-bfbb-a8319b1f8e9f"
+    },
+    {
+      "document_id": "019f216e-e6f6-7952-b93c-bcd3f51138dc",
+      "slug": "tasks/nu-plugin-codedb-mcp-server",
+      "tip_commit_id": "019f2172-5ab7-7e81-915b-13c8eedadbe7"
     }
   ]
 }
