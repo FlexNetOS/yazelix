@@ -155,6 +155,11 @@
       "document_id": "019f219c-19c1-71c3-8d1c-9260fe440f97",
       "slug": "tasks/nu-plugin-codedb-fixture-matrix",
       "tip_commit_id": "019f21a1-11be-7590-9b49-a80198c782f6"
+    },
+    {
+      "document_id": "019f21a1-8d2b-71b2-8a0b-36cd0ff4695c",
+      "slug": "tasks/nu-plugin-codedb-deterministic-scan-tests",
+      "tip_commit_id": "019f21a5-1671-7821-a7e6-1e1bbf6df9bc"
     }
   ]
 }
