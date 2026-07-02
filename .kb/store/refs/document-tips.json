@@ -225,6 +225,11 @@
       "document_id": "019f21d1-fd0f-7870-92e4-10d4839ad70c",
       "slug": "tasks/nu-plugin-codedb-init-provenance",
       "tip_commit_id": "019f21d3-b5e2-7632-9b75-15a86a9a03ee"
+    },
+    {
+      "document_id": "019f21d4-b0f0-7ca3-af56-86524430ee79",
+      "slug": "tasks/nu-plugin-codedb-nu-syntax-gate",
+      "tip_commit_id": "019f21d6-4528-7051-874a-4ee09e5173bc"
     }
   ]
 }
