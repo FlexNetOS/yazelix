@@ -75,6 +75,11 @@
       "document_id": "019f2152-5c0a-70c2-9cf1-f06e0acf13a0",
       "slug": "tasks/nu-plugin-codedb-static-include-edges",
       "tip_commit_id": "019f2155-4695-7480-8e90-37eb28e57e64"
+    },
+    {
+      "document_id": "019f2155-ec3f-7090-8a42-b1fcdd9313c6",
+      "slug": "tasks/nu-plugin-codedb-native-link-static",
+      "tip_commit_id": "019f2157-b242-7c72-ace5-c1dba80c4d20"
     }
   ]
 }
