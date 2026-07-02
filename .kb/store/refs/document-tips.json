@@ -260,6 +260,11 @@
       "document_id": "019f21e5-eb3d-7ce3-b0bc-286ebefadc3e",
       "slug": "tasks/nu-plugin-codedb-codex-bounded-smoke",
       "tip_commit_id": "019f21e8-b672-7ff2-a92a-be7b1f920e6b"
+    },
+    {
+      "document_id": "019f21eb-16e5-70d0-8958-1a5f59ab4cef",
+      "slug": "tasks/nu-plugin-codedb-envctl-runtime",
+      "tip_commit_id": "019f21ec-e68a-7a62-8ca4-6c7d3a2e8e9c"
     }
   ]
 }
