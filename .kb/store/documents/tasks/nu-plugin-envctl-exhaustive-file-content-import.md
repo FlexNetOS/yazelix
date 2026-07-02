@@ -74,6 +74,29 @@ The user expectation is that CodeDB is the more accurate store: it should preser
   - source-of-truth classes include `repo_source`, `envctl_control_surface`, `nix_store_package_output`, `real_home_runtime_state`, `real_home_user_config`, and `real_home_desktop_entry`
 - Next implementation loop should add a Nu plugin or CodeDB CLI command that consumes that artifact and emits envctl-visible rows with hashes/blob references for `content_blob` candidates and precise skip reasons for `metadata_only` rows.
 
+Local CodeDB plugin progress:
+
+- Added a local `nu_plugin_codedb` command in `/home/flexnetos/Downloads/nu_plugin`: `codedb envctl import inventory <inventory_path>`.
+- Added local TDD coverage in `crates/nu_plugin_codedb/src/main.rs` for content-blob hashing and metadata-only skip reasons.
+- The command emits `envctl_yazelix_file_import` rows with target id, logical owner, absolute path, normalized path, source-of-truth class, file kind, parser hint, content hash, byte length, blob ref, safety policy, reproduction policy, import mode, import status, skip reason, and provenance fields.
+- Verification commands passed from `/home/flexnetos/Downloads/nu_plugin` through the Yazelix CI shell:
+  - `cargo fmt --all -- --check`
+  - `cargo test -p nu_plugin_codedb envctl_inventory_import_rows_hash_content_and_skip_metadata_only`
+  - `cargo build --quiet -p nu_plugin_codedb`
+  - `nu --no-config-file --plugins target/debug/nu_plugin_codedb -c 'let rows = (codedb envctl import inventory /home/flexnetos/FlexNetOS/src/yazelix/docs/generated/yazelix_file_target_inventory.json); {rows: ($rows | length), blob_ready: ($rows | where import_status == blob_metadata_ready | length), metadata_only: ($rows | where import_status == metadata_only | length), tables: ($rows | get table | uniq)} | to json'`
+- Full import smoke result:
+  - `rows`: 3,549
+  - `blob_ready`: 1,874
+  - `metadata_only`: 1,675
+  - `tables`: `envctl_yazelix_file_import`
+
+Remaining before completion:
+
+- Land the CodeDB plugin change in a tracked repository or otherwise make the local `/home/flexnetos/Downloads/nu_plugin` package change durable.
+- Wire/envctl-consume `envctl_yazelix_file_import` rows into envctl render/dashboard/table surfaces.
+- Prove no mutation against source, system, Nix store, real-home, and runtime-owned targets for the full plugin import path.
+- Record round-trip/reproduction policy for rows that can be converted back to files now versus verifier-gated future work.
+
 ## Completion Evidence
 
 Pending.
