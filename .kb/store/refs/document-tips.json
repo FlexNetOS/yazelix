@@ -120,6 +120,11 @@
       "document_id": "019f217f-af05-7eb3-970b-482aa6a3b3eb",
       "slug": "tasks/nu-plugin-codedb-envctl-export",
       "tip_commit_id": "019f2188-2b73-7862-97e7-662104517177"
+    },
+    {
+      "document_id": "019f2189-dad4-7793-bf39-ec151b68b3ad",
+      "slug": "tasks/nu-plugin-codedb-meta-repo-selection",
+      "tip_commit_id": "019f218d-3650-7853-8455-5bdf5cc7898e"
     }
   ]
 }
