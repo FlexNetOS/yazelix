@@ -215,6 +215,11 @@
       "document_id": "019f21ca-4799-79d0-9f2c-6c8274277ea6",
       "slug": "tasks/nu-plugin-codedb-temp-home-plugin-registry",
       "tip_commit_id": "019f21cc-78e6-72c2-a969-5f88f21a6ea3"
+    },
+    {
+      "document_id": "019f21cd-487c-75f0-9d09-5981ddf51b0a",
+      "slug": "tasks/nu-plugin-codedb-yazelix-init-bridge",
+      "tip_commit_id": "019f21d1-7ab4-7a53-9765-40d3605cdb0d"
     }
   ]
 }
