@@ -55,6 +55,11 @@
       "document_id": "019f2145-30c3-7ea0-885b-acb63d28fbe7",
       "slug": "tasks/nu-plugin-codedb-rust-items",
       "tip_commit_id": "019f2147-71d8-7842-a791-f640050fd62c"
+    },
+    {
+      "document_id": "019f2148-b12f-7b00-9e24-4c8054e9f5da",
+      "slug": "tasks/nu-plugin-codedb-macro-rules",
+      "tip_commit_id": "019f214b-198d-7853-a60d-6a5052f7d036"
     }
   ]
 }
