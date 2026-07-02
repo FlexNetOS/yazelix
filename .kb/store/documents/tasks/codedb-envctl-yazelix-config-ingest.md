@@ -78,6 +78,8 @@ Start with canonical user/runtime config contracts, then expand outward:
 - Audited the remaining `not_parsed` config rows after the Nu/KDL upgrade. There are 35 visible config files left in that state, mainly Nix, Lua, terminal `.conf`, Markdown, and `flake.lock` surfaces. Tracked the next blocking parser/metadata slice in [[tasks/codedb-envctl-remaining-config-format-metadata]] before continuing implementation.
 - Kept this parent task active until the remaining-format metadata slice is resolved or split into precise follow-ups.
 - Completed the remaining-format metadata slice. Live import now reports 58 config files, 2,028 settings rows, and zero `not_parsed` config files.
+- After fixing the Yazelix flake lock CI issue, reran the live import/render proof. The changed `flake.lock` increased settings rows slightly; current live proof is 58 config files, 2,032 settings rows, and zero `not_parsed` config files.
+- Envctl PR #409 CI surfaced a `loop_lib` API drift issue; tracked and fixed in [[tasks/envctl-pr409-loop-lib-api-drift]] with a loop_lib substrate branch/PR and envctl CI materialization update.
 
 ## Live Evidence
 
@@ -90,10 +92,10 @@ Commands run on 2026-07-02:
 Current envctl import result after all identified parser/metadata upgrades:
 
 - Tables: 10
-- Rows: 2,307
+- Rows: 2,311
 - Components: 0, because the Yazelix repo is intentionally scanned without an envctl manifest
 - Config files: 58
-- Settings rows: 2,028
+- Settings rows: 2,032
 - Env vars: 44
 - Mutating: false
 - Remaining `not_parsed` config files: 0
@@ -114,12 +116,16 @@ App/dashboard visibility:
 
 - `envctl catalog render` produced 30 generated files under `/tmp/yazelix-envctl-catalog-render`.
 - The rendered app/dashboard file is `/tmp/yazelix-envctl-catalog-render/dashboard/mission-control.catalog.kdl`.
-- That dashboard was generated from source tables `paths+settings` and includes 2,077 path+settings rows after all identified parser/metadata upgrades.
+- That dashboard was generated from source tables `paths+settings` and includes 2,081 path+settings rows after all identified parser/metadata upgrades and the flake lock update.
 - The rendered table `/tmp/yazelix-envctl-catalog-render/catalog/tables/config_files.json` contains the loaded Yazelix config rows.
-- The rendered table `/tmp/yazelix-envctl-catalog-render/catalog/tables/settings.json` contains 2,028 settings/reproduction metadata rows.
+- The rendered table `/tmp/yazelix-envctl-catalog-render/catalog/tables/settings.json` contains 2,032 settings/reproduction metadata rows.
 
 Verification gates passed:
 
 - `cargo fmt --check` in envctl.
 - `cargo test -p envctl-engine catalog::tests`.
 - `cargo test -p envctl --test cli_contract catalog_repo_root_imports_yazelix_config_without_manifest`.
+- `bash ci/setup-meta-deps.sh` in envctl.
+- `cargo check -p envctl-engine` in envctl.
+- `bash ci/gates/meta-substrates.sh` in envctl.
+- `bash ci/gates/agent-env.sh` in envctl.
