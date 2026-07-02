@@ -3,7 +3,7 @@ id: 019f2211-cf01-7342-b1aa-1f8d7821b1a0
 slug: tasks/codedb-envctl-yazelix-config-ingest
 title: "Load Yazelix config files into envctl tables through CodeDB"
 type: task
-status: active
+status: completed
 priority: high
 tags: [codedb, envctl, yazelix, config, live_test]
 ---
@@ -33,7 +33,7 @@ The task must use the live `/home/flexnetos/Downloads/nu_plugin` CodeDB plugin/C
 - [x] Any issue surfaced during loading or visibility is captured as a KB task before implementation.
 - [x] All identified Yazelix config and settings files are loaded or each exception is documented with a blocking KB task.
 - [x] Verification evidence includes commands, row counts, selected sample rows, and reproduction/export readiness notes.
-- [ ] Blocking remaining-format metadata task [[tasks/codedb-envctl-remaining-config-format-metadata]] is resolved or narrowed into more specific follow-up tasks.
+- [x] Blocking remaining-format metadata task [[tasks/codedb-envctl-remaining-config-format-metadata]] is resolved or narrowed into more specific follow-up tasks.
 
 ## Initial Load Order
 
@@ -77,6 +77,7 @@ Start with canonical user/runtime config contracts, then expand outward:
   - The import now emits source-byte reproduction metadata rows with `sha256` and `reproduction_policy = source_bytes_required`.
 - Audited the remaining `not_parsed` config rows after the Nu/KDL upgrade. There are 35 visible config files left in that state, mainly Nix, Lua, terminal `.conf`, Markdown, and `flake.lock` surfaces. Tracked the next blocking parser/metadata slice in [[tasks/codedb-envctl-remaining-config-format-metadata]] before continuing implementation.
 - Kept this parent task active until the remaining-format metadata slice is resolved or split into precise follow-ups.
+- Completed the remaining-format metadata slice. Live import now reports 58 config files, 2,028 settings rows, and zero `not_parsed` config files.
 
 ## Live Evidence
 
@@ -86,15 +87,16 @@ Commands run on 2026-07-02:
 - `cargo run -q -p envctl -- --json catalog --repo-root /home/flexnetos/FlexNetOS/src/yazelix import`
 - `cargo run -q -p envctl -- --json catalog --repo-root /home/flexnetos/FlexNetOS/src/yazelix render --out /tmp/yazelix-envctl-catalog-render`
 
-Current envctl import result after Nu/KDL upgrade:
+Current envctl import result after all identified parser/metadata upgrades:
 
 - Tables: 10
-- Rows: 1,656
+- Rows: 2,307
 - Components: 0, because the Yazelix repo is intentionally scanned without an envctl manifest
 - Config files: 58
-- Settings rows: 1,377
+- Settings rows: 2,028
 - Env vars: 44
 - Mutating: false
+- Remaining `not_parsed` config files: 0
 
 First ordered batch envctl rows:
 
@@ -103,14 +105,18 @@ First ordered batch envctl rows:
 - `config_metadata/yazelix_settings.schema.json`: `file_kind = yazelix_config_metadata`, `format = json`, `owner_component = yazelix`, `parse_status = ok`
 - `nushell/config/config.nu`: `file_kind = yazelix_nushell_config`, `format = nushell`, `owner_component = yazelix`, `parse_status = ok`
 - `configs/zellij/layouts/flexnetos_agent_workspace.kdl`: `file_kind = yazelix_runtime_config`, `format = kdl`, `owner_component = yazelix`, `parse_status = ok`
+- `flake.lock`: `file_kind = yazelix_packaging_config`, `format = json`, `parse_status = ok`
+- `flake.nix`: `file_kind = yazelix_packaging_config`, `format = nix`, `parse_status = ok`
+- `configs/terminal_emulators/kitty/kitty.conf`: `file_kind = yazelix_runtime_config`, `format = terminal_conf`, `parse_status = ok`
+- `configs/terminal_emulators/wezterm/.wezterm.lua`: `file_kind = yazelix_runtime_config`, `format = lua`, `parse_status = ok`
 
 App/dashboard visibility:
 
 - `envctl catalog render` produced 30 generated files under `/tmp/yazelix-envctl-catalog-render`.
 - The rendered app/dashboard file is `/tmp/yazelix-envctl-catalog-render/dashboard/mission-control.catalog.kdl`.
-- That dashboard was generated from source tables `paths+settings` and includes 1,426 path+settings rows after the Nu/KDL upgrade.
+- That dashboard was generated from source tables `paths+settings` and includes 2,077 path+settings rows after all identified parser/metadata upgrades.
 - The rendered table `/tmp/yazelix-envctl-catalog-render/catalog/tables/config_files.json` contains the loaded Yazelix config rows.
-- The rendered table `/tmp/yazelix-envctl-catalog-render/catalog/tables/settings.json` contains 1,377 settings/reproduction metadata rows.
+- The rendered table `/tmp/yazelix-envctl-catalog-render/catalog/tables/settings.json` contains 2,028 settings/reproduction metadata rows.
 
 Verification gates passed:
 

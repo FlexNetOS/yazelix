@@ -3,7 +3,7 @@ id: 019f2225-3578-7cf2-9d84-15e8cdfa16a9
 slug: tasks/codedb-envctl-remaining-config-format-metadata
 title: "Add reproduction metadata for remaining Yazelix config formats"
 type: task
-status: active
+status: completed
 priority: medium
 tags: [envctl, yazelix, reproduction, nix, lua, config]
 ---
@@ -16,11 +16,11 @@ This task tracks the next fix-forward parser/metadata slice for remaining Yazeli
 
 ## Acceptance Criteria
 
-- [ ] Envctl catalog recognizes Nix files as `format = nix` and emits stable reproduction metadata rows.
-- [ ] Envctl catalog recognizes Lua files as `format = lua` and emits stable reproduction metadata rows.
-- [ ] Envctl catalog recognizes terminal `.conf` files as config text and emits stable reproduction metadata rows.
-- [ ] Envctl catalog records explicit Markdown/flake-lock reproduction metadata or documents why those files should remain file-identity-only.
-- [ ] Live Yazelix import either reduces `not_parsed` to zero for identified config/settings files or documents each remaining exception with a more specific blocking task.
+- [x] Envctl catalog recognizes Nix files as `format = nix` and emits stable reproduction metadata rows.
+- [x] Envctl catalog recognizes Lua files as `format = lua` and emits stable reproduction metadata rows.
+- [x] Envctl catalog recognizes terminal `.conf` files as config text and emits stable reproduction metadata rows.
+- [x] Envctl catalog records explicit Markdown/flake-lock reproduction metadata or documents why those files should remain file-identity-only.
+- [x] Live Yazelix import either reduces `not_parsed` to zero for identified config/settings files or documents each remaining exception with a more specific blocking task.
 
 ## Evidence
 
@@ -44,3 +44,22 @@ Live audit after Nu/KDL upgrade on 2026-07-02:
 ### 2026-07-02
 
 - Created before continuing parser implementation because these are visible config/settings files that remain loaded only as file identity rows.
+- Implemented in envctl source branch `codex/codedb-yazelix-config-catalog`.
+- Added conservative reproduction metadata for `nix`, `lua`, `terminal_conf`, and `markdown` formats.
+- Treated `flake.lock` as JSON so it imports through the structured JSON parser instead of file-identity-only metadata.
+- Live import proof against `/home/flexnetos/FlexNetOS/src/yazelix`:
+  - Tables: 10
+  - Rows: 2,307
+  - Config files: 58
+  - Settings rows: 2,028
+  - Env vars: 44
+  - Remaining `not_parsed` config files: 0
+  - Selected rows parse as `ok`: `flake.lock`, `flake.nix`, `home_manager/module.nix`, `packaging/mk_runtime_tree.nix`, `configs/terminal_emulators/kitty/kitty.conf`, and `configs/terminal_emulators/wezterm/.wezterm.lua`.
+- Render proof:
+  - `/tmp/yazelix-envctl-catalog-render/catalog/tables/config_files.json`: 58 rows
+  - `/tmp/yazelix-envctl-catalog-render/catalog/tables/settings.json`: 2,028 rows
+  - `/tmp/yazelix-envctl-catalog-render/dashboard/mission-control.catalog.kdl`: 2,077 path+settings rows
+- Verification passed:
+  - `cargo fmt --check`
+  - `cargo test -p envctl-engine catalog::tests`
+  - `cargo test -p envctl --test cli_contract catalog_repo_root_imports_yazelix_config_without_manifest`
