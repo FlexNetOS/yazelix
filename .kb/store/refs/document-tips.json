@@ -245,6 +245,11 @@
       "document_id": "019f21dc-1ca8-7c51-b6f9-5d0fd73ee3bb",
       "slug": "tasks/nu-plugin-codedb-yazelix-enabled-smoke",
       "tip_commit_id": "019f21dd-a285-7742-b476-0fb83ce6628d"
+    },
+    {
+      "document_id": "019f21df-0795-76d2-a1b3-9344b9b30522",
+      "slug": "tasks/nu-plugin-codedb-plugin-secret-guard",
+      "tip_commit_id": "019f21e0-b8ff-7613-8ad4-c5cb028c8c0b"
     }
   ]
 }
