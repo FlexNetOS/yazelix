@@ -160,6 +160,11 @@
       "document_id": "019f21a1-8d2b-71b2-8a0b-36cd0ff4695c",
       "slug": "tasks/nu-plugin-codedb-deterministic-scan-tests",
       "tip_commit_id": "019f21a5-1671-7821-a7e6-1e1bbf6df9bc"
+    },
+    {
+      "document_id": "019f21a6-1945-7930-bca8-91ac33005d24",
+      "slug": "tasks/nu-plugin-codedb-security-no-leak-tests",
+      "tip_commit_id": "019f21a8-2bfa-71e3-aeac-e3e82cef62ad"
     }
   ]
 }
