@@ -290,6 +290,11 @@
       "document_id": "019f21f9-84cc-7cf0-b9f7-69114df2f654",
       "slug": "tasks/nu-plugin-codedb-csv-source-of-truth-repair",
       "tip_commit_id": "019f21fa-bf40-7d33-af5b-fc16c512b8b9"
+    },
+    {
+      "document_id": "019f2211-cf01-7342-b1aa-1f8d7821b1a0",
+      "slug": "tasks/codedb-envctl-yazelix-config-ingest",
+      "tip_commit_id": "019f2212-7ebe-7ab0-89a3-c92380f9c94a"
     }
   ]
 }
