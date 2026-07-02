@@ -50,6 +50,11 @@
       "document_id": "019f2142-7151-7802-8684-75649cf7aa11",
       "slug": "tasks/nu-plugin-codedb-context-rows",
       "tip_commit_id": "019f2144-523e-7b80-9455-b13903b3088c"
+    },
+    {
+      "document_id": "019f2145-30c3-7ea0-885b-acb63d28fbe7",
+      "slug": "tasks/nu-plugin-codedb-rust-items",
+      "tip_commit_id": "019f2147-71d8-7842-a791-f640050fd62c"
     }
   ]
 }
