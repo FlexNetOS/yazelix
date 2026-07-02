@@ -63,6 +63,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.fenix.follows = "fenix";
     };
+    beads_rust_source = {
+      url = "path:/home/flexnetos/FlexNetOS/src/meta/beads_rust";
+      flake = false;
+    };
     zjstatus = {
       url = "github:luccahuguet/zjstatus/yazelix-tab-activity-pipe";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -85,6 +89,7 @@
       yazelixHelix,
       yazelixZellijPaneOrchestrator,
       yazelixZellijPopup,
+      beads_rust_source,
       zjstatus,
     }:
     let
@@ -253,15 +258,11 @@
             yazelixZellijPaneOrchestrator.packages.${system}.yazelix_zellij_pane_orchestrator;
           yazelix_zellij_popup = yazelixZellijPopup.packages.${system}.yzpp;
         };
-      beadsSource = builtins.path {
-        path = ../meta/beads_rust;
-        name = "beads_rust_source";
-      };
       beadsRustPackage =
         system: pkgs:
         import ./packaging/beads_rust.nix {
           inherit pkgs;
-          src = beadsSource;
+          beadsSource = beads_rust_source;
           rustPlatform = pkgs.makeRustPlatform {
             cargo = fenix.packages.${system}.latest.cargo;
             rustc = fenix.packages.${system}.latest.rustc;
