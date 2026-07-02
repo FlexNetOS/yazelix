@@ -110,6 +110,11 @@
       "document_id": "019f2173-94d2-7222-b9ec-fd10e7ccc53c",
       "slug": "tasks/nu-plugin-codedb-unsafe-build-gate",
       "tip_commit_id": "019f2176-60bb-7210-bcad-557b3f63f453"
+    },
+    {
+      "document_id": "019f2177-8327-73c2-9c51-255af800d44c",
+      "slug": "tasks/nu-plugin-codedb-build-capture-logs",
+      "tip_commit_id": "019f217a-4a9b-7e13-889a-e74cb1992684"
     }
   ]
 }
