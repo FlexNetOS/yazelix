@@ -25,6 +25,16 @@
       "document_id": "019f20f7-8637-76a2-b3cd-33d52801435e",
       "slug": "tasks/nu-plugin-codedb-redb-backup-restore",
       "tip_commit_id": "019f20f8-dfd6-7af2-bacd-1a6f909dd643"
+    },
+    {
+      "document_id": "019f2133-e342-7ab2-a882-16c07c047d82",
+      "slug": "tasks/nu-plugin-codedb-filesystem-scanner",
+      "tip_commit_id": "019f2135-e34b-7741-9eca-03b1be2e5716"
+    },
+    {
+      "document_id": "019f2136-9ca2-7ea3-b9b9-5379e0cb2bc3",
+      "slug": "tasks/nu-plugin-codedb-source-metadata-policy",
+      "tip_commit_id": "019f2139-05a9-7e32-a83a-4d5824cbfddc"
     }
   ]
 }
