@@ -150,6 +150,11 @@
       "document_id": "019f2199-e13c-7032-b528-9020b4c7c639",
       "slug": "tasks/nu-plugin-codedb-rust-workspace-skeleton",
       "tip_commit_id": "019f219b-3f11-74e3-a79f-807d16d6a1c1"
+    },
+    {
+      "document_id": "019f219c-19c1-71c3-8d1c-9260fe440f97",
+      "slug": "tasks/nu-plugin-codedb-fixture-matrix",
+      "tip_commit_id": "019f21a1-11be-7590-9b49-a80198c782f6"
     }
   ]
 }
