@@ -36,13 +36,13 @@ This task turns the exhaustive Yazelix target inventory into envctl tables, usin
   - [x] blob reference or inline safe structured value
   - [x] import safety policy
   - [x] reproduction policy
-  - [ ] last observed/provenance fields
-- [ ] Structured files are converted to datatable rows where safe: Nix, TOML, JSON/JSONC, KDL, Nu, Lua, YAML, Markdown, service files, desktop entries, shell fragments, and plain config formats.
-- [ ] Binary or unsafe files are represented with blob metadata and not lossy text decoding.
+  - [x] last observed/provenance fields
+- [x] Structured files are converted to datatable rows where safe: Nix, TOML, JSON/JSONC, KDL, Nu, Lua, YAML, Markdown, service files, desktop entries, shell fragments, and plain config formats.
+- [x] Binary or unsafe files are represented with blob metadata and not lossy text decoding.
 - [x] `.local`, real-home, Nix store, system, generated, cache/state/log, and source files retain distinct safety semantics in envctl.
-- [ ] envctl render/import output proves rows are visible from app/dashboard/table surfaces.
+- [x] envctl render/import output proves rows are visible from app/dashboard/table surfaces.
 - [ ] A no-mutation proof shows the plugin import did not write to source, system, Nix store, real-home, or runtime-owned targets.
-- [ ] Round-trip/reproduction planning identifies which rows can be converted back to files now and which require additional verifier-gated tooling.
+- [x] Round-trip/reproduction planning identifies which rows can be converted back to files now and which require additional verifier-gated tooling.
 
 ## Context
 
@@ -91,6 +91,17 @@ Durable CodeDB plugin progress:
   - `blob_ready`: 1,874
   - `metadata_only`: 1,675
   - `tables`: `envctl_yazelix_file_import`
+- Structured import follow-up:
+  - Plugin commit: `4756713 plugin: add structured envctl inventory rows`
+  - Plugin PR: `https://github.com/FlexNetOS/nu_plugin/pull/1`
+  - Added native `structured_rows` payloads, `structured_status`, `structured_row_count`, and `last_observed`.
+  - JSON/JSONC rows are flattened into key/value records.
+  - Safe text/config formats are exposed as deterministic line/key records for Nix, TOML, KDL, Nu, Lua, YAML, Markdown, desktop/service/shell/plain config-like files.
+  - Unsafe or metadata-only targets keep empty structured payloads and remain blob/metadata rows rather than lossy decoded text.
+- Structured plugin verification:
+  - `cargo test -p nu_plugin_codedb envctl_inventory_import_rows -- --nocapture`
+  - `cargo fmt --all -- --check`
+  - Real Yazelix smoke: 3,549 rows, 1,874 blob-ready, 1,675 metadata-only, 1,427 structured-ready rows, 336,937 structured payload rows, all rows carrying `unix:` `last_observed`.
 
 Envctl catalog progress:
 
@@ -108,6 +119,12 @@ Envctl catalog progress:
   - `cargo test -p envctl-engine render_imports_yazelix_config_files_without_manifest -- --nocapture`
   - `cargo test -p envctl --test cli_contract catalog_repo_root_imports_yazelix_codedb_file_inventory -- --nocapture`
   - `cargo fmt --all -- --check`
+- Envctl structured follow-up:
+  - Envctl commit: `4d8ce75 catalog: expose structured CodeDB inventory rows`
+  - Envctl PR comment: `https://github.com/FlexNetOS/envctl/pull/410#issuecomment-4865520699`
+  - Added `structured_table`, `structured_status`, `structured_row_count`, `structured_rows`, and `last_observed` to `codedb_file_imports`.
+  - Real Yazelix catalog smoke: 3,549 rows, 1,403 structured-ready rows, 324,835 structured payload rows, all rows with ISO-like `last_observed`, 366 Nix store rows metadata-only.
+  - Render proof: `catalog/tables/codedb_file_imports.json` generated with 3,549 rows and 1,403 structured-ready rows.
 - Real-data envctl smoke against `/home/flexnetos/FlexNetOS/src/yazelix`:
   - `envctl_control_surface`: 1,039 rows, 1,022 blob-ready, 17 metadata-only
   - `nix_store_package_output`: 366 rows, 0 blob-ready, 366 metadata-only
@@ -117,12 +134,28 @@ Envctl catalog progress:
   - `repo_source`: 802 rows, 784 blob-ready, 18 metadata-only
   - `.local` subset: 1,337 rows across `real_home_runtime_state` and `real_home_desktop_entry`
 
+No-mutation evidence:
+
+- Full stat proof over all 3,549 inventory target paths was attempted twice and failed both times on the same live runtime-owned file pattern:
+  - `/home/flexnetos/.local/share/yazelix/sessions/1782960525907993465/status_bar_cache.json`
+  - Only runtime cache file metadata changed during the proof window, on a 30-second cadence, consistent with a live Yazelix status writer.
+- Scoped stat proof excluding `*/status_bar_cache.json` passed:
+  - `NO_MUTATION_NON_VOLATILE_STAT_MATCH=1`
+  - `NON_VOLATILE_TARGETS=3527`
+  - `PLUGIN_ROWS=3549`
+- The full no-mutation acceptance criterion remains open until a quiesced Yazelix runtime/manual gate can prove the 22 volatile status-bar cache rows do not change during the import proof window.
+
+Round-trip/reproduction policy:
+
+- Rows with `import_status = blob_metadata_ready`, a `blob_ref`, and `reproduction_policy` such as `git_checkout`, `user_config_source_or_import`, or source-controlled package/config policies can be converted back to files once envctl gains an explicit verifier-gated apply path.
+- Rows with `structured_status = structured_rows_ready` can provide table-level inspection and merge/review data, but the raw blob hash remains the byte-exact reproduction anchor.
+- `metadata_only` rows, Nix store package outputs, real-home runtime state, generated/cache/log rows, and unsafe/opaque rows require regeneration from their owner (`nix_realise`, runtime re-observation, package build, or explicit user import) rather than CodeDB writing file bytes back directly.
+- Envctl `catalog sync --apply` still correctly refuses pending verifier-gated row edit/apply support; reproduction is planned, not enabled as an implicit write path.
+
 Remaining before completion:
 
-- Merge envctl PR #410 so the catalog table is on envctl's default branch.
-- Extend structured-format conversion beyond blob metadata so safe Nix, TOML, JSON/JSONC, KDL, Nu, Lua, YAML, Markdown, desktop/service/shell/plain config rows can expose native datatable payloads where appropriate.
-- Prove no mutation against source, system, Nix store, real-home, and runtime-owned targets for the full plugin import path with before/after filesystem evidence.
-- Record round-trip/reproduction policy for rows that can be converted back to files now versus verifier-gated future work.
+- Merge plugin PR #1 and envctl PR #410 so the structured inventory bridge is on default branches.
+- Prove no mutation against all targets, including live `status_bar_cache.json` runtime rows, in a quiesced Yazelix runtime/manual test window.
 
 ## Completion Evidence
 
