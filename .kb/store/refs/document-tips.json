@@ -205,6 +205,11 @@
       "document_id": "019f21c4-ff63-7902-adfb-cf57b13d97a2",
       "slug": "tasks/nu-plugin-codedb-nu-protocol-compat",
       "tip_commit_id": "019f21c6-791f-7641-a492-4111eb72444c"
+    },
+    {
+      "document_id": "019f21c7-100e-7061-b0d2-df05e751b55b",
+      "slug": "tasks/nu-plugin-codedb-transient-nu-plugin-smoke",
+      "tip_commit_id": "019f21c9-0d49-7870-bdc5-0dc7e148f662"
     }
   ]
 }
