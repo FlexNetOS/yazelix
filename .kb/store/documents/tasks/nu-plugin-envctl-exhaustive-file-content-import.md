@@ -25,21 +25,21 @@ This task turns the exhaustive Yazelix target inventory into envctl tables, usin
 
 ## Acceptance Criteria
 
-- [ ] Depends on completed inventory from [[tasks/yazelix-exhaustive-file-target-inventory]].
-- [ ] Nu plugin command imports every inventory row into envctl tables or records a precise skipped/metadata-only reason.
-- [ ] Table schema includes at minimum:
-  - [ ] target id and logical owner
-  - [ ] absolute path and normalized path
-  - [ ] source-of-truth class
-  - [ ] file kind / parser hint
-  - [ ] content hash and byte length
-  - [ ] blob reference or inline safe structured value
-  - [ ] import safety policy
-  - [ ] reproduction policy
+- [x] Depends on completed inventory from [[tasks/yazelix-exhaustive-file-target-inventory]].
+- [x] Nu plugin command imports every inventory row into envctl tables or records a precise skipped/metadata-only reason.
+- [x] Table schema includes at minimum:
+  - [x] target id and logical owner
+  - [x] absolute path and normalized path
+  - [x] source-of-truth class
+  - [x] file kind / parser hint
+  - [x] content hash and byte length
+  - [x] blob reference or inline safe structured value
+  - [x] import safety policy
+  - [x] reproduction policy
   - [ ] last observed/provenance fields
 - [ ] Structured files are converted to datatable rows where safe: Nix, TOML, JSON/JSONC, KDL, Nu, Lua, YAML, Markdown, service files, desktop entries, shell fragments, and plain config formats.
 - [ ] Binary or unsafe files are represented with blob metadata and not lossy text decoding.
-- [ ] `.local`, real-home, Nix store, system, generated, cache/state/log, and source files retain distinct safety semantics in envctl.
+- [x] `.local`, real-home, Nix store, system, generated, cache/state/log, and source files retain distinct safety semantics in envctl.
 - [ ] envctl render/import output proves rows are visible from app/dashboard/table surfaces.
 - [ ] A no-mutation proof shows the plugin import did not write to source, system, Nix store, real-home, or runtime-owned targets.
 - [ ] Round-trip/reproduction planning identifies which rows can be converted back to files now and which require additional verifier-gated tooling.
@@ -74,12 +74,14 @@ The user expectation is that CodeDB is the more accurate store: it should preser
   - source-of-truth classes include `repo_source`, `envctl_control_surface`, `nix_store_package_output`, `real_home_runtime_state`, `real_home_user_config`, and `real_home_desktop_entry`
 - Next implementation loop should add a Nu plugin or CodeDB CLI command that consumes that artifact and emits envctl-visible rows with hashes/blob references for `content_blob` candidates and precise skip reasons for `metadata_only` rows.
 
-Local CodeDB plugin progress:
+Durable CodeDB plugin progress:
 
-- Added a local `nu_plugin_codedb` command in `/home/flexnetos/Downloads/nu_plugin`: `codedb envctl import inventory <inventory_path>`.
-- Added local TDD coverage in `crates/nu_plugin_codedb/src/main.rs` for content-blob hashing and metadata-only skip reasons.
+- Created durable repo `https://github.com/FlexNetOS/nu_plugin` from the execution package at `/home/flexnetos/FlexNetOS/src/nu_plugin`.
+- Initial repo commit: `8a05df1 Initial CodeDB Nushell plugin package`.
+- Added `nu_plugin_codedb` command: `codedb envctl import inventory <inventory_path>`.
+- Added TDD coverage in `crates/nu_plugin_codedb/src/main.rs` for content-blob hashing and metadata-only skip reasons.
 - The command emits `envctl_yazelix_file_import` rows with target id, logical owner, absolute path, normalized path, source-of-truth class, file kind, parser hint, content hash, byte length, blob ref, safety policy, reproduction policy, import mode, import status, skip reason, and provenance fields.
-- Verification commands passed from `/home/flexnetos/Downloads/nu_plugin` through the Yazelix CI shell:
+- Verification commands passed from `/home/flexnetos/FlexNetOS/src/nu_plugin` through the Yazelix CI shell:
   - `cargo fmt --all -- --check`
   - `cargo test -p nu_plugin_codedb envctl_inventory_import_rows_hash_content_and_skip_metadata_only`
   - `cargo build --quiet -p nu_plugin_codedb`
@@ -90,11 +92,36 @@ Local CodeDB plugin progress:
   - `metadata_only`: 1,675
   - `tables`: `envctl_yazelix_file_import`
 
+Envctl catalog progress:
+
+- Envctl worktree: `/home/flexnetos/FlexNetOS/src/envctl-codedb-file-import`.
+- Envctl commit: `fc6d074 catalog: import Yazelix CodeDB file inventory`.
+- Envctl PR: `https://github.com/FlexNetOS/envctl/pull/410`.
+- Added read-only envctl catalog table `codedb_file_imports`, also accepting aliases `codedb-file-imports` and `envctl_yazelix_file_import`.
+- The table consumes `docs/generated/yazelix_file_target_inventory.json` from a Yazelix repo root and preserves CodeDB blob semantics:
+  - `content_blob` rows read current bytes only when readable and emit SHA-256 `content_hash` plus `sha256:<hash>` `blob_ref`.
+  - `metadata_only` rows do not read file contents and keep safety policy as `skip_reason`.
+  - Nix store rows stay metadata-only in envctl.
+  - `.local`/real-home rows keep distinct real-home classes and are metadata-only unless the inventory marks a row `content_blob`.
+- Envctl verification passed:
+  - `cargo test -p envctl-engine scan_imports_yazelix_config_files_without_manifest -- --nocapture`
+  - `cargo test -p envctl-engine render_imports_yazelix_config_files_without_manifest -- --nocapture`
+  - `cargo test -p envctl --test cli_contract catalog_repo_root_imports_yazelix_codedb_file_inventory -- --nocapture`
+  - `cargo fmt --all -- --check`
+- Real-data envctl smoke against `/home/flexnetos/FlexNetOS/src/yazelix`:
+  - `envctl_control_surface`: 1,039 rows, 1,022 blob-ready, 17 metadata-only
+  - `nix_store_package_output`: 366 rows, 0 blob-ready, 366 metadata-only
+  - `real_home_desktop_entry`: 2 rows, 0 blob-ready, 2 metadata-only
+  - `real_home_runtime_state`: 1,335 rows, 68 blob-ready, 1,267 metadata-only
+  - `real_home_user_config`: 5 rows, 0 blob-ready, 5 metadata-only
+  - `repo_source`: 802 rows, 784 blob-ready, 18 metadata-only
+  - `.local` subset: 1,337 rows across `real_home_runtime_state` and `real_home_desktop_entry`
+
 Remaining before completion:
 
-- Land the CodeDB plugin change in a tracked repository or otherwise make the local `/home/flexnetos/Downloads/nu_plugin` package change durable.
-- Wire/envctl-consume `envctl_yazelix_file_import` rows into envctl render/dashboard/table surfaces.
-- Prove no mutation against source, system, Nix store, real-home, and runtime-owned targets for the full plugin import path.
+- Merge envctl PR #410 so the catalog table is on envctl's default branch.
+- Extend structured-format conversion beyond blob metadata so safe Nix, TOML, JSON/JSONC, KDL, Nu, Lua, YAML, Markdown, desktop/service/shell/plain config rows can expose native datatable payloads where appropriate.
+- Prove no mutation against source, system, Nix store, real-home, and runtime-owned targets for the full plugin import path with before/after filesystem evidence.
 - Record round-trip/reproduction policy for rows that can be converted back to files now versus verifier-gated future work.
 
 ## Completion Evidence
