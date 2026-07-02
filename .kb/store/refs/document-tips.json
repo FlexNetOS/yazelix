@@ -90,6 +90,11 @@
       "document_id": "019f215b-dda2-7641-8973-c5342c098ff9",
       "slug": "tasks/nu-plugin-codedb-cli-scan-export-schema",
       "tip_commit_id": "019f215f-a5d2-7662-bbc6-54ac98f30533"
+    },
+    {
+      "document_id": "019f2163-378f-7cf1-945e-1e55b3a62032",
+      "slug": "tasks/nu-plugin-codedb-nu-commands",
+      "tip_commit_id": "019f2169-a1b5-7210-8bac-0ee8c75e61b9"
     }
   ]
 }
