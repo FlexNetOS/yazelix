@@ -220,6 +220,11 @@
       "document_id": "019f21cd-487c-75f0-9d09-5981ddf51b0a",
       "slug": "tasks/nu-plugin-codedb-yazelix-init-bridge",
       "tip_commit_id": "019f21d1-7ab4-7a53-9765-40d3605cdb0d"
+    },
+    {
+      "document_id": "019f21d1-fd0f-7870-92e4-10d4839ad70c",
+      "slug": "tasks/nu-plugin-codedb-init-provenance",
+      "tip_commit_id": "019f21d3-b5e2-7632-9b75-15a86a9a03ee"
     }
   ]
 }
