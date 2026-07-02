@@ -250,6 +250,11 @@
       "document_id": "019f21df-0795-76d2-a1b3-9344b9b30522",
       "slug": "tasks/nu-plugin-codedb-plugin-secret-guard",
       "tip_commit_id": "019f21e0-b8ff-7613-8ad4-c5cb028c8c0b"
+    },
+    {
+      "document_id": "019f21e2-394c-78b3-8e9d-f700322bd40b",
+      "slug": "tasks/nu-plugin-codedb-redb-lifecycle",
+      "tip_commit_id": "019f21e4-6d5a-75a0-bdf2-6fefa181ea70"
     }
   ]
 }
