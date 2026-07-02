@@ -165,6 +165,11 @@
       "document_id": "019f21a6-1945-7930-bca8-91ac33005d24",
       "slug": "tasks/nu-plugin-codedb-security-no-leak-tests",
       "tip_commit_id": "019f21a8-2bfa-71e3-aeac-e3e82cef62ad"
+    },
+    {
+      "document_id": "019f21a8-8059-72f2-951f-816e3a3137e4",
+      "slug": "tasks/nu-plugin-codedb-no-mutation-tests",
+      "tip_commit_id": "019f21aa-46f5-7273-b4e3-333c932dcada"
     }
   ]
 }
