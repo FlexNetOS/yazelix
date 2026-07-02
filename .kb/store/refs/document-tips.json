@@ -315,6 +315,11 @@
       "document_id": "019f2225-3578-7cf2-9d84-15e8cdfa16a9",
       "slug": "tasks/codedb-envctl-remaining-config-format-metadata",
       "tip_commit_id": "019f2228-7f6f-7db2-a72c-366af36d47b4"
+    },
+    {
+      "document_id": "019f222a-fc46-7402-ba2d-7ad1fd5a284c",
+      "slug": "tasks/yazelix-ci-beads-rust-absolute-path",
+      "tip_commit_id": "019f222f-b701-7ff2-b736-a16d44ebe812"
     }
   ]
 }

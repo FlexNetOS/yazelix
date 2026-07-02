@@ -64,7 +64,7 @@
       inputs.fenix.follows = "fenix";
     };
     beads_rust_source = {
-      url = "path:/home/flexnetos/FlexNetOS/src/meta/beads_rust";
+      url = "github:FlexNetOS/beads_rust";
       flake = false;
     };
     zjstatus = {

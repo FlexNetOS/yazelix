@@ -3,13 +3,17 @@
     "beads_rust_source": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-P48bCccSH0ddA8guMM0XvphcyYMwKQ83N/2A6POGAk0=",
-        "path": "/home/flexnetos/FlexNetOS/src/meta/beads_rust",
-        "type": "path"
+        "lastModified": 1782787733,
+        "narHash": "sha256-lIBeHo8wbW8cE5jcSSjnkPEGBYRbf7hlnGp0rzxxD44=",
+        "owner": "FlexNetOS",
+        "repo": "beads_rust",
+        "rev": "2498339168b8e88d641e8ae1664843fc69740012",
+        "type": "github"
       },
       "original": {
-        "path": "/home/flexnetos/FlexNetOS/src/meta/beads_rust",
-        "type": "path"
+        "owner": "FlexNetOS",
+        "repo": "beads_rust",
+        "type": "github"
       }
     },
     "crane": {
