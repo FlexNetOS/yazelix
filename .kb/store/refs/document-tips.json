@@ -80,6 +80,11 @@
       "document_id": "019f2155-ec3f-7090-8a42-b1fcdd9313c6",
       "slug": "tasks/nu-plugin-codedb-native-link-static",
       "tip_commit_id": "019f2157-b242-7c72-ace5-c1dba80c4d20"
+    },
+    {
+      "document_id": "019f2158-61a7-70d2-99e8-b63936bc3a43",
+      "slug": "tasks/nu-plugin-codedb-no-mutation-proof",
+      "tip_commit_id": "019f215a-7d5f-7d81-862c-0c5722b8319c"
     }
   ]
 }
