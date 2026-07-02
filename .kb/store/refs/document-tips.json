@@ -130,6 +130,11 @@
       "document_id": "019f218d-ec7a-7921-8f48-98c8cb96472c",
       "slug": "tasks/nu-plugin-codedb-codex-bridge-sample",
       "tip_commit_id": "019f2190-ac98-7de1-9510-cc404ff8431d"
+    },
+    {
+      "document_id": "019f2191-63f3-7641-8065-6dcad836f5b6",
+      "slug": "tasks/nu-plugin-codedb-yazelix-placement-docs",
+      "tip_commit_id": "019f2193-04aa-75e2-b22d-53313653f99e"
     }
   ]
 }
