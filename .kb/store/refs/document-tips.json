@@ -264,7 +264,12 @@
     {
       "document_id": "019f21eb-16e5-70d0-8958-1a5f59ab4cef",
       "slug": "tasks/nu-plugin-codedb-envctl-runtime",
-      "tip_commit_id": "019f21ec-e68a-7a62-8ca4-6c7d3a2e8e9c"
+      "tip_commit_id": "019f21f0-06e1-7e12-83b9-d635740bfe45"
+    },
+    {
+      "document_id": "019f21ef-3196-73f0-ba3e-99f366868b6f",
+      "slug": "tasks/nu-plugin-codedb-extraction-proof",
+      "tip_commit_id": "019f21f0-06e1-7e12-83b9-d635740bfe45"
     }
   ]
 }

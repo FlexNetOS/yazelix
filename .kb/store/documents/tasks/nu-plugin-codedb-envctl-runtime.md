@@ -3,7 +3,7 @@ id: 019f21eb-16e5-70d0-8958-1a5f59ab4cef
 slug: tasks/nu-plugin-codedb-envctl-runtime
 title: "Add CodeDB envctl runtime integration rows"
 type: task
-status: draft
+status: completed
 priority: medium
 ---
 
