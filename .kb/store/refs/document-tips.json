@@ -335,6 +335,16 @@
       "document_id": "019f223d-40ea-7092-82f6-8c979bf8e639",
       "slug": "tasks/envctl-pr409-cargo-audit-advisories",
       "tip_commit_id": "019f2249-bce7-7373-90ef-a6037e467723"
+    },
+    {
+      "document_id": "019f2289-7a96-7533-8b4d-830dd7f36ddd",
+      "slug": "tasks/yazelix-exhaustive-file-target-inventory",
+      "tip_commit_id": "019f228a-88d7-7771-9222-4133bcb60b7b"
+    },
+    {
+      "document_id": "019f2289-7aaa-7d61-a7a1-01cb2e7d6598",
+      "slug": "tasks/nu-plugin-envctl-exhaustive-file-content-import",
+      "tip_commit_id": "019f228a-88d7-7771-9222-4133bcb60b7b"
     }
   ]
 }
