@@ -48,6 +48,26 @@ This task defines the discovery work required before importing file contents int
 
 The prior live proof showed envctl could import 58 repo-owned Yazelix config files into 10 catalog tables, but it did not cover `/etc`, `/usr`, `$META_ROOT/.local`, real-home `.local`, or generated runtime/deploy targets. This task is the correction point for that missing scope.
 
+## Discovery Notes
+
+### 2026-07-02 read-only target check
+
+Current answer to "are all files from the Nix store and `.local` in envctl?": no. The existing envctl proof from [[tasks/codedb-envctl-yazelix-config-ingest]] imported the repo-owned Yazelix config catalog only: 58 config files, 2,032 settings rows, and 0 `/nix/store` or real-home `.local` target rows. This inventory task and [[tasks/nu-plugin-envctl-exhaustive-file-content-import]] are the active work items that must close that gap.
+
+Read-only discovery found the following target families that are not represented by the current repo-only envctl catalog:
+
+- `/nix/store` has many Yazelix-related immutable package/output classes, including `yazelix`, `yzx`, `yazelix-runtime`, `yazelix-core-0.1.0`, `yazelix-helix-25.7.1`, `yazelix-rust-core-source`, `yazelix-package-source`, `yazelix-runtime-release-contracts`, `yazelix-zellij-pane-orchestrator-0.1.0`, `yazelix_zellij_bar-0.1.0`, `yazelix_yazi_assets-0.1.0`, `yazelix_screen-0.1.0`, `yazelix_cursors-0.1.0`, `mars`, `mars.desktop`, and `mars_terminal_icon.png`. These should be inventory rows with immutable/package-output safety semantics, not write targets.
+- `/home/flexnetos/.local/share/yazelix` exists and currently contains 1,331 files. Observed classes include generated runtime configs, Helix/Yazi/Zellij config projections, Bash and Nushell initializer projections, session snapshots, status-bar caches, startup handoff JSON, terminal launch logs, welcome logs, startup profile JSONL, sidebar bootstrap temp files, config overrides, agent usage cache, and upgrade/rebuild state files.
+- `/home/flexnetos/.local/share/applications` contains Yazelix desktop-entry targets: `com.flexnetos.Yazelix.Agent.desktop` and `com.yazelix.Yazelix.Mars.desktop`.
+- `/home/flexnetos/FlexNetOS/.local` does not currently exist on this machine, so the observed `.local` depth for this pass is real-home `.local`. The inventory still needs to handle `$META_ROOT/.local/**` for envctl-managed workspaces where that bridge exists.
+
+Classification implications:
+
+- Repo source and safe generated config projections can become content/blob rows after the Nu plugin import path is implemented.
+- Nix store paths should be exact immutable package evidence, with content imported only when safe and useful; closures and derivations should remain metadata-rich and mutation-prohibited.
+- Real-home `.local` runtime state, logs, caches, sessions, and desktop entries need distinct owner/safety labels. Logs, caches, session state, temp files, and user-home bridge/adoption paths should default to metadata-only unless a contract explicitly permits content import.
+- The current envctl catalog is therefore a partial projection, not the authoritative exhaustive store. CodeDB/nu_plugin is expected to become the more accurate file/blob store, with envctl projecting tables and later converting safe rows back to files through verifier-gated commands.
+
 ## Implementation Notes
 
 - Start with read-only discovery only.
