@@ -65,6 +65,11 @@
       "document_id": "019f214b-c33d-72f3-aa32-ab55bc81534c",
       "slug": "tasks/nu-plugin-codedb-proc-macro-static",
       "tip_commit_id": "019f214e-70f5-75b0-af80-cba1eb6e9091"
+    },
+    {
+      "document_id": "019f214f-d575-76c3-9469-2d32e89e98fa",
+      "slug": "tasks/nu-plugin-codedb-build-script-static",
+      "tip_commit_id": "019f2151-c63a-7c92-ac1d-e0160ed31670"
     }
   ]
 }
