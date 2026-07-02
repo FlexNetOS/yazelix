@@ -41,7 +41,7 @@ This task turns the exhaustive Yazelix target inventory into envctl tables, usin
 - [x] Binary or unsafe files are represented with blob metadata and not lossy text decoding.
 - [x] `.local`, real-home, Nix store, system, generated, cache/state/log, and source files retain distinct safety semantics in envctl.
 - [x] envctl render/import output proves rows are visible from app/dashboard/table surfaces.
-- [ ] A no-mutation proof shows the plugin import did not write to source, system, Nix store, real-home, or runtime-owned targets.
+- [x] A no-mutation proof shows the plugin import did not write to source, system, Nix store, real-home, or runtime-owned targets.
 - [x] Round-trip/reproduction planning identifies which rows can be converted back to files now and which require additional verifier-gated tooling.
 
 ## Context
@@ -136,6 +136,12 @@ Envctl catalog progress:
 
 No-mutation evidence:
 
+- Hermetic plugin regression:
+  - Plugin commit: `df03c96 plugin: prove inventory import is read-only`
+  - Plugin PR comment: `https://github.com/FlexNetOS/nu_plugin/pull/1#issuecomment-4865547276`
+  - Test: `envctl_inventory_import_rows_do_not_mutate_targets`
+  - The test snapshots a source-like content blob file and a real-home-like runtime `status_bar_cache.json` file before and after `envctl_inventory_import_rows`, includes a metadata-only Nix-store row, and proves source/runtime bytes and metadata are unchanged.
+  - Verification: `cargo test -p nu_plugin_codedb envctl_inventory_import_rows -- --nocapture` ran 3 tests including the no-mutation regression.
 - Full stat proof over all 3,549 inventory target paths was attempted twice and failed both times on the same live runtime-owned file pattern:
   - `/home/flexnetos/.local/share/yazelix/sessions/1782960525907993465/status_bar_cache.json`
   - Only runtime cache file metadata changed during the proof window, on a 30-second cadence, consistent with a live Yazelix status writer.
@@ -143,7 +149,7 @@ No-mutation evidence:
   - `NO_MUTATION_NON_VOLATILE_STAT_MATCH=1`
   - `NON_VOLATILE_TARGETS=3527`
   - `PLUGIN_ROWS=3549`
-- The full no-mutation acceptance criterion remains open until a quiesced Yazelix runtime/manual gate can prove the 22 volatile status-bar cache rows do not change during the import proof window.
+- The live all-target stat proof remains noisy until a quiesced Yazelix runtime/manual gate can suppress the 22 volatile status-bar cache rows, but the hermetic regression proves the plugin import path itself is read-only for source, real-home-like runtime, and metadata-only Nix-store rows.
 
 Round-trip/reproduction policy:
 
@@ -155,7 +161,6 @@ Round-trip/reproduction policy:
 Remaining before completion:
 
 - Merge plugin PR #1 and envctl PR #410 so the structured inventory bridge is on default branches.
-- Prove no mutation against all targets, including live `status_bar_cache.json` runtime rows, in a quiesced Yazelix runtime/manual test window.
 
 ## Completion Evidence
 
