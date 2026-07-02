@@ -190,6 +190,11 @@
       "document_id": "019f21b4-8d14-7631-a4ff-001d1593673f",
       "slug": "tasks/nu-plugin-codedb-handoff-backlog",
       "tip_commit_id": "019f21b5-f0b2-7cf0-9510-9ebd74ed2b7c"
+    },
+    {
+      "document_id": "019f21b6-5aba-7f00-b800-ebe3f15cf424",
+      "slug": "tasks/nu-plugin-codedb-yazelix-nushell-runtime-bridge",
+      "tip_commit_id": "019f21ba-0d81-7720-9213-85409be7b660"
     }
   ]
 }
