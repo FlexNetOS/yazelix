@@ -3,7 +3,7 @@ id: 019f2289-7a96-7533-8b4d-830dd7f36ddd
 slug: tasks/yazelix-exhaustive-file-target-inventory
 title: "Inventory every Yazelix file target across repo Nix system and .local depths"
 type: task
-status: active
+status: completed
 priority: high
 tags: [codedb, envctl, yazelix, inventory, nix, system, local]
 ---
@@ -24,21 +24,21 @@ This task defines the discovery work required before importing file contents int
 
 ## Acceptance Criteria
 
-- [ ] Inventory command or script walks all relevant Yazelix roots:
-  - [ ] `/home/flexnetos/FlexNetOS/src/yazelix`
-  - [ ] `/home/flexnetos/FlexNetOS/src/envctl` surfaces that generate or consume Yazelix catalog rows
-  - [ ] `$META_ROOT` layout paths from envctl/yazelix runtime contracts
-  - [ ] Nix build outputs and package closures needed to identify packaged Yazelix files
-  - [ ] XDG config/data/state/cache targets for Yazelix
-  - [ ] `$META_ROOT/.local/**` and any real-home `.local/**` bridge/adoption targets
-  - [ ] system/user service and desktop-entry targets that start or supervise Yazelix
-- [ ] Each inventory row records absolute path, normalized logical path, owner, source-of-truth class, current existence, file kind, parser hint, mutability, reproduction policy, and safety policy.
-- [ ] Nix targets are resolved with cheap eval/build-info probes first, avoiding unnecessary large builds.
-- [ ] `.local` and real-home targets are classified as owned, bridge, adopted, ignored, cache/state/log, or unsafe-to-import.
-- [ ] The inventory identifies files that should be imported as content blobs versus metadata-only rows.
-- [ ] The inventory identifies gaps in the current envctl catalog coverage, including repo-only assumptions from [[tasks/codedb-envctl-yazelix-config-ingest]].
-- [ ] The inventory output is committed or rendered to an explicit, reviewable artifact path outside mutable runtime state.
-- [ ] Verification proves no source, system, Nix store, or real-home path was mutated during discovery.
+- [x] Inventory command or script walks all relevant Yazelix roots:
+  - [x] `/home/flexnetos/FlexNetOS/src/yazelix`
+  - [x] `/home/flexnetos/FlexNetOS/src/envctl` surfaces that generate or consume Yazelix catalog rows
+  - [x] `$META_ROOT` layout paths from envctl/yazelix runtime contracts
+  - [x] Nix build outputs and package closures needed to identify packaged Yazelix files
+  - [x] XDG config/data/state/cache targets for Yazelix
+  - [x] `$META_ROOT/.local/**` and any real-home `.local/**` bridge/adoption targets
+  - [x] system/user service and desktop-entry targets that start or supervise Yazelix
+- [x] Each inventory row records absolute path, normalized logical path, owner, source-of-truth class, current existence, file kind, parser hint, mutability, reproduction policy, and safety policy.
+- [x] Nix targets are resolved with cheap eval/build-info probes first, avoiding unnecessary large builds.
+- [x] `.local` and real-home targets are classified as owned, bridge, adopted, ignored, cache/state/log, or unsafe-to-import.
+- [x] The inventory identifies files that should be imported as content blobs versus metadata-only rows.
+- [x] The inventory identifies gaps in the current envctl catalog coverage, including repo-only assumptions from [[tasks/codedb-envctl-yazelix-config-ingest]].
+- [x] The inventory output is committed or rendered to an explicit, reviewable artifact path outside mutable runtime state.
+- [x] Verification proves no source, system, Nix store, or real-home path was mutated during discovery.
 
 ## Context
 
@@ -78,4 +78,35 @@ Classification implications:
 
 ## Completion Evidence
 
-Pending.
+Completed on 2026-07-02.
+
+Implemented:
+
+- Added `yazelix_maintainer::repo_yazelix_file_inventory` as the inventory producer.
+- Added `yzx_repo_maintainer yazelix-file-inventory --out <path>` as the explicit artifact command.
+- Added TDD coverage in `rust_core/yazelix_maintainer/tests/yazelix_file_target_inventory.rs`.
+- Rendered the reviewable artifact to `docs/generated/yazelix_file_target_inventory.json`.
+
+Live artifact summary:
+
+- Total inventory rows: 3,549.
+- Source-of-truth classes:
+  - `repo_source`: 802
+  - `envctl_control_surface`: 1,039
+  - `nix_store_package_output`: 366
+  - `real_home_runtime_state`: 1,335
+  - `real_home_user_config`: 5
+  - `real_home_desktop_entry`: 2
+- Import modes:
+  - `content_blob`: 1,909
+  - `metadata_only`: 1,640
+
+Commands run:
+
+- `cargo test --manifest-path rust_core/Cargo.toml -p yazelix_maintainer --test yazelix_file_target_inventory`
+- `cargo run --quiet --manifest-path rust_core/Cargo.toml -p yazelix_maintainer --bin yzx_repo_maintainer -- yazelix-file-inventory --out docs/generated/yazelix_file_target_inventory.json`
+- `cargo fmt --manifest-path rust_core/Cargo.toml --all -- --check`
+- `cargo run --quiet --manifest-path rust_core/Cargo.toml -p yazelix_maintainer --bin yzx_repo_validator -- validate-rust-test-traceability`
+- `cargo run --quiet --manifest-path rust_core/Cargo.toml -p yazelix_maintainer --bin yzx_repo_validator -- validate-package-rust-test-purity`
+
+All commands were run through `nix develop --accept-flake-config .#ci -c ...` because ambient `cargo` was not on `PATH`. The inventory command reported `mutating=false`, and the scanner only reads discovered targets; the sole write is the explicit `--out` artifact path.

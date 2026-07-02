@@ -61,6 +61,19 @@ The user expectation is that CodeDB is the more accurate store: it should preser
 - Keep all writes to explicit output/catalog/plugin database paths.
 - Any discovered import gaps should create additional GitKB tasks before implementation proceeds.
 
+## Progress Notes
+
+### 2026-07-02
+
+- Inventory dependency is implemented by [[tasks/yazelix-exhaustive-file-target-inventory]].
+- The import input artifact is `docs/generated/yazelix_file_target_inventory.json`.
+- Current artifact summary:
+  - 3,549 inventory rows
+  - 1,909 `content_blob` candidates
+  - 1,640 `metadata_only` rows
+  - source-of-truth classes include `repo_source`, `envctl_control_surface`, `nix_store_package_output`, `real_home_runtime_state`, `real_home_user_config`, and `real_home_desktop_entry`
+- Next implementation loop should add a Nu plugin or CodeDB CLI command that consumes that artifact and emits envctl-visible rows with hashes/blob references for `content_blob` candidates and precise skip reasons for `metadata_only` rows.
+
 ## Completion Evidence
 
 Pending.
