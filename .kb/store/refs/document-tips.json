@@ -255,6 +255,11 @@
       "document_id": "019f21e2-394c-78b3-8e9d-f700322bd40b",
       "slug": "tasks/nu-plugin-codedb-redb-lifecycle",
       "tip_commit_id": "019f21e4-6d5a-75a0-bdf2-6fefa181ea70"
+    },
+    {
+      "document_id": "019f21e5-eb3d-7ce3-b0bc-286ebefadc3e",
+      "slug": "tasks/nu-plugin-codedb-codex-bounded-smoke",
+      "tip_commit_id": "019f21e8-b672-7ff2-a92a-be7b1f920e6b"
     }
   ]
 }
