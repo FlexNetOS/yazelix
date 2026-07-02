@@ -25,14 +25,14 @@ The task must use the live `/home/flexnetos/Downloads/nu_plugin` CodeDB plugin/C
 
 ## Acceptance Criteria
 
-- [ ] Current CodeDB plugin/CLI/envctl command surfaces are inspected from the live workspace.
-- [ ] A systematic ordered inventory of Yazelix config/settings files is recorded.
-- [ ] Envctl-visible table schema or table rows exist for loaded config/settings files.
-- [ ] A live test loads the first ordered Yazelix config batch into those tables.
-- [ ] The app/runtime surface can read or display the loaded rows.
-- [ ] Any issue surfaced during loading or visibility is captured as a KB task before implementation.
+- [x] Current CodeDB plugin/CLI/envctl command surfaces are inspected from the live workspace.
+- [x] A systematic ordered inventory of Yazelix config/settings files is recorded.
+- [x] Envctl-visible table schema or table rows exist for loaded config/settings files.
+- [x] A live test loads the first ordered Yazelix config batch into those tables.
+- [x] The app/runtime surface can read or display the loaded rows.
+- [x] Any issue surfaced during loading or visibility is captured as a KB task before implementation.
 - [ ] All identified Yazelix config and settings files are loaded or each exception is documented with a blocking KB task.
-- [ ] Verification evidence includes commands, row counts, selected sample rows, and reproduction/export readiness notes.
+- [x] Verification evidence includes commands, row counts, selected sample rows, and reproduction/export readiness notes.
 
 ## Initial Load Order
 
@@ -59,3 +59,53 @@ Start with canonical user/runtime config contracts, then expand outward:
 
 - Created this active task from the live integration objective.
 - First execution slice: inspect CodeDB plugin/CLI/envctl surfaces and derive the ordered Yazelix config inventory before mutating implementation files.
+- CodeDB live Nu plugin proof:
+  - Command surface: `codedb scan`, `codedb fs entries`, `codedb export`, `codedb tables`, `codedb schema`, `codedb doctor`.
+  - `codedb scan /home/flexnetos/FlexNetOS/src/yazelix` returned 3,320 `filesystem_entries`, 5,634 `rust_items`, and a degraded `cargo_packages` row because this repo's Rust workspace is under `rust_core/Cargo.toml`.
+  - `codedb fs entries --repo /home/flexnetos/FlexNetOS/src/yazelix --limit 3400` showed the first ordered config batch as table rows: `settings_default.jsonc`, `config_metadata/main_config_contract.toml`, `config_metadata/yazelix_settings.schema.json`, `nushell/config/config.nu`, and `configs/zellij/layouts/flexnetos_agent_workspace.kdl`.
+- Envctl source-run proof:
+  - `/home/flexnetos/FlexNetOS/usr/bin/envctl` is missing, tracked in [[tasks/codedb-envctl-frontdoor-missing]].
+  - Source fallback works from `/home/flexnetos/FlexNetOS/src/envctl` with `cargo run -p envctl`.
+  - Upgraded envctl catalog to support `catalog --repo-root /home/flexnetos/FlexNetOS/src/yazelix` without a Yazelix-local envctl `manifest/`.
+  - Added Yazelix config-family discovery for `settings_default.jsonc`, `config_metadata/`, `configs/`, `nushell/`, `home_manager/`, `packaging/`, `flake.nix`, `flake.lock`, `release_metadata.toml`, and `rust_core/yazelix_zellij_config_pack/`.
+  - Added JSONC settings parsing; issue tracked and fixed in [[tasks/codedb-envctl-jsonc-settings-parser]].
+  - Filed remaining Nu/KDL structured parser follow-up as [[tasks/codedb-envctl-nu-kdl-config-parsers]].
+
+## Live Evidence
+
+Commands run on 2026-07-02:
+
+- `nu --no-config-file --plugins /home/flexnetos/Downloads/nu_plugin/target/debug/nu_plugin_codedb -c 'codedb fs entries --repo /home/flexnetos/FlexNetOS/src/yazelix --limit 3400 ...'`
+- `cargo run -q -p envctl -- --json catalog --repo-root /home/flexnetos/FlexNetOS/src/yazelix import`
+- `cargo run -q -p envctl -- --json catalog --repo-root /home/flexnetos/FlexNetOS/src/yazelix render --out /tmp/yazelix-envctl-catalog-render`
+
+Current envctl import result:
+
+- Tables: 10
+- Rows: 1,509
+- Components: 0, because the Yazelix repo is intentionally scanned without an envctl manifest
+- Config files: 58
+- Settings rows: 1,230
+- Env vars: 44
+- Mutating: false
+
+First ordered batch envctl rows:
+
+- `settings_default.jsonc`: `file_kind = yazelix_settings_default`, `format = jsonc`, `owner_component = yazelix`, `parse_status = ok`
+- `config_metadata/main_config_contract.toml`: `file_kind = yazelix_config_metadata`, `format = toml`, `owner_component = yazelix`, `parse_status = ok`
+- `config_metadata/yazelix_settings.schema.json`: `file_kind = yazelix_config_metadata`, `format = json`, `owner_component = yazelix`, `parse_status = ok`
+- `nushell/config/config.nu`: `file_kind = yazelix_nushell_config`, `owner_component = yazelix`, `parse_status = not_parsed`
+- `configs/zellij/layouts/flexnetos_agent_workspace.kdl`: `file_kind = yazelix_runtime_config`, `format = kdl`, `owner_component = yazelix`, `parse_status = not_parsed`
+
+App/dashboard visibility:
+
+- `envctl catalog render` produced 30 generated files under `/tmp/yazelix-envctl-catalog-render`.
+- The rendered app/dashboard file is `/tmp/yazelix-envctl-catalog-render/dashboard/mission-control.catalog.kdl`.
+- That dashboard was generated from source tables `paths+settings` and includes `pane command="envctl" args="catalog" "scan" "--json" // paths=49 settings=1230`.
+- The rendered table `/tmp/yazelix-envctl-catalog-render/catalog/tables/config_files.json` contains the loaded Yazelix config rows.
+
+Verification gates passed:
+
+- `cargo fmt --check` in envctl.
+- `cargo test -p envctl-engine catalog::tests`.
+- `cargo test -p envctl --test cli_contract catalog_repo_root_imports_yazelix_config_without_manifest`.

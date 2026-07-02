@@ -294,7 +294,22 @@
     {
       "document_id": "019f2211-cf01-7342-b1aa-1f8d7821b1a0",
       "slug": "tasks/codedb-envctl-yazelix-config-ingest",
-      "tip_commit_id": "019f2212-7ebe-7ab0-89a3-c92380f9c94a"
+      "tip_commit_id": "019f221f-f9a7-7b13-8b80-1223f4a1b523"
+    },
+    {
+      "document_id": "019f2213-38f0-7fe3-acae-4068db180490",
+      "slug": "tasks/codedb-envctl-frontdoor-missing",
+      "tip_commit_id": "019f221f-f9a7-7b13-8b80-1223f4a1b523"
+    },
+    {
+      "document_id": "019f2219-0dc5-70b0-b0af-0bb2770554cf",
+      "slug": "tasks/codedb-envctl-jsonc-settings-parser",
+      "tip_commit_id": "019f221f-f9a7-7b13-8b80-1223f4a1b523"
+    },
+    {
+      "document_id": "019f221c-6e0a-7b13-b287-1ae3cc0ce3c8",
+      "slug": "tasks/codedb-envctl-nu-kdl-config-parsers",
+      "tip_commit_id": "019f221f-f9a7-7b13-8b80-1223f4a1b523"
     }
   ]
 }
