@@ -95,6 +95,11 @@
       "document_id": "019f2163-378f-7cf1-945e-1e55b3a62032",
       "slug": "tasks/nu-plugin-codedb-nu-commands",
       "tip_commit_id": "019f2169-a1b5-7210-8bac-0ee8c75e61b9"
+    },
+    {
+      "document_id": "019f216a-a04f-7501-9d0c-0296b73367d0",
+      "slug": "tasks/nu-plugin-codedb-doctor-checks",
+      "tip_commit_id": "019f216d-adaa-7d83-bfbb-a8319b1f8e9f"
     }
   ]
 }
