@@ -3,7 +3,7 @@ id: 019f2289-7aaa-7d61-a7a1-01cb2e7d6598
 slug: tasks/nu-plugin-envctl-exhaustive-file-content-import
 title: "Import exhaustive Yazelix file contents into envctl tables through Nu plugin"
 type: task
-status: active
+status: completed
 priority: high
 tags: [codedb, envctl, nu_plugin, nushell, yazelix, blobs, datatables]
 ---
@@ -158,10 +158,15 @@ Round-trip/reproduction policy:
 - `metadata_only` rows, Nix store package outputs, real-home runtime state, generated/cache/log rows, and unsafe/opaque rows require regeneration from their owner (`nix_realise`, runtime re-observation, package build, or explicit user import) rather than CodeDB writing file bytes back directly.
 - Envctl `catalog sync --apply` still correctly refuses pending verifier-gated row edit/apply support; reproduction is planned, not enabled as an implicit write path.
 
-Remaining before completion:
+Default-branch landing:
 
-- Merge plugin PR #1 and envctl PR #410 so the structured inventory bridge is on default branches.
+- `https://github.com/FlexNetOS/nu_plugin/pull/1` merged on 2026-07-02 at `55b5ff0140531fb80b980ee774e69cc92fb4d286`.
+- `https://github.com/FlexNetOS/envctl/pull/410` merged on 2026-07-02 at `52100614ab4666e6abab52a3292d0149351a9453`.
 
 ## Completion Evidence
 
-Pending.
+- All acceptance criteria above are checked.
+- CodeDB Nu plugin durable repo exists at `https://github.com/FlexNetOS/nu_plugin`.
+- Envctl default branch includes `codedb_file_imports` table import/render support through merged PR #410.
+- Plugin default branch includes structured inventory rows and hermetic no-mutation regression through merged PR #1.
+- GitKB evidence records focused TDD tests, fmt checks, real Yazelix import/render smokes, no-mutation proof, and round-trip/reproduction policy.
