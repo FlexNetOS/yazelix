@@ -45,6 +45,11 @@
       "document_id": "019f2140-0023-77d2-94ab-bc481199fa2d",
       "slug": "tasks/nu-plugin-codedb-cargo-sources",
       "tip_commit_id": "019f2141-b0d5-7291-81cc-0d973924e343"
+    },
+    {
+      "document_id": "019f2142-7151-7802-8684-75649cf7aa11",
+      "slug": "tasks/nu-plugin-codedb-context-rows",
+      "tip_commit_id": "019f2144-523e-7b80-9455-b13903b3088c"
     }
   ]
 }
