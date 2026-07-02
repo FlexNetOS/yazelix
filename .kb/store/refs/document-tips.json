@@ -195,6 +195,11 @@
       "document_id": "019f21b6-5aba-7f00-b800-ebe3f15cf424",
       "slug": "tasks/nu-plugin-codedb-yazelix-nushell-runtime-bridge",
       "tip_commit_id": "019f21ba-0d81-7720-9213-85409be7b660"
+    },
+    {
+      "document_id": "019f21ba-f862-76f0-8ce0-17817eb2aae0",
+      "slug": "tasks/nu-plugin-codedb-runtime-tool-package",
+      "tip_commit_id": "019f21c4-67e6-7b81-8686-b1068ead5ada"
     }
   ]
 }
