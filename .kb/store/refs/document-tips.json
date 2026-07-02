@@ -125,6 +125,11 @@
       "document_id": "019f2189-dad4-7793-bf39-ec151b68b3ad",
       "slug": "tasks/nu-plugin-codedb-meta-repo-selection",
       "tip_commit_id": "019f218d-3650-7853-8455-5bdf5cc7898e"
+    },
+    {
+      "document_id": "019f218d-ec7a-7921-8f48-98c8cb96472c",
+      "slug": "tasks/nu-plugin-codedb-codex-bridge-sample",
+      "tip_commit_id": "019f2190-ac98-7de1-9510-cc404ff8431d"
     }
   ]
 }
