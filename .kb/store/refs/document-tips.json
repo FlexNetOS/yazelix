@@ -330,6 +330,11 @@
       "document_id": "019f2238-04a2-7683-94c7-65fe00d26805",
       "slug": "tasks/envctl-pr409-meta-local-policy-fixture-paths",
       "tip_commit_id": "019f2239-0a00-78f3-b33f-03cc9ad4ba4c"
+    },
+    {
+      "document_id": "019f223d-40ea-7092-82f6-8c979bf8e639",
+      "slug": "tasks/envctl-pr409-cargo-audit-advisories",
+      "tip_commit_id": "019f2247-db75-7432-8e8c-8cabbc9542f1"
     }
   ]
 }
