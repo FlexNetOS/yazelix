@@ -31,8 +31,9 @@ The task must use the live `/home/flexnetos/Downloads/nu_plugin` CodeDB plugin/C
 - [x] A live test loads the first ordered Yazelix config batch into those tables.
 - [x] The app/runtime surface can read or display the loaded rows.
 - [x] Any issue surfaced during loading or visibility is captured as a KB task before implementation.
-- [ ] All identified Yazelix config and settings files are loaded or each exception is documented with a blocking KB task.
+- [x] All identified Yazelix config and settings files are loaded or each exception is documented with a blocking KB task.
 - [x] Verification evidence includes commands, row counts, selected sample rows, and reproduction/export readiness notes.
+- [ ] Blocking remaining-format metadata task [[tasks/codedb-envctl-remaining-config-format-metadata]] is resolved or narrowed into more specific follow-up tasks.
 
 ## Initial Load Order
 
@@ -70,6 +71,12 @@ Start with canonical user/runtime config contracts, then expand outward:
   - Added Yazelix config-family discovery for `settings_default.jsonc`, `config_metadata/`, `configs/`, `nushell/`, `home_manager/`, `packaging/`, `flake.nix`, `flake.lock`, `release_metadata.toml`, and `rust_core/yazelix_zellij_config_pack/`.
   - Added JSONC settings parsing; issue tracked and fixed in [[tasks/codedb-envctl-jsonc-settings-parser]].
   - Filed remaining Nu/KDL structured parser follow-up as [[tasks/codedb-envctl-nu-kdl-config-parsers]].
+- Completed the Nu/KDL structured metadata slice:
+  - `nushell/config/config.nu` now imports as `format = nushell`, `parse_status = ok`.
+  - `configs/zellij/layouts/flexnetos_agent_workspace.kdl` now imports as `format = kdl`, `parse_status = ok`.
+  - The import now emits source-byte reproduction metadata rows with `sha256` and `reproduction_policy = source_bytes_required`.
+- Audited the remaining `not_parsed` config rows after the Nu/KDL upgrade. There are 35 visible config files left in that state, mainly Nix, Lua, terminal `.conf`, Markdown, and `flake.lock` surfaces. Tracked the next blocking parser/metadata slice in [[tasks/codedb-envctl-remaining-config-format-metadata]] before continuing implementation.
+- Kept this parent task active until the remaining-format metadata slice is resolved or split into precise follow-ups.
 
 ## Live Evidence
 
@@ -79,13 +86,13 @@ Commands run on 2026-07-02:
 - `cargo run -q -p envctl -- --json catalog --repo-root /home/flexnetos/FlexNetOS/src/yazelix import`
 - `cargo run -q -p envctl -- --json catalog --repo-root /home/flexnetos/FlexNetOS/src/yazelix render --out /tmp/yazelix-envctl-catalog-render`
 
-Current envctl import result:
+Current envctl import result after Nu/KDL upgrade:
 
 - Tables: 10
-- Rows: 1,509
+- Rows: 1,656
 - Components: 0, because the Yazelix repo is intentionally scanned without an envctl manifest
 - Config files: 58
-- Settings rows: 1,230
+- Settings rows: 1,377
 - Env vars: 44
 - Mutating: false
 
@@ -94,15 +101,16 @@ First ordered batch envctl rows:
 - `settings_default.jsonc`: `file_kind = yazelix_settings_default`, `format = jsonc`, `owner_component = yazelix`, `parse_status = ok`
 - `config_metadata/main_config_contract.toml`: `file_kind = yazelix_config_metadata`, `format = toml`, `owner_component = yazelix`, `parse_status = ok`
 - `config_metadata/yazelix_settings.schema.json`: `file_kind = yazelix_config_metadata`, `format = json`, `owner_component = yazelix`, `parse_status = ok`
-- `nushell/config/config.nu`: `file_kind = yazelix_nushell_config`, `owner_component = yazelix`, `parse_status = not_parsed`
-- `configs/zellij/layouts/flexnetos_agent_workspace.kdl`: `file_kind = yazelix_runtime_config`, `format = kdl`, `owner_component = yazelix`, `parse_status = not_parsed`
+- `nushell/config/config.nu`: `file_kind = yazelix_nushell_config`, `format = nushell`, `owner_component = yazelix`, `parse_status = ok`
+- `configs/zellij/layouts/flexnetos_agent_workspace.kdl`: `file_kind = yazelix_runtime_config`, `format = kdl`, `owner_component = yazelix`, `parse_status = ok`
 
 App/dashboard visibility:
 
 - `envctl catalog render` produced 30 generated files under `/tmp/yazelix-envctl-catalog-render`.
 - The rendered app/dashboard file is `/tmp/yazelix-envctl-catalog-render/dashboard/mission-control.catalog.kdl`.
-- That dashboard was generated from source tables `paths+settings` and includes `pane command="envctl" args="catalog" "scan" "--json" // paths=49 settings=1230`.
+- That dashboard was generated from source tables `paths+settings` and includes 1,426 path+settings rows after the Nu/KDL upgrade.
 - The rendered table `/tmp/yazelix-envctl-catalog-render/catalog/tables/config_files.json` contains the loaded Yazelix config rows.
+- The rendered table `/tmp/yazelix-envctl-catalog-render/catalog/tables/settings.json` contains 1,377 settings/reproduction metadata rows.
 
 Verification gates passed:
 
