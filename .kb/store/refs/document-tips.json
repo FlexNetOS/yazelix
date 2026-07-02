@@ -275,6 +275,11 @@
       "document_id": "019f21f1-0b77-7c53-b9bd-cf7b0ea70bee",
       "slug": "tasks/nu-plugin-codedb-controlled-task-graph",
       "tip_commit_id": "019f21f1-ef54-7343-abc6-236b9b2255ba"
+    },
+    {
+      "document_id": "019f21f2-eca1-79a1-a32e-5e896c8ee31e",
+      "slug": "tasks/nu-plugin-codedb-checklist-evidence-map",
+      "tip_commit_id": "019f21f3-fcd5-7d03-bcaf-5f8b0042d62b"
     }
   ]
 }
