@@ -280,6 +280,11 @@
       "document_id": "019f21f2-eca1-79a1-a32e-5e896c8ee31e",
       "slug": "tasks/nu-plugin-codedb-checklist-evidence-map",
       "tip_commit_id": "019f21f3-fcd5-7d03-bcaf-5f8b0042d62b"
+    },
+    {
+      "document_id": "019f21f4-dc57-7443-9c14-1edc165ebae0",
+      "slug": "tasks/nu-plugin-codedb-final-package-validation",
+      "tip_commit_id": "019f21f8-65a6-70f3-b0bb-34f6b1ff13e3"
     }
   ]
 }
