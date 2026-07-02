@@ -80,6 +80,7 @@ Start with canonical user/runtime config contracts, then expand outward:
 - Completed the remaining-format metadata slice. Live import now reports 58 config files, 2,028 settings rows, and zero `not_parsed` config files.
 - After fixing the Yazelix flake lock CI issue, reran the live import/render proof. The changed `flake.lock` increased settings rows slightly; current live proof is 58 config files, 2,032 settings rows, and zero `not_parsed` config files.
 - Envctl PR #409 CI surfaced a `loop_lib` API drift issue; tracked and fixed in [[tasks/envctl-pr409-loop-lib-api-drift]] with a loop_lib substrate branch/PR and envctl CI materialization update.
+- Envctl PR #409 then surfaced a meta-local-policy failure from fixture-only `~/.local/share/yazelix` paths; tracked and fixed in [[tasks/envctl-pr409-meta-local-policy-fixture-paths]].
 
 ## Live Evidence
 
@@ -129,3 +130,4 @@ Verification gates passed:
 - `cargo check -p envctl-engine` in envctl.
 - `bash ci/gates/meta-substrates.sh` in envctl.
 - `bash ci/gates/agent-env.sh` in envctl.
+- `bash ci/gates/meta-local-policy.sh` in envctl.

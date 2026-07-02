@@ -294,7 +294,7 @@
     {
       "document_id": "019f2211-cf01-7342-b1aa-1f8d7821b1a0",
       "slug": "tasks/codedb-envctl-yazelix-config-ingest",
-      "tip_commit_id": "019f2236-6e1b-7103-b16f-4ba5793693e4"
+      "tip_commit_id": "019f2239-0a00-78f3-b33f-03cc9ad4ba4c"
     },
     {
       "document_id": "019f2213-38f0-7fe3-acae-4068db180490",
@@ -325,6 +325,11 @@
       "document_id": "019f2231-0581-7ed1-bd36-f92ed6b36327",
       "slug": "tasks/envctl-pr409-loop-lib-api-drift",
       "tip_commit_id": "019f2236-6e1b-7103-b16f-4ba5793693e4"
+    },
+    {
+      "document_id": "019f2238-04a2-7683-94c7-65fe00d26805",
+      "slug": "tasks/envctl-pr409-meta-local-policy-fixture-paths",
+      "tip_commit_id": "019f2239-0a00-78f3-b33f-03cc9ad4ba4c"
     }
   ]
 }
