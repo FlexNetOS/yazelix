@@ -230,6 +230,11 @@
       "document_id": "019f21d4-b0f0-7ca3-af56-86524430ee79",
       "slug": "tasks/nu-plugin-codedb-nu-syntax-gate",
       "tip_commit_id": "019f21d6-4528-7051-874a-4ee09e5173bc"
+    },
+    {
+      "document_id": "019f21d6-fee9-7c50-a50a-23fd38b6ea7e",
+      "slug": "tasks/nu-plugin-codedb-no-real-home-registration",
+      "tip_commit_id": "019f21d8-40c8-79b0-9c87-d215101f1cc0"
     }
   ]
 }
