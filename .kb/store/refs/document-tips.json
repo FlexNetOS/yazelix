@@ -105,6 +105,11 @@
       "document_id": "019f216e-e6f6-7952-b93c-bcd3f51138dc",
       "slug": "tasks/nu-plugin-codedb-mcp-server",
       "tip_commit_id": "019f2172-5ab7-7e81-915b-13c8eedadbe7"
+    },
+    {
+      "document_id": "019f2173-94d2-7222-b9ec-fd10e7ccc53c",
+      "slug": "tasks/nu-plugin-codedb-unsafe-build-gate",
+      "tip_commit_id": "019f2176-60bb-7210-bcad-557b3f63f453"
     }
   ]
 }
