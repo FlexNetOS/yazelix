@@ -185,6 +185,11 @@
       "document_id": "019f21b0-dc77-7542-9ff2-ad6d9067f8c0",
       "slug": "tasks/nu-plugin-codedb-release-manifest",
       "tip_commit_id": "019f21b3-7fd8-7c51-8887-7401153badbc"
+    },
+    {
+      "document_id": "019f21b4-8d14-7631-a4ff-001d1593673f",
+      "slug": "tasks/nu-plugin-codedb-handoff-backlog",
+      "tip_commit_id": "019f21b5-f0b2-7cf0-9510-9ebd74ed2b7c"
     }
   ]
 }
