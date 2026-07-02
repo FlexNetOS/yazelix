@@ -74,6 +74,7 @@ The failing PR audit output named:
   - rendered tables: `config_files.json` has 58 rows, `settings.json` has 2032 rows
 - Additional checks passed:
   - envctl `cargo fmt --check`
+  - envctl `cargo clippy --workspace -- -D warnings`
   - envctl `cargo check -p envctl-gui`
   - envctl `cargo test -p envctl-engine catalog::tests`
   - envctl `bash ci/gates/meta-local-policy.sh`
@@ -84,6 +85,7 @@ The failing PR audit output named:
 
 - loop_lib commit: `1dbef01ca2b80faad71650993728e09827f7c22e`
 - envctl commit: `9dac17b5bb633069766d0695d75cca699c64b547`
+- envctl clippy follow-up commit: `3a2ddb137331b9280b5d625d7b2fad3dfc30f0cd`
 - GitHub PRs updated:
   - loop_lib PR 9 branch `codex/envctl-runner-command-builder`
   - envctl PR 409 branch `codex/codedb-yazelix-config-catalog`
