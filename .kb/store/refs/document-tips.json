@@ -170,6 +170,11 @@
       "document_id": "019f21a8-8059-72f2-951f-816e3a3137e4",
       "slug": "tasks/nu-plugin-codedb-no-mutation-tests",
       "tip_commit_id": "019f21aa-46f5-7273-b4e3-333c932dcada"
+    },
+    {
+      "document_id": "019f21aa-a992-70b1-beeb-3732a47f7098",
+      "slug": "tasks/nu-plugin-codedb-unsafe-capture-tests",
+      "tip_commit_id": "019f21ac-09a0-7b03-9c9e-ce49f3d6a5c0"
     }
   ]
 }
