@@ -36,9 +36,8 @@ let
   install_check = import ./install_check.nix { inherit pkgs; };
   flexnetos_foundation_claude = pkgs."claude-code";
   flexnetos_foundation_codex = import ./codex_cli_release.nix {
-    inherit pkgs;
+    inherit pkgs system;
     version = "0.143.0-alpha.35";
-    sha256 = "sha256-YOG+oQa4EHj1qXVMbyHKqIEGMIUyniRhMqGrnqJBpCc=";
   };
   flexnetos_foundation_git_kb = import ./git_kb_local_binary.nix {
     inherit pkgs;
