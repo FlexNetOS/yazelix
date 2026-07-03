@@ -178,6 +178,8 @@
           skipStableWrapperRedirect ? false,
           components ? { },
           extraRuntimePackages ? agentUsagePackages system,
+          extraRuntimeCommands ? [ ],
+          exportedBinCommands ? [ ],
           yaziAssets ? yazelixYaziAssets.packages.${system}.yazelix_yazi_assets,
           yazelixHelixPackage ? kgpPackages.helixPackage system,
           yazelixCursorsPackage ? yazelixCursors.packages.${system}.yazelix_cursors,
@@ -194,6 +196,7 @@
             inherit runtimeIdentity;
             inherit name runtimeName skipStableWrapperRedirect marsTerminalPackage;
             inherit yazelixHelixPackage yazelixCursorsPackage;
+            inherit extraRuntimeCommands exportedBinCommands;
             pkgs = runtimePkgs;
             enableZellijKittyPassthrough =
               enableZellijKittyPassthrough || terminalNeedsKittyPassthrough runtimeVariant;
@@ -302,6 +305,7 @@
         in
         import ./packaging/flake_outputs.nix {
           inherit agentUsagePackages beadsRustPackage kgpPackages;
+          mkYazelix = mkYazelix system;
           inherit pkgs runtimePackage system yazelixPackage;
           inherit yazelixCursors yazelixScreen yazelixYaziAssets;
           inherit yazelixZellijBar yazelixZellijPaneOrchestrator;
