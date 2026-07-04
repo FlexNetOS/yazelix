@@ -46,6 +46,9 @@ let
   flexnetos_foundation_rtk = import ./rtk_local_binary.nix {
     inherit pkgs;
   };
+  flexnetos_foundation_ccboard = import ./ccboard_local_binary.nix {
+    inherit pkgs;
+  };
   yazelix_flexnetos_foundation = mkYazelix {
     inherit pkgs;
     runtimeVariant = "mars";
@@ -56,23 +59,27 @@ let
       flexnetos_foundation_codex
       flexnetos_foundation_git_kb
       flexnetos_foundation_rtk
+      flexnetos_foundation_ccboard
     ];
     extraRuntimeCommands = [
       "claude"
       "codex"
       "git-kb"
       "rtk"
+      "ccboard"
     ];
     exportedBinCommands = [
       "claude"
       "codex"
       "git-kb"
       "rtk"
+      "ccboard"
     ];
   };
   packages =
     {
       br = beads_rust;
+      ccboard = flexnetos_foundation_ccboard;
       claude = flexnetos_foundation_claude;
       codex = flexnetos_foundation_codex;
       git_kb = flexnetos_foundation_git_kb;
