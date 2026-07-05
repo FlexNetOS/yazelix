@@ -178,7 +178,7 @@
           skipStableWrapperRedirect ? false,
           components ? { },
           extraRuntimePackages ? agentUsagePackages system,
-          extraRuntimeCommands ? [ ],
+          extraRuntimeCommands ? [ "tu" ],
           exportedBinCommands ? [ ],
           yaziAssets ? yazelixYaziAssets.packages.${system}.yazelix_yazi_assets,
           yazelixHelixPackage ? kgpPackages.helixPackage system,
@@ -349,6 +349,10 @@
           runtime_release_contracts = import ./packaging/runtime_release_contracts.nix {
             inherit pkgs;
             runtime = outputs.packages.runtime_mars;
+          };
+          flexnetos_foundation_runtime_release_contracts = import ./packaging/runtime_release_contracts.nix {
+            inherit pkgs;
+            runtime = outputs.packages.yazelix_flexnetos_foundation;
           };
         }
       );

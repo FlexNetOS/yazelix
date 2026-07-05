@@ -58,6 +58,7 @@ let
       flexnetos_foundation_rtk
     ];
     extraRuntimeCommands = [
+      "tu"
       "claude"
       "codex"
       "git-kb"

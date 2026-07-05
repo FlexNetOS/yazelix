@@ -236,6 +236,18 @@ pkgs.runCommand name { } ''
     fi
   done
 
+  if [ -e "$out/libexec/yazelix_zellij_bar_widget" ]; then
+    yazelix_zellij_bar_widget_target="$(readlink "$out/libexec/yazelix_zellij_bar_widget")"
+    rm -f "$out/libexec/yazelix_zellij_bar_widget"
+    cat > "$out/libexec/yazelix_zellij_bar_widget" <<EOF
+#!/bin/sh
+PATH="$out/toolbin:$out/bin:\$PATH"
+export PATH
+exec "$yazelix_zellij_bar_widget_target" "\$@"
+EOF
+    chmod +x "$out/libexec/yazelix_zellij_bar_widget"
+  fi
+
   link_runtime_command_alias() {
     source_name="$1"
     alias_name="$2"
