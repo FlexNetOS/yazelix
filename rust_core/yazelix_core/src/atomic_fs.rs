@@ -1,3 +1,4 @@
+// Test lane: maintainer
 use crate::bridge::{CoreError, ErrorClass};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -146,6 +147,7 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
 
     #[cfg(unix)]
+    // Regression: unchanged generated files do not require write access to their parent directory.
     #[test]
     fn skips_matching_content_in_read_only_directory() {
         let dir = tempfile::tempdir().unwrap();
@@ -161,6 +163,7 @@ mod tests {
     }
 
     #[cfg(unix)]
+    // Regression: changed generated files still report read-only runtime output as an error.
     #[test]
     fn still_errors_when_read_only_directory_needs_rewrite() {
         let dir = tempfile::tempdir().unwrap();

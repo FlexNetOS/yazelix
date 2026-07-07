@@ -211,6 +211,9 @@ pkgs.runCommand name { } ''
   done
   link_runtime_input "${yaziAssetsRoot}/flavors" "configs/yazi/flavors"
   link_runtime_input "${yaziAssetsRoot}/yazelix_starship.toml" "configs/yazi/yazelix_starship.toml"
+  if [ -d "${yaziAssetsRoot}/runtime_tools" ]; then
+    link_runtime_input "${yaziAssetsRoot}/runtime_tools" "runtime_tools"
+  fi
   for yazi_plugin in auto-layout.yazi git.yazi lazygit.yazi smart-tabs.yazi starship.yazi; do
     link_runtime_input "${yaziAssetsRoot}/plugins/$yazi_plugin" "configs/yazi/plugins/$yazi_plugin"
   done
@@ -235,6 +238,15 @@ pkgs.runCommand name { } ''
       done
     fi
   done
+  if [ -d "$out/runtime_tools" ]; then
+    for bin_dir in "$out/runtime_tools"/*/bin; do
+      [ -d "$bin_dir" ] || continue
+      for entry in "$bin_dir"/*; do
+        [ -e "$entry" ] || continue
+        replace_runtime_link "$entry" "libexec/$(basename "$entry")"
+      done
+    done
+  fi
 
   if [ -e "$out/libexec/yazelix_zellij_bar_widget" ]; then
     yazelix_zellij_bar_widget_target="$(readlink "$out/libexec/yazelix_zellij_bar_widget")"

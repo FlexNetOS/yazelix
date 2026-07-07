@@ -11,49 +11,105 @@ inputs under `~/.config/yazelix` or package inputs under this repository.
 | --- | --- |
 | Active frontdoor | `/home/flexnetos/.nix-profile/bin/yzx` |
 | Nix profile element | `nix profile list --json` shows active `lifeos_foundation_yzx` from `path:/home/flexnetos/FlexNetOS/src/yazelix`. |
-| Profile target | `/home/flexnetos/.nix-profile/bin/yzx` resolves to `/nix/store/wlnwxa5rncylgylqfvjy32fwzvblyvvf-lifeos-foundation-yzx/bin/yzx`. |
-| Runtime identity | clean-env `yzx status` reports runtime dir `/nix/store/wlnwxa5rncylgylqfvjy32fwzvblyvvf-lifeos-foundation-yzx`; `yzx --version-full` reports `v17.9` and `yazelix_yazi_assets` revision `471073d54d4a6c9fa9e87f26134d6db3f387977e`. |
-| Current shell caveat | Existing Codex process still inherited older `/nix/store/v1n4m95v55krbji6mhxc40n5y9fnl4b2-yazelix-flexnetos-foundation` environment entries; clean profile-launched `yzx run` resolves `yzx`, `codex`, and `claude` through `.nix-profile` first. |
+| Profile target | `/home/flexnetos/.nix-profile/bin/yzx` resolves to `/nix/store/20p5djw21m3lji2sr2chvdyd36ngmj4m-lifeos-foundation-yzx/bin/yzx`. |
+| Runtime identity | clean-env `yzx status` reports runtime dir `/nix/store/20p5djw21m3lji2sr2chvdyd36ngmj4m-lifeos-foundation-yzx`; `yzx --version-full` reports `v17.9` and `yazelix_yazi_assets` revision `471073d54d4a6c9fa9e87f26134d6db3f387977e`. |
+| Current shell caveat | Existing long-lived shells may still have old Yazelix store paths in inherited `PATH`; clean profile probes resolve `yzx`, `codex`, `claude`, `rtk`, and `git-kb` through `.nix-profile`. |
 | Generated runtime | `yzx status` reports `Status up to date`, `Repair needed no`. |
 | Health gate | `/home/flexnetos/.nix-profile/bin/yzx doctor` passes. |
 | Desktop entry | `com.yazelix.Yazelix.Mars.desktop` uses `Exec="/home/flexnetos/.nix-profile/bin/yzx" desktop launch`. |
 | Agent desktop entry | `com.flexnetos.Yazelix.Agent.desktop` uses `YAZELIX_LAYOUT_OVERRIDE="/home/flexnetos/.nix-profile/configs/zellij/layouts/flexnetos_agent_workspace.kdl"` with profile `yzx`. |
-| Claude URL handler | `claude-code-url-handler.desktop` uses `Exec="/home/flexnetos/.nix-profile/bin/claude" --handle-uri %u`. |
+| Claude URL handler | `claude-code-url-handler.desktop` uses `Exec="/home/flexnetos/.nix-profile/bin/claude" --handle-uri %u`; clean profile `claude --version` reports `2.1.202 (Claude Code)`. |
 | Stale local wrapper | `~/.local/bin` contains only `archive`; no `~/.local/bin/yzx` shadow. |
-| Menu visual capture | Bounded `yzx menu` capture wrote only terminal alternate-screen/control sequences, so visual gray-cell acceptance still needs a live fresh desktop/session check. |
-| Source target | `.#lifeos_foundation_yzx` exists and builds `/nix/store/16ahwljhhyf00gllip06xrcprd8xzp66-lifeos-foundation-yzx`; `.#yazelix_flexnetos_foundation` is no longer exposed in the current worktree after the profile migration. |
+| Menu/status visual capture | PTY `yzx config ui` capture reached the `status_bar` tab and showed `zellij.widget_tray` current `[9 items]` with workspace, Claude, Codex, CPU, and RAM available; generated layout and direct widget probes cover the repaired cells. A live desktop/Zellij visual pass remains the human acceptance check. |
+| Source target | `.#lifeos_foundation_yzx` builds `/nix/store/xxmpnb3w6k12qwsyv7wdc7qmx1g3sb3f-lifeos-foundation-yzx`; `.#yazelix_flexnetos_foundation` is no longer exposed in the current worktree after the profile migration. |
 | Beads tracking | `yazelix-xig9o` tracks the LifeOS foundation `yzx` ownership migration. |
 
 ## Repair Ledger
 
 | component | desired_owner | current_owner | source_repo_or_package | nix_attr | exported_bin | runtime_probe | yzx_menu_cell | current_state | required_action | proof |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| yzx frontdoor | Nix profile package | Nix profile package | `src/yazelix` | `lifeos_foundation_yzx` | `yzx` | `yzx status` | n/a | Runtime healthy; profile attr migrated | Keep profile path as active frontdoor; do not restore user-local wrapper | `nix profile list --json` shows active `lifeos_foundation_yzx`; `readlink -f /home/flexnetos/.nix-profile/bin/yzx` -> `...wln.../bin/yzx` |
+| yzx frontdoor | Nix profile package | Nix profile package | `src/yazelix` | `lifeos_foundation_yzx` | `yzx` | `yzx status` | n/a | Runtime healthy; profile attr migrated | Keep profile path as active frontdoor; do not restore user-local wrapper | `nix profile list --json` shows active `lifeos_foundation_yzx`; `readlink -f /home/flexnetos/.nix-profile/bin/yzx` -> `/nix/store/20p5djw21m3lji2sr2chvdyd36ngmj4m-lifeos-foundation-yzx/bin/yzx` |
 | foundation name | LifeOS-owned `lifeos-foundation-yzx` target | Source and profile use LifeOS package target | `src/yazelix` | `lifeos_foundation_yzx` | n/a | `nix build .#lifeos_foundation_yzx` | n/a | Migrated | Keep the old FlexNetOS foundation attr out unless a future compatibility owner requires it | `packaging/flake_outputs.nix` defines `lifeos_foundation_yzx` with `name = "lifeos-foundation-yzx"` |
 | RTK | Upstream RTK 0.43.0 | Upstream RTK release package in foundation | `github:rtk-ai/rtk/v0.43.0` via `packaging/rtk_release.nix` | foundation extra runtime package | `rtk` | `rtk --version` | agent wrapper | Repaired | Do not route foundation through `src/rtk-tokenkill` unless a real FlexNetOS delta is required | `/home/flexnetos/.nix-profile/bin/rtk --version` -> `rtk 0.43.0` |
 | rtk-tokenkill fork | None unless delta exists | Separate dirty-history fork, not active foundation owner | `src/rtk-tokenkill` | none | none | `git rev-list upstream_tmp/v0.43.0...HEAD` | n/a | Not in sync; not needed for current foundation | Either archive/remove from foundation scope or rebase/sync only if a required delta is proven | fork comparison showed `3 49` divergence |
 | Codex | Yazelix profile package plus RTK wrapper policy | Profile toolbin | foundation package | `lifeos_foundation_yzx` | `codex` | `yazelix_zellij_bar_widget codex ...` | `codex_usage` | Working | Keep `codex` wrapped by `rtk codex` in generated shell/session policy | clean `yzx run` resolves `/home/flexnetos/.nix-profile/bin/codex` before runtime-local tool paths |
-| Claude | Yazelix profile package | Profile toolbin | nixpkgs `claude-code` with allow-unfree predicate | `lifeos_foundation_yzx` | `claude` | `yazelix_zellij_bar_widget claude ...` | `claude_usage` | Working | Keep unfree allow predicate scoped to `claude-code` | clean `yzx run` resolves `/home/flexnetos/.nix-profile/bin/claude` before runtime-local tool paths |
+| Claude | Yazelix profile package | Profile toolbin | `packaging/claude_code_release.nix` overriding `claude-code` to 2.1.202 | `lifeos_foundation_yzx` | `claude` | `yazelix_zellij_bar_widget claude ...` | `claude_usage` | Working; upgraded to latest known release | Keep unfree allow predicate scoped to `claude-code` and keep URL handler on profile wrapper | clean profile `claude --version` -> `2.1.202 (Claude Code)`; direct widget probe returned `claude 5h|16.4M|97% wk|16.4M|98%` |
 | Codex/Claude runtime PATH | Nix profile frontdoors first | Installed profile runtime orders profile bins before runtime toolbin/bin and removes stale Yazelix store PATH entries | `rust_core/yazelix_core/src/runtime_env.rs` | `lifeos_foundation_yzx` | `yzx`, `codex`, `claude` | `yzx run command -v ...` | n/a | Repaired for fresh profile-launched sessions | Keep `.nix-profile/bin` first and treat inherited older Yazelix store paths as stale shadows; already-open sessions still need a fresh launch | focused `runtime_env` cargo tests pass; clean profile `yzx run` resolves all three through `.nix-profile/bin` first |
-| Claude URL handler | Nix profile `claude` wrapper | User-local desktop handler | `~/.local/share/applications/claude-code-url-handler.desktop` | n/a | `claude` | `xdg-mime query default x-scheme-handler/claude-cli` | n/a | Repaired local handler | Keep profile `Exec`; if a profile-owned desktop handler appears later, migrate away from user-local copy instead of pinning a store private binary | `Exec="/home/flexnetos/.nix-profile/bin/claude" --handle-uri %u` |
-| OpenCode | Undecided full-install package and data owner | Missing from PATH/profile; no usage DB | nixpkgs has `opencode` candidate, not currently included | none | missing | `command -v opencode` | removed from active tray | Disabled to avoid gray/empty cell | Decide whether foundation should package `opencode` and how to own `/home/flexnetos/.local/share/opencode/opencode.db`; re-enable tray only after real probe passes | Pure profile PATH reports `opencode` missing; `~/.config/yazelix/settings.jsonc` tray no longer contains `opencode_go_usage`; generated provider flag is false |
+| Claude URL handler | Nix profile `claude` wrapper | User-local desktop handler | `~/.local/share/applications/claude-code-url-handler.desktop` | n/a | `claude` | `xdg-mime query default x-scheme-handler/claude-cli` | n/a | Repaired local handler | Keep profile `Exec`; if a profile-owned desktop handler appears later, migrate away from user-local copy instead of pinning a store private binary | `Exec="/home/flexnetos/.nix-profile/bin/claude" --handle-uri %u`; MIME default is `claude-code-url-handler.desktop` |
+| OpenCode | Not active foundation until binary and data owner are defined | Missing from PATH/profile; no usage DB | nixpkgs has `opencode` candidate, not currently included | none | missing | `command -v opencode` | removed from active tray | Intentionally disabled to avoid gray/empty cell | Do not re-enable tray unless foundation owns `opencode` and `/home/flexnetos/.local/share/opencode/opencode.db` | Pure profile PATH reports `opencode` missing; `~/.config/yazelix/settings.jsonc` tray excludes `opencode_go_usage`; generated provider flag is false; direct widget probe returns empty |
 | CPU widget | Yazelix generated bar widget | Profile runtime | `yazelix_zellij_bar_widget` | foundation runtime | libexec widget | returns `cpu <percent>` | `cpu` | Working | Keep enabled in active tray | direct widget probe exited 0 |
 | RAM widget | Yazelix generated bar widget | Profile runtime | `yazelix_zellij_bar_widget` | foundation runtime | libexec widget | returns `ram <percent>` | `ram` | Working | Keep enabled in active tray | direct widget probe exited 0 |
 | Workspace cell | Yazelix pane orchestrator/status bar | Profile generated Zellij config | `src/yazelix` | foundation runtime | generated config/plugin | layout contains `{pipe_workspace}` | `workspace` | Enabled | Verify visually after relaunch; do not edit generated layouts by hand | active config tray includes `workspace` |
-| Yazi assets/plugins | Child asset repo consumed by Yazelix package | Yazelix flake input | `src/yazelix-yazi-assets` | `yazelixYaziAssets` input | generated plugin tree | plugin files in profile runtime | n/a | Repaired | Keep child input pinned to published commit with smart tabs | profile plugins include `smart-tabs.yazi` |
+| Yazi assets/plugins | Child asset repo consumed by Yazelix package | Yazelix flake input plus generated runtime output | `src/yazelix-yazi-assets` | `yazelixYaziAssets` input | generated plugin tree | plugin/flavor files under `~/.local/share/yazelix/configs/yazi` | n/a | Repaired | Keep child input pinned to published commit with smart tabs; use generated runtime only as proof | `yzx --version-full` reports yazi assets `471073d`; generated runtime includes `smart-tabs.yazi/main.lua` and 24 flavors |
 | git-kb | Profile package | Profile toolbin | GitKB release packaging | foundation extra runtime package | `git-kb` | `git-kb --version` | n/a | Working | Keep release package, not local binary shim | `/home/flexnetos/.nix-profile/bin/git-kb --version` -> `git-kb 0.2.12` |
-| bun | Needs ownership decision | FlexNetOS usr/bin | `/home/flexnetos/FlexNetOS/usr/bin/bun` | none in foundation | not profile exported | `command -v bun` | n/a | Present outside profile only | Decide whether yzx foundation should export or intentionally delegate to FlexNetOS usr/bin | Pure profile PATH reports missing; workspace PATH resolves to `.../FlexNetOS/usr/bin/bun` |
-| bunx | Needs ownership decision | FlexNetOS usr/bin | `/home/flexnetos/FlexNetOS/usr/bin/bunx` | none in foundation | not profile exported | `command -v bunx` | n/a | Present outside profile only | Same as bun | Pure profile PATH reports missing; workspace PATH resolves to `.../FlexNetOS/usr/bin/bunx` |
-| kache | Needs ownership decision | FlexNetOS usr/bin | `/home/flexnetos/FlexNetOS/usr/bin/kache` | none in foundation | not profile exported | `command -v kache` | n/a | Present outside profile only | Decide profile vs workspace ownership | Pure profile PATH reports missing; workspace PATH resolves to `.../FlexNetOS/usr/bin/kache` |
-| wild linker | Needs ownership decision | FlexNetOS usr/bin | `/home/flexnetos/FlexNetOS/usr/bin/wild` | none in foundation | not profile exported | `command -v wild` | n/a | Present outside profile only | Decide profile vs workspace ownership | Pure profile PATH reports missing; workspace PATH resolves to `.../FlexNetOS/usr/bin/wild` |
-| meta | Needs ownership decision | FlexNetOS usr/bin | `/home/flexnetos/FlexNetOS/usr/bin/meta` | none in foundation | not profile exported | `command -v meta` | n/a | Present outside profile only | Decide whether foundation owns Meta CLI or delegates to workspace root | Pure profile PATH reports missing; workspace PATH resolves to `.../FlexNetOS/usr/bin/meta` |
-| vue | Needs install decision | Missing | nixpkgs or npm/bun package candidate | none | missing | `command -v vue` | n/a | Missing | Decide whether full install needs Vue CLI, Vue language server, or project-local tooling only | `command -v vue` missing |
-| vite | Needs install decision | Missing | nixpkgs/npm/bun package candidate | none | missing | `command -v vite` | n/a | Missing | Decide profile export vs project-local dev dependency | `command -v vite` missing |
-| tauri | Needs install decision | Missing | nixpkgs/Rust crate candidate | none | missing | `command -v tauri` | n/a | Missing | Decide whether foundation should export `tauri-cli` | `command -v tauri` missing |
-| wasmEdge | Needs install decision | Missing | WasmEdge package candidate | none | missing | `command -v wasmEdge` and `command -v wasmedge` | n/a | Missing | Decide casing/package and profile export if required by LifeOS/Yazelix workflows | both commands missing |
+| bun | LifeOS/FlexNetOS workspace toolchain | FlexNetOS usr/bin | `/home/flexnetos/FlexNetOS/usr/bin/bun` | none in foundation | not profile exported | `bun --version` | n/a | Present outside profile by design | Keep out of `yzx` profile unless Yazelix itself needs to own JS package management; LifeOS scripts call `bun` through workspace toolchain | pure profile PATH reports missing; workspace PATH resolves `bun` -> `1.3.14`; LifeOS AGENTS says use bun for JS |
+| bunx | LifeOS/FlexNetOS workspace toolchain | FlexNetOS usr/bin | `/home/flexnetos/FlexNetOS/usr/bin/bunx` | none in foundation | not profile exported | `bunx --version` | n/a | Present outside profile by design | Same as bun | pure profile PATH reports missing; workspace PATH resolves `bunx` -> `1.3.14` |
+| kache | FlexNetOS workspace/control-plane toolchain | FlexNetOS usr/bin | `/home/flexnetos/FlexNetOS/usr/bin/kache` via envctl/meta | none in foundation | not profile exported | `kache --version` | n/a | Present outside profile by design | Keep meta/envctl ownership; do not recreate user-local shims or add to `yzx` profile | pure profile PATH reports missing; workspace PATH resolves `kache` -> `0.8.0`; local workaround proof says active frontdoors are meta-owned under `/home/flexnetos/FlexNetOS/usr/bin` |
+| wild linker | FlexNetOS workspace/control-plane toolchain | FlexNetOS usr/bin | `/home/flexnetos/FlexNetOS/usr/bin/wild` via envctl/meta | none in foundation | not profile exported | `wild --version` | n/a | Present outside profile by design | Keep meta/envctl ownership; no `ld.wild` shim unless owner defines it | pure profile PATH reports missing; workspace PATH resolves `wild` -> `0.9.0`; `ld.wild` remains missing |
+| meta | FlexNetOS workspace control plane | FlexNetOS usr/bin | `/home/flexnetos/FlexNetOS/usr/bin/meta` | none in foundation | not profile exported | `meta --version` | n/a | Present outside profile by design | Keep workspace root control-plane ownership; do not make Yazelix profile own Meta CLI without a package contract | pure profile PATH reports missing; workspace PATH resolves `meta` -> `0.2.22`; `WORKSPACE_LAYOUT.md` defines `META_ROOT` as `src/meta` |
+| vue | LifeOS project-local dependency | Missing as global command | `src/lifeos/package.json` dependency | none | missing | `bun run build` path, not `command -v vue` | n/a | Not a global profile export | Keep as LifeOS dependency, not `yzx` foundation export; project uses `vue-tsc` and Vite scripts | package.json lists `vue` and build scripts; `command -v vue` missing is expected |
+| vite | LifeOS project-local dependency | Missing as global command | `src/lifeos/package.json` devDependency | none | missing | `bun run dev` / `bun run build` | n/a | Not a global profile export | Keep project-local; run through Bun scripts | package.json `dev` is `vite`, `build` runs `vite build`; `tauri.conf.json` calls `bun run dev/build` |
+| tauri | LifeOS project-local CLI | Missing as global command | `src/lifeos/package.json` devDependency `@tauri-apps/cli` | none | missing | `bun run tauri:*` | n/a | Not a global profile export | Keep project-local unless native installer workflow requires a profile-owned host CLI | package.json defines `tauri`, `tauri:dev`, and `tauri:build` scripts |
+| wasmEdge | No active Yazelix/LifeOS foundation owner | Missing | research-only mentions outside active foundation docs | none | missing | `command -v wasmEdge` and `command -v wasmedge` | n/a | Not part of current foundation | Leave out of `yzx` profile until an owning workflow/package requires it | repo search found only current ledger/worklog plus `meta-ruvector` research examples; no active Yazelix/LifeOS consumer |
 | built-in Yazelix tools | Yazelix profile runtime | Profile/runtime closure | `src/yazelix` runtime package list | foundation runtime | mostly not top-level exports | `yzx doctor` | n/a | Healthy | Do not widen profile exports without explicit owner decision | doctor reports runtime healthy; optional `mise` and `tombi` host tools unavailable only |
 
 ## Validation Already Run
+
+### 2026-07-07 Final Profile Repair and Claude 2.1.202
+
+```text
+env -u FLEXNETOS_GIT_KB_PATH -u FLEXNETOS_RTK_PATH -u NIXPKGS_ALLOW_UNFREE nix build --accept-flake-config --no-write-lock-file .#lifeos_foundation_yzx --no-link --print-out-paths --log-format raw
+-> /nix/store/xxmpnb3w6k12qwsyv7wdc7qmx1g3sb3f-lifeos-foundation-yzx
+
+env -u FLEXNETOS_GIT_KB_PATH -u FLEXNETOS_RTK_PATH -u NIXPKGS_ALLOW_UNFREE nix build --accept-flake-config --no-write-lock-file .#checks.x86_64-linux.lifeos_foundation_yzx_runtime_release_contracts --no-link --print-out-paths --log-format raw
+-> /nix/store/2wvb76r3w06h5li73id0g35h27864yd5-yazelix-runtime-release-contracts
+
+env -u FLEXNETOS_GIT_KB_PATH -u FLEXNETOS_RTK_PATH -u NIXPKGS_ALLOW_UNFREE nix build --accept-flake-config --no-write-lock-file .#claude --no-link --print-out-paths --log-format raw
+-> /nix/store/fha66lcq86lkj8qf1dl6vign6cw7a93c-claude-code-2.1.202
+
+/home/flexnetos/.nix-profile/bin/yzx update upstream
+-> ✅ Yazelix profile updated.
+
+/home/flexnetos/.nix-profile/bin/yzx doctor --fix
+-> Generated runtime state repaired.
+
+/home/flexnetos/.nix-profile/bin/yzx desktop install
+-> Installed Yazelix desktop entry: /home/flexnetos/.local/share/applications/com.yazelix.Yazelix.Mars.desktop
+
+readlink -f /home/flexnetos/.nix-profile/bin/yzx
+-> /nix/store/20p5djw21m3lji2sr2chvdyd36ngmj4m-lifeos-foundation-yzx/bin/yzx
+
+/home/flexnetos/.nix-profile/bin/yzx status
+-> Generated Runtime State: Status up to date; Repair needed no
+
+/home/flexnetos/.nix-profile/bin/yzx doctor
+-> All checks passed.
+
+TERM=xterm-256color YAZELIX_ZELLIJ_SESSION_NAME=codex_visual_proof_20260707 YAZELIX_LAYOUT_OVERRIDE=/home/flexnetos/.nix-profile/configs/zellij/layouts/flexnetos_agent_workspace.kdl YAZELIX_STARTUP_PROFILE_SKIP_WELCOME=1 /home/flexnetos/.nix-profile/bin/yzx enter --home --setup-only --with core.skip_welcome_screen=true
+-> Generated 6 shell initializers; Setup complete; optional tools not found: atuin, mise.
+```
+
+Permission-regression checks:
+
+```text
+nix develop --accept-flake-config .#ci -c cargo test --manifest-path rust_core/Cargo.toml -p yazelix_core readonly -- --nocapture
+-> initializer, Zellij, config override, and Yazi readonly repair tests passed.
+
+nix develop --accept-flake-config .#ci -c cargo fmt --manifest-path rust_core/Cargo.toml --all -- --check
+-> passed
+
+nix develop --accept-flake-config .#ci -c cargo test --manifest-path rust_core/Cargo.toml -p yazelix_core widget_tray_picker_marks_host_selected_status_widgets_checked -- --nocapture
+-> 1 passed; host-selected workspace, Claude, CPU, and RAM tray values render checked while OpenCode remains unchecked.
+```
+
+Clean profile versions:
+
+```text
+claude=2.1.202 (Claude Code)
+codex=codex-cli 0.143.0-alpha.35
+rtk=rtk 0.43.0
+git-kb=git-kb 0.2.12
+```
 
 ### 2026-07-07 Codex Profile Path Repair
 
@@ -75,14 +131,15 @@ env -i HOME=/home/flexnetos USER=flexnetos LOGNAME=flexnetos SHELL=/bin/sh TERM=
 
 The clean profile runtime proof resolves `yzx`, `codex`, and `claude` through
 `/home/flexnetos/.nix-profile/bin` before runtime-local tool paths. The
-already-open Codex shell still carries stale `v1n4...-yazelix-flexnetos-foundation`
-environment entries from its launch-time session; treat those as inherited
-session state, not as the active owner for fresh launches.
+already-open Codex shell still carries stale
+`fqzbpni171j0q86gbgirgj49npq7fzbq-yazelix-flexnetos-foundation` environment
+entries from its launch-time session; treat those as inherited session state,
+not as the active owner for fresh launches.
 
 ```text
 env -u FLEXNETOS_GIT_KB_PATH -u FLEXNETOS_RTK_PATH -u NIXPKGS_ALLOW_UNFREE nix build --accept-flake-config .#lifeos_foundation_yzx --no-link --print-out-paths --log-format raw
 env -u FLEXNETOS_GIT_KB_PATH -u FLEXNETOS_RTK_PATH -u NIXPKGS_ALLOW_UNFREE nix build --accept-flake-config .#checks.x86_64-linux.lifeos_foundation_yzx_runtime_release_contracts --no-link --print-out-paths --log-format raw
-nix develop --accept-flake-config ..#ci -c cargo fmt --check
+nix develop --accept-flake-config .#ci -c cargo fmt --manifest-path rust_core/Cargo.toml --all -- --check
 cargo test -p yazelix_core resolves_rtk_for_codex_agent
 cargo test -p yazelix_core codex_without_rtk_is_rejected
 cargo test -p yazelix_zellij_config_pack wraps_direct_codex_right_sidebar_with_rtk
@@ -134,11 +191,16 @@ Known repaired state as of 2026-07-07:
   lifeos_foundation_yzx_runtime_release_contracts and require smart-tabs.yazi.
 - Profile update through /home/flexnetos/.nix-profile/bin/yzx update upstream succeeded.
 - nix profile list --json shows active lifeos_foundation_yzx from path:/home/flexnetos/FlexNetOS/src/yazelix.
+- readlink -f /home/flexnetos/.nix-profile/bin/yzx reports /nix/store/20p5djw21m3lji2sr2chvdyd36ngmj4m-lifeos-foundation-yzx/bin/yzx.
 - yzx --version-full reports v17.9 and yazi assets revision 471073d54d4a6c9fa9e87f26134d6db3f387977e.
+- clean profile claude --version reports 2.1.202 (Claude Code).
 - Profile RTK is upstream rtk 0.43.0.
 - Profile git-kb is 0.2.12.
 - yzx doctor passes after doctor --fix.
+- yzx enter --home --setup-only --with core.skip_welcome_screen=true succeeds
+  after generated initializer and session override permission repair.
 - desktop install was rerun after config updates.
+- claude-code-url-handler.desktop uses /home/flexnetos/.nix-profile/bin/claude.
 - Source now defines .#lifeos_foundation_yzx with derivation/runtime names
   lifeos-foundation-yzx and lifeos-foundation-yzx-runtime.
 - Mars desktop Exec uses /home/flexnetos/.nix-profile/bin/yzx desktop launch.
@@ -148,25 +210,24 @@ Known repaired state as of 2026-07-07:
 - OpenCode usage is intentionally removed from the active tray because opencode is missing and ~/.local/share/opencode/opencode.db is absent.
 - Current running Codex shell may still have an old store path ahead of .nix-profile; treat that as inherited session state and verify fresh-shell PATH before changing packages.
 
-Finish the remaining ownership decisions:
-1. Verify .#lifeos_foundation_yzx builds and its store path is named
-   lifeos-foundation-yzx. Do not re-add the old
-   yazelix_flexnetos_foundation attr unless a future compatibility owner
+Resolved ownership decisions:
+1. Keep the active profile target on lifeos_foundation_yzx. Do not re-add the
+   old yazelix_flexnetos_foundation attr unless a future compatibility owner
    proves it is still required.
-2. Decide whether rtk-tokenkill is needed at all. Current foundation uses
-   upstream RTK 0.43.0 directly. If no FlexNetOS delta is proven, keep
-   rtk-tokenkill out of the active foundation path.
-3. Decide full-install ownership for bun, bunx, kache, wild, meta, vue, vite,
-   tauri, wasmEdge/wasmedge, and opencode. Current state:
-   - pure profile PATH exports only yzx, codex, claude, rtk, and git-kb from the required list.
-   - bun, bunx, kache, wild, meta resolve only when /home/flexnetos/FlexNetOS/usr/bin is on PATH.
-   - vue, vite, tauri, wasmEdge/wasmedge, opencode are missing from both the pure profile and workspace PATH probes.
-   - Do not add exports just to make a checklist green. Add a profile package
-     only when Yazelix or LifeOS should actually own it.
-4. If OpenCode is made part of the foundation, package the binary and define
-   the data owner for /home/flexnetos/.local/share/opencode/opencode.db before
-   re-enabling zellij.widget_tray opencode_go_usage.
-5. Keep Yazi assets pinned to the published child commit that includes
+2. Keep the active foundation on upstream RTK 0.43.0. The rtk-tokenkill fork is
+   not in sync with upstream v0.43.0 and is not part of the active foundation
+   path unless a real FlexNetOS delta is later proven.
+3. Keep bun and bunx as LifeOS/FlexNetOS workspace toolchain commands under
+   /home/flexnetos/FlexNetOS/usr/bin, not Yazelix profile exports.
+4. Keep kache, wild, and meta as meta/envctl-owned workspace frontdoors under
+   /home/flexnetos/FlexNetOS/usr/bin, not Yazelix profile exports.
+5. Keep vue, vite, and tauri project-local to LifeOS and invoked through Bun
+   scripts, not global yzx profile commands.
+6. Keep wasmEdge/wasmedge out of the foundation until an owning Yazelix/LifeOS
+   workflow appears. Current active repo search found no foundation consumer.
+7. Keep OpenCode disabled in the tray until both the binary owner and
+   /home/flexnetos/.local/share/opencode/opencode.db owner are defined.
+8. Keep Yazi assets pinned to the published child commit that includes
    smart-tabs.yazi, and keep runtime contracts checking that plugin.
 
 Before claiming success, run and report exact proof:

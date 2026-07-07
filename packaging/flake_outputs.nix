@@ -35,7 +35,10 @@ let
   yazelix_yazi_assets = yazelixYaziAssets.packages.${system}.yazelix_yazi_assets;
   beads_rust = beadsRustPackage system pkgs;
   install_check = import ./install_check.nix { inherit pkgs; };
-  flexnetos_foundation_claude = pkgs."claude-code";
+  flexnetos_foundation_claude = import ./claude_code_release.nix {
+    inherit pkgs;
+    version = "2.1.202";
+  };
   flexnetos_foundation_codex = import ./codex_cli_release.nix {
     inherit pkgs system;
     version = "0.143.0-alpha.35";
@@ -60,13 +63,17 @@ let
       "tu"
       "claude"
       "codex"
+      "codedb"
       "git-kb"
+      "nu_plugin_codedb"
       "rtk"
     ];
     exportedBinCommands = [
       "claude"
       "codex"
+      "codedb"
       "git-kb"
+      "nu_plugin_codedb"
       "rtk"
     ];
   };

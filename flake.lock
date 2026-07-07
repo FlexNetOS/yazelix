@@ -16,6 +16,28 @@
         "type": "github"
       }
     },
+    "codedbNuPlugin": {
+      "inputs": {
+        "nixpkgs": [
+          "yazelixYaziAssets",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1783087936,
+        "narHash": "sha256-qAOON1OAG4Y6GgxXj1DJFceHI2a6BBZCIheG+ZWcUHk=",
+        "owner": "FlexNetOS",
+        "repo": "nu_plugin",
+        "rev": "37e6d2a22994308f440da1ff3cb3fda9901c9e40",
+        "type": "github"
+      },
+      "original": {
+        "owner": "FlexNetOS",
+        "repo": "nu_plugin",
+        "rev": "37e6d2a22994308f440da1ff3cb3fda9901c9e40",
+        "type": "github"
+      }
+    },
     "crane": {
       "locked": {
         "lastModified": 1776396856,
@@ -511,16 +533,17 @@
     },
     "yazelixYaziAssets": {
       "inputs": {
+        "codedbNuPlugin": "codedbNuPlugin",
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1783394232,
-        "narHash": "sha256-IzQndUzR4BgqXQHDQDgtszKYoF0AUby/FvzXBg25Zys=",
+        "lastModified": 1783406712,
+        "narHash": "sha256-yMK6HF5lUJO8v4MD8TufsiXBabbFyv3wF/YPMz+rKN0=",
         "owner": "FlexNetOS",
         "repo": "yazelix-yazi-assets",
-        "rev": "471073d54d4a6c9fa9e87f26134d6db3f387977e",
+        "rev": "c534fe3a9e3543f7931fc9ea5ce7e842174e559d",
         "type": "github"
       },
       "original": {

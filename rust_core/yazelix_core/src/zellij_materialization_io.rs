@@ -1,3 +1,4 @@
+// Test lane: maintainer
 use crate::bridge::{CoreError, ErrorClass};
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -115,6 +116,7 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
 
     #[cfg(unix)]
+    // Regression: unchanged generated Zellij layouts do not require write access to their parent directory.
     #[test]
     fn skips_matching_content_in_read_only_directory() {
         let dir = tempfile::tempdir().unwrap();
@@ -130,6 +132,7 @@ mod tests {
     }
 
     #[cfg(unix)]
+    // Regression: changed generated Zellij layouts still fail against read-only runtime output.
     #[test]
     fn still_errors_when_read_only_directory_needs_rewrite() {
         let dir = tempfile::tempdir().unwrap();
