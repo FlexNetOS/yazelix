@@ -52,45 +52,39 @@ br close <id>         # Complete work
 
 ### Rebuild the installed runtime — one way only
 
-`yazelix_flexnetos_foundation` is installed via `nix profile` against `path:/home/flexnetos/FlexNetOS/src/yazelix`. Rebuild by invoking the standalone script:
+`lifeos_foundation_yzx` is installed via the default Nix profile against `path:/home/flexnetos/FlexNetOS/src/yazelix`. Rebuild through the active profile frontdoor:
 
 ```bash
-flexnetos-rebuild-yazelix
+/home/flexnetos/.nix-profile/bin/yzx update upstream
+/home/flexnetos/.nix-profile/bin/yzx doctor --fix
+/home/flexnetos/.nix-profile/bin/yzx doctor
 ```
 
-The script lives at `~/.local/bin/flexnetos-rebuild-yazelix` and works in any shell context (interactive, non-interactive, rescue). It handles all the env plumbing internally: `NIXPKGS_ALLOW_UNFREE=1` for `claude-code`, `readlink -f` resolution for the git-kb / rtk / ccboard `FLEXNETOS_*_PATH` env vars (nix rejects `~/.nix-profile/…` symlinks — needs direct store paths), and `nix profile upgrade --impure yazelix_flexnetos_foundation`.
+Do not rebuild this package with host-local `FLEXNETOS_*_PATH` inputs or `packaging/*_local_binary.nix` shims. Runtime tools in the foundation package must come from published flake inputs or source-owned package definitions so the profile can be rebuilt in a clean no-override path.
 
-Do NOT copy the raw `nix profile upgrade` command out with hardcoded store hashes for the FLEXNETOS_*_PATH values. Those hashes go stale on every profile upgrade and hardcoding them re-introduces the exact "three-profiles-that-should-be-one" drift class we fixed. There is one way; use it.
+Do not copy raw `nix profile upgrade` commands with hardcoded store hashes. Those hashes go stale on every profile upgrade and re-introduce the exact "three-profiles-that-should-be-one" drift class this package is meant to prevent.
 
 Verify the rebuild:
 
 ```bash
 grep codex_usage_display ~/.nix-profile/settings_default.jsonc  # should mirror src/yazelix/settings_default.jsonc
 readlink -f ~/.nix-profile/bin/yzx                              # store hash should differ from prior
+/home/flexnetos/.nix-profile/bin/yzx run codedb --version
 ```
 
-### Local build toolchain (for `packaging/*_local_binary.nix` inputs)
+### Local toolchain notes are not package ownership
 
-The FlexNetOS foundation package accepts three locally-built binaries (git-kb, rtk, ccboard) via `FLEXNETOS_*_PATH` env vars. Each binary is a separate Rust build; use this toolchain:
+The host has useful build accelerators and developer tools, but they are not foundation package ownership:
 
 | Tool | Path | Notes |
 |---|---|---|
 | `cargo` + `rustc` (fenix rust-mixed 1.96) | `/nix/store/b47aazvj6hmsd1i1a6sy9ch5yx8ylvxg-rust-mixed/bin/{cargo,rustc}` | Newer store hashes may exist; `find /nix/store -maxdepth 5 -name 'cargo' -type f \| xargs -I{} sh -c '{} --version'` to check |
 | `cargo` nightly (fenix, if needed) | `/nix/store/l831cb33qjq42psp88zdga9zvgn785ix-auditable-cargo-nightly-latest-2026-05-31/bin/cargo` | Cargo-only bundle, no matching rustc — use the rust-mixed above for a full toolchain |
-| `kache-rustc-wrapper` | `/home/flexnetos/FlexNetOS/usr/bin/kache-rustc-wrapper` | Replaces sccache. Set as `RUSTC_WRAPPER=`. Compilation cache hits made ccboard rebuild in 2m28s. |
+| `kache-rustc-wrapper` | `/home/flexnetos/FlexNetOS/usr/bin/kache-rustc-wrapper` | Replaces sccache. Set as `RUSTC_WRAPPER=` for local development builds only. |
 | `wild` linker | `/home/flexnetos/.local/bin/wild` | **CAVEAT**: gcc rejects absolute paths for `-fuse-ld=<path>`. Do NOT set `RUSTFLAGS="-C link-arg=-fuse-ld=/absolute/path/to/wild"` — it errors with `unrecognized command-line option`. Either use `-fuse-ld=wild` (short name, needs `ld.wild` in the gcc search prefix) or drop wild; kache is the primary speed win. |
 | `bun` / `bunx` | `/home/flexnetos/.local/bin/{bun,bunx}` | For node commands invoked during build (e.g. codex tooling). |
 
-Recipe used for ccboard v0.24.0 (works, produces `target/release/ccboard`):
-
-```bash
-cd <ccboard-source> && \
-  PATH="/nix/store/b47aazvj6hmsd1i1a6sy9ch5yx8ylvxg-rust-mixed/bin:$PATH" \
-  RUSTC_WRAPPER=/home/flexnetos/FlexNetOS/usr/bin/kache-rustc-wrapper \
-  cargo build --release --bin ccboard
-```
-
-After the binary lands, install it to the stable staging path (`~/FlexNetOS/usr/bin/<name>`) and the pre-persisted `FLEXNETOS_<NAME>_PATH` env vars will point at it on the next `flexnetos-rebuild-yazelix`.
+If a runtime tool starts as a local experiment, publish or vendor it through the owning child repo first, then consume that published input from Yazelix. Do not feed ad-hoc host binaries into `lifeos_foundation_yzx`.
 
 ## Architecture Overview
 
@@ -98,7 +92,7 @@ After the binary lands, install it to the stable staging path (`~/FlexNetOS/usr/
 
 Three yazelix-named directories exist under `/home/flexnetos/FlexNetOS/src/`. Only one is canonical for this package:
 
-- **`src/yazelix`** — canonical. `nix profile list` shows `yazelix_flexnetos_foundation` locked to `path:/home/flexnetos/FlexNetOS/src/yazelix`. Edits here are the ones that ship after a rebuild.
+- **`src/yazelix`** — canonical. `nix profile list` shows `lifeos_foundation_yzx` locked to `path:/home/flexnetos/FlexNetOS/src/yazelix`. Edits here are the ones that ship after a rebuild.
 - **`src/yazelix_new_worktree`** — a stale git worktree of the same repo on branch `worktree/new_worktree`. Not consumed by any build. Safe to ignore.
 - **`src/yazelix-helix`** — a separate repo (helix editor fork) consumed via flake input `yazelixHelix`. Not competing with the two above; touch only when explicitly working on the helix bridge.
 
@@ -108,7 +102,7 @@ The FlexNetOS agent workspace has three artifacts that must reference the same r
 
 1. **Custom layout** — `configs/zellij/layouts/flexnetos_agent_workspace.kdl` (a template consumed by `runtime_materialization::resolve_zellij_layout_path`; the runtime detects `__YAZELIX_ZJSTATUS_TAB_TEMPLATE__` and renders it into `~/.local/share/yazelix/configs/zellij/layouts/`). Also shipped into the nix-store profile at `~/.nix-profile/configs/zellij/layouts/flexnetos_agent_workspace.kdl` — identical sha256.
 2. **Launch app** — `~/.local/share/applications/com.flexnetos.Yazelix.Agent.desktop` (hand-installed, NOT home-manager managed, safe to edit directly; ownership marker `X-FlexNetOS-Managed=true` keeps `install_ownership_report.rs` from repairing it).
-3. **Runtime binary/profile** — `~/.nix-profile/bin/yzx` → `/nix/store/…-yazelix-flexnetos-foundation` (variant `mars`, profile `mars-full`).
+3. **Runtime binary/profile** — `~/.nix-profile/bin/yzx` → `/nix/store/…-lifeos-foundation-yzx` (variant `mars`, profile `mars-full`).
 
 ## Conventions & Patterns
 
@@ -131,18 +125,16 @@ Neither is a startup-file edit. Fix by re-launching the Yazelix desktop entry af
 
 If the warning persists across a fresh login, THEN look at `~/.local/share/yazelix/initializers/{bash,nushell}/*` for hardcoded store paths and search shell rc files for actual `alias yzx=` / `function yzx` definitions.
 
-### `com.flexnetos.Yazelix.Agent.desktop` env-var handoff
+### Profile frontdoor handoff
 
-Runtime configuration required to rebuild is persisted in `~/.bashrc` and `~/.config/nushell/env.nu`:
+Runtime configuration required to rebuild is owned by the profile package, not host env-var shims:
 
-- `FLEXNETOS_GIT_KB_PATH="$HOME/.nix-profile/toolbin/git-kb"` (resolves via profile symlink, so the path follows whichever store hash is installed)
-- `FLEXNETOS_RTK_PATH="$HOME/.nix-profile/toolbin/rtk"`
-- `NIXPKGS_ALLOW_UNFREE` is intentionally scoped to the `flexnetos-rebuild-yazelix` bash function only, not exported globally, to avoid silently pulling unfree packages into unrelated `nix build` calls.
+- `/home/flexnetos/.nix-profile/bin/yzx` is the active frontdoor.
+- `/home/flexnetos/.nix-profile/configs/zellij/layouts/flexnetos_agent_workspace.kdl` is the profile layout override path.
+- `/home/flexnetos/.config/yazelix/` is the editable user input surface.
+- `/home/flexnetos/.local/share/yazelix/` is generated runtime output and must be used only as proof.
 
-Convenience scripts on PATH (`~/.local/bin/`):
-
-- `flexnetos-rebuild-yazelix` — one-shot rebuild with all required env; self-contained script, works in any shell context
-- `flexnetos-doctor` — wraps `command yzx doctor` to bypass any session-level shadowing
+Avoid `~/.local/bin/yzx` and user-local stale launchers as parallel ownership paths.
 
 ### `~/.config/yazelix/zellij.kdl` sidecar — merge trigger caveat
 
@@ -155,20 +147,17 @@ yzx doctor --fix   # detects "needs repair", regenerates config.kdl
 
 The sidecar is intended for native zellij keys that yazelix does NOT already render (from `settings.jsonc`) or enforce (from `enforced_top_level_settings` in `rust_core/yazelix_zellij_config_pack/src/lib.rs`). For example: `scrollback_lines_to_serialize` is a good sidecar key; `session_serialization` and `serialize_pane_viewport` are already enforced and don't need duplication.
 
-### Adding a new locally-built binary to the foundation runtime
+### Adding a new runtime binary to the foundation runtime
 
-Follow the same pattern as `git-kb`, `rtk`, and `ccboard`:
+Follow the source-owned pattern used for `git-kb`, `rtk`, Claude Code, Codex, and CodeDB:
 
-1. Create `packaging/<name>_local_binary.nix` copying the `rtk_local_binary.nix` skeleton — pname/mainProgram = binary name, throws if the corresponding `FLEXNETOS_<NAME>_PATH` env var is empty.
-2. Edit `packaging/flake_outputs.nix`:
-   - Add `flexnetos_foundation_<name> = import ./<name>_local_binary.nix { inherit pkgs; };` in the `let` block.
-   - Append `flexnetos_foundation_<name>` to `extraRuntimePackages`.
-   - Append the binary name to both `extraRuntimeCommands` and `exportedBinCommands`.
-   - Add `<name> = flexnetos_foundation_<name>;` to the `packages` block.
-3. Ensure the binary exists at a stable host path before rebuilding (e.g., `~/FlexNetOS/usr/bin/<name>` for user-built tools, or a fixed store path for tools that come from another nix build).
-4. Rebuild via the `flexnetos-rebuild-yazelix` bash function — it resolves the FLEXNETOS_*_PATH env vars automatically.
+1. Prefer a published flake input, fixed-output release package, or first-party child repo package.
+2. If the tool is owned by a child repo, publish and merge the child repo first.
+3. Update Yazelix's flake input/lock to the published child revision.
+4. Edit `packaging/flake_outputs.nix` to add the package to `extraRuntimePackages`, `extraRuntimeCommands`, and `exportedBinCommands` only after it builds without host-local paths.
+5. Validate with `validate-child-release-transaction` and a no-override `nix build .#lifeos_foundation_yzx`.
 
-**Symlink gotcha**: `FLEXNETOS_*_PATH` values passed to `nix profile upgrade` must be direct paths, not `~/.nix-profile/…` symlinks. When nix follows a `~/.nix-profile/toolbin/<tool>` symlink and resolves it into the store, the sandbox rejects the resolved path with `install: cannot stat '/nix/store/…'`. `flexnetos-rebuild-yazelix` handles this via `readlink -f`. Rebuild through the script; do not craft ad-hoc `nix profile upgrade` invocations.
+Do not create `packaging/<name>_local_binary.nix` for the foundation runtime. That pattern makes the Nix profile depend on whatever happened to be present on one workstation and breaks clean rebuilds.
 
 ## GitKB
 

@@ -31,16 +31,4 @@ layout {
             plugin location="zellij:status-bar"
         }
     }
-
-    tab name="Mission Control" {
-        pane size=1 borderless=true {
-            __YAZELIX_ZJSTATUS_TAB_TEMPLATE__
-        }
-        pane name="ccboard" {
-            command "ccboard"
-        }
-        pane size=1 borderless=true {
-            plugin location="zellij:status-bar"
-        }
-    }
 }
