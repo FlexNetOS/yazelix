@@ -22,6 +22,7 @@ pkgs.runCommand "yazelix-runtime-release-contracts" { } ''
   done
 
   test -s "$runtime/configs/zellij/plugins/zjstatus.wasm"
+  test -s "$runtime/configs/yazi/plugins/smart-tabs.yazi/main.lua"
   if grep -R -I -F 'https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm' \
     "$runtime/configs" "$runtime/shells" >/dev/null; then
     echo "Yazelix runtime must use packaged file-backed zjstatus.wasm, not upstream URL auto-download" >&2

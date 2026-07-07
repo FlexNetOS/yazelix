@@ -211,7 +211,7 @@ pkgs.runCommand name { } ''
   done
   link_runtime_input "${yaziAssetsRoot}/flavors" "configs/yazi/flavors"
   link_runtime_input "${yaziAssetsRoot}/yazelix_starship.toml" "configs/yazi/yazelix_starship.toml"
-  for yazi_plugin in auto-layout.yazi git.yazi lazygit.yazi starship.yazi; do
+  for yazi_plugin in auto-layout.yazi git.yazi lazygit.yazi smart-tabs.yazi starship.yazi; do
     link_runtime_input "${yaziAssetsRoot}/plugins/$yazi_plugin" "configs/yazi/plugins/$yazi_plugin"
   done
   printf '%s\n' ${pkgs.lib.escapeShellArg runtimeVariant} > "$out/runtime_variant"
