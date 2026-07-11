@@ -21,8 +21,8 @@ launches them with their built-in defaults or their existing user config.
 - Type: boundary
 - Status: live
 - Owner: Rust `launch_commands/terminal.rs`, Rust `launch_commands/process.rs`, and POSIX `shells/posix/detached_launch_probe.sh`
-- Statement: `yzx launch` builds the packaged Kitty argv, applies the runtime graphics wrapper when required, and runs the detached-launch probe. It must not duplicate startup-launch preflight or terminal materialization ownership
-- Verification: automated Rust tests in `rust_core/yazelix_core/src/launch_commands.rs`; validator `yzx_repo_validator validate-contracts`
+- Statement: `yzx launch` builds the packaged Kitty argv, prepends the absolute runtime-owned Linux graphics wrapper with structured argv when required, and runs the detached-launch probe. It must not discover the wrapper from ambient `PATH`, assemble an inline shell body, or duplicate startup-launch preflight or terminal materialization ownership
+- Verification: automated Rust tests in `rust_core/yazelix_core/src/launch_commands.rs`; validator `yzx_repo_validator validate-contracts`; manual review against `rust_nushell_bridge_contract.md`
 
 #### TLAUNCH-002
 - Type: failure_mode
