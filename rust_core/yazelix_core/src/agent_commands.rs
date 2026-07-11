@@ -314,6 +314,12 @@ fn run_git_kb_step(args: &AgentInitArgs, git_kb: &Path) -> Result<(), CoreError>
             args.meta_root.display()
         );
         run_agent_init_command(
+            "GitKB initialization",
+            git_kb,
+            &["init", "--no-verify"],
+            &args.meta_root,
+        )?;
+        run_agent_init_command(
             "GitKB Codex scaffold",
             git_kb,
             &["init", "codex"],
@@ -742,6 +748,7 @@ mod tests {
         .unwrap();
 
         let output = fs::read_to_string(log).unwrap();
+        assert!(output.contains(&format!("git-kb|{}|init --no-verify", meta.display())));
         assert!(output.contains(&format!("git-kb|{}|init codex", meta.display())));
         assert!(output.contains(&format!(
             "grit|{}|-r {} init",
