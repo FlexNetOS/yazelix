@@ -63,6 +63,11 @@ Kitty variant.
   only checked the runtime variant when the old log directory was empty.
 - The FlexNetOS Agent desktop entry used the correct profile `yzx` command and
   layout override but retained Mars comment and WM-class metadata.
+- The first installed Kitty launch reached the correct packaged Kitty binary,
+  then exited by signal 11 after GLFW reported `EGL: Failed to initialize EGL`.
+  The package runtime already shipped `libexec/nixGLMesa`, but the Rust launch
+  argv no longer prepended it. The earlier Nushell launch implementation had
+  applied NixGL to Kitty; that behavior was lost during the Rust ownership cut.
 
 ## Progress Log
 
@@ -76,6 +81,16 @@ Kitty variant.
   both desktop files with `desktop-file-validate`.
 - Implemented source fixes so Kitty skips Mars-only materialization, native
   config status remains user-owned, and stale Mars logs are ignored.
+- Archived the two failed installed-runtime launch logs under the existing
+  repair archive.
+- Implemented the follow-up in an isolated clean worktree because another
+  session had uncommitted changes in the original checkout. Linux Kitty launch
+  now prepends the absolute runtime-owned NixGL helper with structured argv,
+  fails loudly if the packaged helper is missing, preserves Kitty-named launch
+  logs, and self-describes `nixGLMesa` as a private required bundled command.
+- Kept the fix inside the main Rust launch and Nix package-assembly owners, in
+  line with the Rust/Nushell bridge, runtime self-description, terminal support,
+  and terminal config-pack contracts.
 
 ## Verification
 
