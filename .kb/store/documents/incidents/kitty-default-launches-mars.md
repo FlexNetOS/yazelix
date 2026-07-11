@@ -48,3 +48,48 @@ Kitty variant.
 - Reported runtime: `v17.9`, variant `kitty`
 - Reported config: `/home/flexnetos/.config/yazelix/settings.jsonc`
 - Reported install owner: default Nix profile
+
+## Findings
+
+- The profile runtime and `yzx status --json` correctly selected Kitty.
+- `launch_materialization.rs` still sent every active terminal through
+  `generate_terminal_materialization`, but that materializer only accepts Mars.
+  A Kitty desktop launch therefore failed before spawning Kitty.
+- Native-config diagnostics advertised
+  `~/.local/share/yazelix/configs/terminal_emulators/kitty` even though the
+  Kitty contract keeps native configuration user-owned and writes no generated
+  Kitty config.
+- Doctor surfaced stale Mars launch logs even for a Kitty runtime because it
+  only checked the runtime variant when the old log directory was empty.
+- The FlexNetOS Agent desktop entry used the correct profile `yzx` command and
+  layout override but retained Mars comment and WM-class metadata.
+
+## Progress Log
+
+### 2026-07-11
+
+- Archived pre-repair runtime and source evidence under
+  `/home/flexnetos/archive/yazelix-kitty-repair-20260711T1159Z/`.
+- Repaired generated Yazelix state through `yzx doctor --fix`; subsequent
+  profile doctor/status reports are healthy and select Kitty.
+- Corrected the FlexNetOS Agent desktop entry metadata to Kitty and validated
+  both desktop files with `desktop-file-validate`.
+- Implemented source fixes so Kitty skips Mars-only materialization, native
+  config status remains user-owned, and stale Mars logs are ignored.
+
+## Verification
+
+- `cargo fmt --manifest-path rust_core/Cargo.toml --all -- --check`
+- `cargo check --manifest-path rust_core/Cargo.toml -p yazelix_core`
+- Kitty regression filter: 11 passed
+- Mars launch-log regression filter: 3 passed
+- Full `yazelix_core --lib`: 442 passed; one pre-existing unrelated
+  `config_state::tests::computes_default_rebuild_hash_without_recorded_state`
+  failure remains
+- `yzx_repo_validator validate-contracts`
+- `nix build .#runtime_kitty --no-link --no-write-lock-file`
+
+## Remaining gate
+
+- Launch the built/fixed Kitty runtime in a fresh desktop window and obtain the
+  maintainer's manual confirmation before pushing the non-trivial change.
