@@ -679,7 +679,7 @@ mod tests {
 
         assert_eq!(
             state.config_hash,
-            "d9bd53ec09a8dde70031173fd292dd7a616e2147cadc0a7e208d6cfa85c41407"
+            "dcb3fc2de8ad8c2e1ef4e0232226b635f1086fc9920e248670984237cbe9c88b"
         );
         assert!(state.needs_refresh);
     }
