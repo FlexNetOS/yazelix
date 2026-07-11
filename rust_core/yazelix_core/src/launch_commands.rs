@@ -619,16 +619,28 @@ mod tests {
         assert_eq!(mode, 0o755);
     }
 
-    // Defends: Mars runtime metadata is accepted as a shipped packaged terminal.
+    // Defends: Kitty runtime metadata is accepted as a shipped packaged terminal.
     #[test]
-    fn active_terminal_accepts_mars_runtime_variant() {
+    fn active_terminal_accepts_kitty_runtime_variant() {
         let runtime = TempDir::new().unwrap();
-        fs::write(runtime.path().join("runtime_variant"), "mars\n").unwrap();
+        fs::write(runtime.path().join("runtime_variant"), "kitty\n").unwrap();
 
         assert_eq!(
             crate::terminal_variant::active_terminal_from_runtime_dir(runtime.path()).unwrap(),
-            "mars"
+            "kitty"
         );
+    }
+
+    // Defends: mars is no longer a launchable packaged terminal (removed 2026-07-11);
+    // stale mars runtime metadata must fail clearly instead of launching.
+    #[test]
+    fn active_terminal_rejects_mars_runtime_variant() {
+        let runtime = TempDir::new().unwrap();
+        fs::write(runtime.path().join("runtime_variant"), "mars\n").unwrap();
+
+        let error =
+            crate::terminal_variant::active_terminal_from_runtime_dir(runtime.path()).unwrap_err();
+        assert_eq!(error.code(), "unsupported_terminal_variant");
     }
 
     // Defends: desktop launch logs use the terminal executable basename, so mars diagnostics can find them reliably.
@@ -645,6 +657,27 @@ mod tests {
                 .and_then(|name| name.to_str())
                 .unwrap_or_default()
                 .starts_with("mars_")
+        );
+    }
+
+    // Defends: prepending a private NixGL helper does not rename Kitty launch
+    // evidence to nixglmesa and hide terminal-specific failures from doctor.
+    #[test]
+    fn wrapped_launch_probe_log_path_uses_terminal_basename() {
+        let state = TempDir::new().unwrap();
+        let argv = vec![
+            "/runtime/libexec/nixGLMesa".to_string(),
+            "/runtime/toolbin/kitty".to_string(),
+        ];
+
+        let log =
+            get_launch_probe_log_path(state.path(), launch_probe_terminal_name(&argv)).unwrap();
+
+        assert!(
+            log.file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or_default()
+                .starts_with("kitty_")
         );
     }
 
