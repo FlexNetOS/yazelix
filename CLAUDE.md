@@ -145,14 +145,9 @@ Runtime configuration required to rebuild is owned by the profile package, not h
 
 Avoid `~/.local/bin/yzx` and user-local stale launchers as parallel ownership paths.
 
-### `~/.config/yazelix/zellij.kdl` sidecar — merge trigger caveat
+### `~/.config/yazelix/zellij.kdl` sidecar — merged into generated config.kdl
 
-The sidecar is merged into `~/.local/share/yazelix/configs/zellij/config.kdl` at materialization time, but yazelix's freshness hash does NOT include the sidecar file. Editing the sidecar alone will not cause `yzx doctor` to detect drift or re-materialize. To pick up sidecar changes without waiting for the next desktop launch:
-
-```bash
-rm -f ~/.local/share/yazelix/state/rebuild_hash
-yzx doctor --fix   # detects "needs repair", regenerates config.kdl
-```
+The sidecar is merged into `~/.local/share/yazelix/configs/zellij/config.kdl` at materialization time, and its content **is** folded into the config freshness hash (`config_override_sidecar_fingerprint` in `rust_core/yazelix_core/src/config_state.rs`). Editing the sidecar alone now causes `yzx doctor` to detect drift and re-materialize on the next run — no manual `rebuild_hash` deletion required. (Historically the freshness hash ignored the sidecar; if you are on an older runtime that predates this fix, force a refresh with `rm -f ~/.local/share/yazelix/state/rebuild_hash && yzx doctor --fix`.)
 
 The sidecar is intended for native zellij keys that yazelix does NOT already render (from `settings.jsonc`) or enforce (from `enforced_top_level_settings` in `rust_core/yazelix_zellij_config_pack/src/lib.rs`). For example: `scrollback_lines_to_serialize` is a good sidecar key; `session_serialization` and `serialize_pane_viewport` are already enforced and don't need duplication.
 
