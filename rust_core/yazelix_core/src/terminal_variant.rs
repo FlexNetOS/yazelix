@@ -3,7 +3,9 @@ use std::fs;
 use std::path::Path;
 
 /// Launch preference order: first entry that resolves to a runnable binary wins.
-pub const SUPPORTED_TERMINALS: &[&str] = &["kitty", "ghostty", "mars"];
+/// Mars was removed from the chain (operator directive 2026-07-11): kitty is the
+/// packaged default and ghostty is the host-installed backup.
+pub const SUPPORTED_TERMINALS: &[&str] = &["kitty", "ghostty"];
 const KNOWN_SESSION_TERMINALS: &[&str] = &[
     "ghostty", "mars", "rio", "wezterm", "ratty", "kitty", "foot",
 ];
