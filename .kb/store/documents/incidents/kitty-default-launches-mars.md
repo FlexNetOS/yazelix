@@ -89,6 +89,19 @@ Kitty variant.
 - `yzx_repo_validator validate-contracts`
 - `nix build .#runtime_kitty --no-link --no-write-lock-file`
 
+## Installed-runtime proof
+
+- `yzx update local_source` upgraded the profile-owned package to
+  `/nix/store/6j5i7cx0q863lhw85ihmd681p2y0hgp1-lifeos-foundation-yzx`.
+- `yzx status --json` reports `terminal = "kitty"`, current generated state,
+  and no repair requirement.
+- `yzx doctor --json` reports zero errors and zero warnings.
+- Doctor reports no Mars launch-log findings and no generated Kitty config;
+  Kitty correctly uses built-in defaults because
+  `~/.config/kitty/kitty.conf` is absent.
+- Both desktop entries target `/home/flexnetos/.nix-profile/bin/yzx`, use the
+  Kitty WM class, and pass desktop-file validation.
+
 ## Remaining gate
 
 - Launch the built/fixed Kitty runtime in a fresh desktop window and obtain the
