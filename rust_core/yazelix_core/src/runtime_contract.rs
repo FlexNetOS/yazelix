@@ -943,7 +943,10 @@ mod tests {
                 .details
                 .as_deref()
                 .unwrap_or_default()
-                .contains("Supported terminals: mars")
+                .contains(&format!(
+                    "Supported terminals: {}",
+                    SUPPORTED_TERMINALS.join(", ")
+                ))
         );
     }
 

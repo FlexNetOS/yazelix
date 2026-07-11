@@ -2,7 +2,8 @@ use crate::bridge::{CoreError, ErrorClass};
 use std::fs;
 use std::path::Path;
 
-pub const SUPPORTED_TERMINALS: &[&str] = &["mars"];
+/// Launch preference order: first entry that resolves to a runnable binary wins.
+pub const SUPPORTED_TERMINALS: &[&str] = &["kitty", "ghostty", "mars"];
 const KNOWN_SESSION_TERMINALS: &[&str] = &[
     "ghostty", "mars", "rio", "wezterm", "ratty", "kitty", "foot",
 ];
