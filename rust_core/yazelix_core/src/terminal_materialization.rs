@@ -864,11 +864,10 @@ mod tests {
         config
     }
 
-    // Regression: the packaged Kitty default has no Yazelix-generated terminal
-    // config, so `generate_terminal_materialization` is a clean no-op (Ok with
-    // no generated files) instead of erroring. This is what lets Home Manager
-    // activation and installed-runtime validation call
-    // `terminal-materialization.generate --from-env` on a Kitty runtime.
+    // The packaged Kitty default has no Yazelix-generated terminal config. This
+    // lets Home Manager activation and installed-runtime validation call the
+    // materializer on a Kitty runtime without creating terminal-owned files.
+    // Regression: Kitty terminal materialization is a clean no-op.
     #[test]
     fn kitty_terminal_materialization_is_a_noop() {
         let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
