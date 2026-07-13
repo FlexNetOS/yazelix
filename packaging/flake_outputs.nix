@@ -106,17 +106,24 @@ let
       chmod +x "$out/bin/kache-rustc-wrapper"
     '';
   };
-  flexnetos_foundation_rust_toolchain = fenixPkgs.combine [
-    fenixPkgs.latest.cargo
-    fenixPkgs.latest.rustc
-    fenixPkgs.latest.rustfmt
-    fenixPkgs.latest.clippy
-    # musl static lane (envctl blueprint R9/TASK-0093): rust-std for the
-    # x86_64-unknown-linux-musl target so `cargo build --target
-    # x86_64-unknown-linux-musl` links fully-static binaries. std only —
-    # the host cargo/rustc above stay the single compiler.
-    fenixPkgs.targets.x86_64-unknown-linux-musl.latest.rust-std
-  ];
+  flexnetos_foundation_musl_toolchain =
+    if system == "x86_64-linux" then
+      pkgs.pkgsCross.musl64.stdenv.cc
+    else
+      null;
+  flexnetos_foundation_rust_toolchain = fenixPkgs.combine (
+    [
+      fenixPkgs.latest.cargo
+      fenixPkgs.latest.rustc
+      fenixPkgs.latest.rustfmt
+      fenixPkgs.latest.clippy
+    ]
+    ++ pkgs.lib.optionals (system == "x86_64-linux") [
+      # The Rust target and its C linker/sysroot form one static-build lane.
+      # Keep the host compiler above as the sole default compiler.
+      fenixPkgs.targets.x86_64-unknown-linux-musl.latest.rust-std
+    ]
+  );
   # bun pinned ahead of nixpkgs-unstable (ships 1.3.13; upstream stable is
   # 1.3.14, https://github.com/oven-sh/bun/releases/tag/bun-v1.3.14).
   # Same official-binary source the nixpkgs derivation uses. Drop this
@@ -142,35 +149,40 @@ let
     runtimeVariant = "kitty";
     name = "lifeos-foundation-yzx";
     runtimeName = "lifeos-foundation-yzx-runtime";
-    extraRuntimePackages = defaultRuntimePackages ++ [
-      flexnetos_foundation_claude
-      flexnetos_foundation_codex
-      flexnetos_foundation_git_kb
-      flexnetos_foundation_kache_wrapped
-      flexnetos_foundation_grit
-      flexnetos_foundation_icm
-      flexnetos_foundation_weave
-      flexnetos_foundation_obscura
-      flexnetos_foundation_meta
-      flexnetos_foundation_notebooklm
-      flexnetos_foundation_rtk
-      flexnetos_foundation_rust_toolchain
-      flexnetos_foundation_bun
-      # beads_rust ships `br` (agent-first issue tracker); the .claude
-      # SessionStart/PreCompact hooks and AGENTS.md beads workflow depend on it
-      # resolving from the runtime profile, not just maintainer/CI shells.
-      beads_rust
-      # actionlint backs envctl's ci/gates/actionlint.sh (workflow syntax + custom
-      # runner labels); the gate SKIPs until this ships on toolbin.
-      pkgs.actionlint
-      pkgs.cargo-tauri
-      pkgs.clang
-      pkgs.corepack
-      pkgs.kitty
-      pkgs.nodejs_24
-      pkgs.wasm-pack
-      pkgs.wild
-    ];
+    extraRuntimePackages =
+      defaultRuntimePackages
+      ++ [
+        flexnetos_foundation_claude
+        flexnetos_foundation_codex
+        flexnetos_foundation_git_kb
+        flexnetos_foundation_kache_wrapped
+        flexnetos_foundation_grit
+        flexnetos_foundation_icm
+        flexnetos_foundation_weave
+        flexnetos_foundation_obscura
+        flexnetos_foundation_meta
+        flexnetos_foundation_notebooklm
+        flexnetos_foundation_rtk
+        flexnetos_foundation_rust_toolchain
+        flexnetos_foundation_bun
+        # beads_rust ships `br` (agent-first issue tracker); the .claude
+        # SessionStart/PreCompact hooks and AGENTS.md beads workflow depend on it
+        # resolving from the runtime profile, not just maintainer/CI shells.
+        beads_rust
+        # actionlint backs envctl's ci/gates/actionlint.sh (workflow syntax + custom
+        # runner labels); the gate SKIPs until this ships on toolbin.
+        pkgs.actionlint
+        pkgs.cargo-tauri
+        pkgs.clang
+        pkgs.corepack
+        pkgs.kitty
+        pkgs.nodejs_24
+        pkgs.wasm-pack
+        pkgs.wild
+      ]
+      ++ pkgs.lib.optionals (system == "x86_64-linux") [
+        flexnetos_foundation_musl_toolchain
+      ];
     extraRuntimeCommands = [
       "tu"
       "actionlint"
@@ -215,6 +227,10 @@ let
       "wasm-pack"
       "wild"
       "yarn"
+    ] ++ pkgs.lib.optionals (system == "x86_64-linux") [
+      "x86_64-unknown-linux-musl-ar"
+      "x86_64-unknown-linux-musl-gcc"
+      "x86_64-unknown-linux-musl-ranlib"
     ];
     exportedBinCommands = [
       "claude"
@@ -259,6 +275,10 @@ let
       "wasm-pack"
       "wild"
       "yarn"
+    ] ++ pkgs.lib.optionals (system == "x86_64-linux") [
+      "x86_64-unknown-linux-musl-ar"
+      "x86_64-unknown-linux-musl-gcc"
+      "x86_64-unknown-linux-musl-ranlib"
     ];
   };
   packages =

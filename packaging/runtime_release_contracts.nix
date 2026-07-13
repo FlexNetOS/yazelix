@@ -12,6 +12,16 @@ pkgs.runCommand "yazelix-runtime-release-contracts" { } ''
   test -s "$runtime/runtime_components.json"
   test -x "$runtime/toolbin/tu"
   test -x "$runtime/toolbin/ccboard"
+  if [ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ]; then
+    musl_gcc="$runtime/toolbin/x86_64-unknown-linux-musl-gcc"
+    test -x "$musl_gcc"
+    test -x "$runtime/toolbin/x86_64-unknown-linux-musl-ar"
+    test -x "$runtime/toolbin/x86_64-unknown-linux-musl-ranlib"
+    printf 'fn main() {}\n' \
+      | "$runtime/toolbin/rustc" - --target x86_64-unknown-linux-musl \
+        -C "linker=$musl_gcc" -o musl-static-probe
+    test -x musl-static-probe
+  fi
   test -x "$runtime/runtime_tools/ccboard/bin/ccboard"
   grep -F '"ccboard":' "$runtime/runtime_tools.json" >/dev/null
   grep -F '"commands":["ccboard"]' "$runtime/runtime_tools.json" >/dev/null
