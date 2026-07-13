@@ -8,6 +8,8 @@
   gritPackage,
   icmPackage,
   weavePackage,
+  weaveLibsqlPackage,
+  obscuraPackage,
   metaPackage,
   runtimePackage,
   system,
@@ -56,6 +58,8 @@ let
   flexnetos_foundation_grit = gritPackage system pkgs;
   flexnetos_foundation_icm = icmPackage system pkgs;
   flexnetos_foundation_weave = weavePackage system pkgs;
+  flexnetos_foundation_weave_libsql = weaveLibsqlPackage system pkgs;
+  flexnetos_foundation_obscura = obscuraPackage system pkgs;
   flexnetos_foundation_meta = metaPackage system pkgs;
   flexnetos_foundation_kache = import ./kache_release.nix { inherit pkgs; };
   flexnetos_foundation_notebooklm = import ./notebooklm_release.nix {
@@ -146,6 +150,7 @@ let
       flexnetos_foundation_grit
       flexnetos_foundation_icm
       flexnetos_foundation_weave
+      flexnetos_foundation_obscura
       flexnetos_foundation_meta
       flexnetos_foundation_notebooklm
       flexnetos_foundation_rtk
@@ -203,6 +208,7 @@ let
       "pnpm"
       "rtk"
       "weave"
+      "obscura"
       "rustc"
       "rustdoc"
       "rustfmt"
@@ -243,6 +249,7 @@ let
       "pnpm"
       "rtk"
       "weave"
+      "obscura"
       "rust-analyzer"
       "rustc"
       "rustdoc"
@@ -262,6 +269,8 @@ let
       git_kb = flexnetos_foundation_git_kb;
       rtk = flexnetos_foundation_rtk;
       weave = flexnetos_foundation_weave;
+      weave_libsql = flexnetos_foundation_weave_libsql;
+      obscura = flexnetos_foundation_obscura;
       inherit beads_rust install_check;
       inherit runtime_kitty yazelix_kitty;
       inherit lifeos_foundation_yzx;
