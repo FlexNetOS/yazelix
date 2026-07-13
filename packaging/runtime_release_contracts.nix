@@ -1,4 +1,4 @@
-{ pkgs, runtime }:
+{ pkgs, runtime, foundation ? false }:
 
 pkgs.runCommand "yazelix-runtime-release-contracts" { } ''
   set -eu
@@ -10,18 +10,98 @@ pkgs.runCommand "yazelix-runtime-release-contracts" { } ''
   test -s "$runtime/runtime_identity.json"
   test -s "$runtime/runtime_tools.json"
   test -s "$runtime/runtime_components.json"
+  test -x "$runtime/toolbin/nu"
   test -x "$runtime/toolbin/tu"
-  test -x "$runtime/toolbin/ccboard"
-  if [ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ]; then
-    musl_gcc="$runtime/toolbin/x86_64-unknown-linux-musl-gcc"
-    test -x "$musl_gcc"
-    test -x "$runtime/toolbin/x86_64-unknown-linux-musl-ar"
-    test -x "$runtime/toolbin/x86_64-unknown-linux-musl-ranlib"
-    printf 'fn main() {}\n' \
-      | "$runtime/toolbin/rustc" - --target x86_64-unknown-linux-musl \
-        -C "linker=$musl_gcc" -o musl-static-probe
-    test -x musl-static-probe
-  fi
+  ${pkgs.lib.optionalString foundation ''
+    for command_name in \
+      cargo-audit cargo-msrv-1.89 cc ccboard file home-manager pkg-config rtk \
+      rustc-msrv-1.89 rustdoc-msrv-1.89 sqlite3; do
+      test -x "$runtime/toolbin/$command_name"
+      test -x "$runtime/bin/$command_name"
+      test "$(readlink -f "$runtime/toolbin/$command_name")" = \
+        "$(readlink -f "$runtime/bin/$command_name")"
+    done
+    if [ "$(uname -s)" = Linux ]; then
+      test -x "$runtime/bin/yzx-desktop-launch"
+      test -x "$runtime/bin/yzx-agent-workspace-launch"
+      test -s "$runtime/share/applications/com.yazelix.Yazelix.Kitty.desktop"
+      test -s "$runtime/share/applications/com.flexnetos.Yazelix.Agent.desktop"
+      grep -F 'Exec=/usr/bin/env sh -lc "exec ~/.nix-profile/bin/yzx-desktop-launch"' \
+        "$runtime/share/applications/com.yazelix.Yazelix.Kitty.desktop" >/dev/null
+      grep -F 'Exec=/usr/bin/env sh -lc "exec ~/.nix-profile/bin/yzx-agent-workspace-launch"' \
+        "$runtime/share/applications/com.flexnetos.Yazelix.Agent.desktop" >/dev/null
+    fi
+    test -s "$runtime/nushell/config/config.nu"
+    test -s "$runtime/nushell/config/rtk_wrappers.nu"
+    grep -F 'use rtk_wrappers.nu *' "$runtime/nushell/config/config.nu" >/dev/null
+    grep -F 'export def --wrapped cargo' "$runtime/nushell/config/rtk_wrappers.nu" >/dev/null
+    grep -F '{ ^rtk cargo' "$runtime/nushell/config/rtk_wrappers.nu" >/dev/null
+    grep -F 'export def --wrapped codex' "$runtime/nushell/config/rtk_wrappers.nu" >/dev/null
+    grep -F '{ ^rtk codex' "$runtime/nushell/config/rtk_wrappers.nu" >/dev/null
+    grep -F '^rtk proxy -- cargo test' "$runtime/nushell/config/rtk_wrappers.nu" >/dev/null
+    if grep -F '`^cargo test' "$runtime/nushell/config/rtk_wrappers.nu" >/dev/null; then
+      echo "RTK Nu policy must proxy raw evidence instead of bypassing RTK" >&2
+      exit 1
+    fi
+    "$runtime/toolbin/cargo-audit" --version | grep -F 'cargo-audit 0.22.1' >/dev/null
+    "$runtime/toolbin/cargo-msrv-1.89" --version | grep -F 'cargo 1.89.0' >/dev/null
+    "$runtime/toolbin/rustc-msrv-1.89" --version | grep -F 'rustc 1.89.0' >/dev/null
+    "$runtime/toolbin/file" --version >/dev/null
+    "$runtime/toolbin/home-manager" --version >/dev/null
+    "$runtime/toolbin/pkg-config" --version >/dev/null
+    "$runtime/toolbin/sqlite3" --version >/dev/null
+
+    mkdir -p msrv-probe/src msrv-cargo-home
+    cat > msrv-probe/Cargo.toml <<'EOF'
+    [package]
+    name = "yazelix-msrv-probe"
+    version = "0.0.0"
+    edition = "2024"
+    publish = false
+
+    [workspace]
+    EOF
+    printf 'fn main() {}\n' > msrv-probe/src/main.rs
+    CARGO_HOME="$PWD/msrv-cargo-home" \
+      "$runtime/toolbin/cargo-msrv-1.89" check \
+        --offline --manifest-path msrv-probe/Cargo.toml
+
+    if [ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ]; then
+      for command_name in Xvfb sqld; do
+        test -x "$runtime/toolbin/$command_name"
+        test -x "$runtime/bin/$command_name"
+      done
+      "$runtime/toolbin/sqld" --version | grep -F 'sqld 0.24.33' >/dev/null
+
+      musl_gcc="$runtime/toolbin/x86_64-linux-musl-gcc"
+      musl_gxx="$runtime/toolbin/x86_64-linux-musl-g++"
+      musl_ar="$runtime/toolbin/x86_64-linux-musl-ar"
+      musl_ranlib="$runtime/toolbin/x86_64-linux-musl-ranlib"
+      for command_name in \
+        x86_64-linux-musl-ar x86_64-linux-musl-g++ \
+        x86_64-linux-musl-gcc x86_64-linux-musl-ranlib \
+        x86_64-unknown-linux-musl-ar x86_64-unknown-linux-musl-g++ \
+        x86_64-unknown-linux-musl-gcc x86_64-unknown-linux-musl-ranlib; do
+        test -x "$runtime/toolbin/$command_name"
+        test -x "$runtime/bin/$command_name"
+      done
+      printf 'int main(void) { return 0; }\n' \
+        | "$musl_gcc" -static -x c - -o musl-c-probe
+      printf 'int main() { return 0; }\n' \
+        | "$musl_gxx" -static -x c++ - -o musl-cxx-probe
+      printf 'int yazelix_archive_probe(void) { return 0; }\n' \
+        | "$musl_gcc" -x c -c - -o musl-archive-probe.o
+      "$musl_ar" rcs libyazelix-musl-probe.a musl-archive-probe.o
+      "$musl_ranlib" libyazelix-musl-probe.a
+      test -s libyazelix-musl-probe.a
+
+      printf 'fn main() {}\n' \
+        | "$runtime/toolbin/rustc" - --target x86_64-unknown-linux-musl \
+          -C "linker=$musl_gcc" -o musl-static-probe
+      "$runtime/toolbin/file" musl-static-probe \
+        | grep -E 'statically linked|static-pie linked' >/dev/null
+    fi
+  ''}
   test -x "$runtime/runtime_tools/ccboard/bin/ccboard"
   grep -F '"ccboard":' "$runtime/runtime_tools.json" >/dev/null
   grep -F '"commands":["ccboard"]' "$runtime/runtime_tools.json" >/dev/null
@@ -35,6 +115,12 @@ pkgs.runCommand "yazelix-runtime-release-contracts" { } ''
   grep -F '"commands":["codedb","nu_plugin_codedb"]' "$runtime/runtime_tools.json" >/dev/null
   test -x "$runtime/runtime_tools/codedb/bin/codedb"
   test -x "$runtime/runtime_tools/codedb/bin/nu_plugin_codedb"
+  codedb_plugin_command_count="$(
+    "$runtime/toolbin/nu" --no-config-file \
+      --plugins "$runtime/runtime_tools/codedb/bin/nu_plugin_codedb" \
+      -c 'scope commands | where type == plugin | where name == "codedb doctor" | length'
+  )"
+  test "$codedb_plugin_command_count" = 1
   test -s "$runtime/runtime_tools/codedb/runtime-tool-metadata.json"
   test -s "$runtime/config_metadata/codedb_runtime_tool.toml"
   agent_layout="$runtime/configs/zellij/layouts/flexnetos_agent_workspace.kdl"

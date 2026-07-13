@@ -369,6 +369,9 @@
         import ./packaging/meta_release.nix {
           inherit pkgs;
         };
+      # Home Manager belongs inside the Yazelix foundation package. The
+      # real-home Nix profile therefore keeps exactly one owning element.
+      homeManagerPackage = system: home-manager.packages.${system}.default;
       maintainerShell =
         system: pkgs:
         import ./maintainer_shell.nix {
@@ -403,7 +406,7 @@
         in
         import ./packaging/flake_outputs.nix {
           inherit agentUsagePackages beadsRustPackage kgpPackages rtkPackage;
-          inherit gritPackage icmPackage metaPackage obscuraPackage weaveLibsqlPackage weavePackage;
+          inherit gritPackage homeManagerPackage icmPackage metaPackage obscuraPackage weaveLibsqlPackage weavePackage;
           mkYazelix = mkYazelix system;
           inherit pkgs runtimePackage system yazelixPackage;
           inherit yazelixCursors yazelixScreen yazelixYaziAssets;
@@ -441,6 +444,7 @@
           pkgs = mkPkgs system;
           outputs = systemOutputs system;
           lifeosFoundationYzxRuntimeReleaseContracts = import ./packaging/runtime_release_contracts.nix {
+            foundation = true;
             inherit pkgs;
             runtime = outputs.packages.lifeos_foundation_yzx;
           };

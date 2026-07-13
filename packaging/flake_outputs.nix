@@ -6,6 +6,7 @@
   pkgs,
   rtkPackage,
   gritPackage,
+  homeManagerPackage,
   icmPackage,
   weavePackage,
   weaveLibsqlPackage,
@@ -61,6 +62,7 @@ let
   flexnetos_foundation_weave_libsql = weaveLibsqlPackage system pkgs;
   flexnetos_foundation_obscura = obscuraPackage system pkgs;
   flexnetos_foundation_meta = metaPackage system pkgs;
+  flexnetos_foundation_home_manager = homeManagerPackage system;
   flexnetos_foundation_kache = import ./kache_release.nix { inherit pkgs; };
   flexnetos_foundation_notebooklm = import ./notebooklm_release.nix {
     inherit pkgs;
@@ -108,7 +110,16 @@ let
   };
   flexnetos_foundation_musl_toolchain =
     if system == "x86_64-linux" then
-      pkgs.pkgsCross.musl64.stdenv.cc
+      pkgs.symlinkJoin {
+        name = "flexnetos-foundation-musl-toolchain";
+        paths = [ pkgs.pkgsCross.musl64.stdenv.cc ];
+        postBuild = ''
+          ln -s "$out/bin/x86_64-unknown-linux-musl-gcc" "$out/bin/x86_64-linux-musl-gcc"
+          ln -s "$out/bin/x86_64-unknown-linux-musl-g++" "$out/bin/x86_64-linux-musl-g++"
+          ln -s "$out/bin/x86_64-unknown-linux-musl-ar" "$out/bin/x86_64-linux-musl-ar"
+          ln -s "$out/bin/x86_64-unknown-linux-musl-ranlib" "$out/bin/x86_64-linux-musl-ranlib"
+        '';
+      }
     else
       null;
   flexnetos_foundation_rust_toolchain = fenixPkgs.combine (
@@ -124,6 +135,29 @@ let
       fenixPkgs.targets.x86_64-unknown-linux-musl.latest.rust-std
     ]
   );
+  flexnetos_foundation_rust_1_89 = fenixPkgs.fromToolchainName {
+    name = "1.89.0";
+    sha256 = "sha256-+9FmLhAOezBZCOziO0Qct1NOrfpjNsXxc/8I0c7BdKE=";
+  };
+  # Keep nightly as the interactive/default compiler while exposing an exact,
+  # immutable MSRV lane for envctl compatibility gates.
+  flexnetos_foundation_rust_1_89_lane = pkgs.runCommand
+    "flexnetos-foundation-rust-1.89-lane"
+    { nativeBuildInputs = [ pkgs.makeWrapper ]; }
+    ''
+      mkdir -p "$out/bin"
+      makeWrapper "${flexnetos_foundation_rust_1_89.cargo}/bin/cargo" \
+        "$out/bin/cargo-msrv-1.89" \
+        --unset CARGO_BUILD_RUSTC_WRAPPER \
+        --unset RUSTC_WRAPPER \
+        --unset RUSTUP_TOOLCHAIN \
+        --set RUSTC "${flexnetos_foundation_rust_1_89.rustc}/bin/rustc" \
+        --set RUSTDOC "${flexnetos_foundation_rust_1_89.rustc}/bin/rustdoc"
+      ln -s "${flexnetos_foundation_rust_1_89.rustc}/bin/rustc" \
+        "$out/bin/rustc-msrv-1.89"
+      ln -s "${flexnetos_foundation_rust_1_89.rustc}/bin/rustdoc" \
+        "$out/bin/rustdoc-msrv-1.89"
+    '';
   # bun pinned ahead of nixpkgs-unstable (ships 1.3.13; upstream stable is
   # 1.3.14, https://github.com/oven-sh/bun/releases/tag/bun-v1.3.14).
   # Same official-binary source the nixpkgs derivation uses. Drop this
@@ -142,7 +176,7 @@ let
       })
     else
       pkgs.bun;
-  lifeos_foundation_yzx = mkYazelix {
+  lifeos_foundation_yzx_base = mkYazelix {
     inherit pkgs;
     # Kitty is the packaged default terminal; ghostty (host-installed) is the
     # backup. Mars was removed from the foundation (operator directive 2026-07-11).
@@ -161,8 +195,10 @@ let
         flexnetos_foundation_weave
         flexnetos_foundation_obscura
         flexnetos_foundation_meta
+        flexnetos_foundation_home_manager
         flexnetos_foundation_notebooklm
         flexnetos_foundation_rtk
+        flexnetos_foundation_rust_1_89_lane
         flexnetos_foundation_rust_toolchain
         flexnetos_foundation_bun
         # beads_rust ships `br` (agent-first issue tracker); the .claude
@@ -172,16 +208,23 @@ let
         # actionlint backs envctl's ci/gates/actionlint.sh (workflow syntax + custom
         # runner labels); the gate SKIPs until this ships on toolbin.
         pkgs.actionlint
+        pkgs.cargo-audit
         pkgs.cargo-tauri
         pkgs.clang
         pkgs.corepack
+        pkgs.file
         pkgs.kitty
         pkgs.nodejs_24
+        pkgs.pkg-config
+        pkgs.sqlite
+        pkgs.stdenv.cc
         pkgs.wasm-pack
         pkgs.wild
       ]
       ++ pkgs.lib.optionals (system == "x86_64-linux") [
         flexnetos_foundation_musl_toolchain
+        pkgs.sqld
+        pkgs.xorg-server
       ];
     extraRuntimeCommands = [
       "tu"
@@ -203,13 +246,18 @@ let
       "bun"
       "bunx"
       "cargo"
+      "cargo-audit"
+      "cargo-msrv-1.89"
       "cargo-tauri"
+      "cc"
       "clang"
       "clang++"
       "clippy-driver"
       "cargo-fmt"
       "cargo-clippy"
       "corepack"
+      "file"
+      "home-manager"
       "kache"
       "kache-rustc-wrapper"
       "ld.wild"
@@ -218,17 +266,28 @@ let
       "npm"
       "nu_plugin_codedb"
       "pnpm"
+      "pkg-config"
       "rtk"
       "weave"
       "obscura"
       "rustc"
+      "rustc-msrv-1.89"
       "rustdoc"
+      "rustdoc-msrv-1.89"
       "rustfmt"
+      "sqlite3"
       "wasm-pack"
       "wild"
       "yarn"
     ] ++ pkgs.lib.optionals (system == "x86_64-linux") [
+      "Xvfb"
+      "sqld"
+      "x86_64-linux-musl-ar"
+      "x86_64-linux-musl-g++"
+      "x86_64-linux-musl-gcc"
+      "x86_64-linux-musl-ranlib"
       "x86_64-unknown-linux-musl-ar"
+      "x86_64-unknown-linux-musl-g++"
       "x86_64-unknown-linux-musl-gcc"
       "x86_64-unknown-linux-musl-ranlib"
     ];
@@ -248,13 +307,18 @@ let
       "bun"
       "bunx"
       "cargo"
+      "cargo-audit"
+      "cargo-msrv-1.89"
       "cargo-tauri"
+      "cc"
       "clang"
       "clang++"
       "clippy-driver"
       "cargo-fmt"
       "cargo-clippy"
       "corepack"
+      "file"
+      "home-manager"
       "kache"
       "kache-rustc-wrapper"
       "ld.wild"
@@ -263,23 +327,120 @@ let
       "npm"
       "nu_plugin_codedb"
       "pnpm"
+      "pkg-config"
       "rtk"
       "weave"
       "obscura"
       "rust-analyzer"
       "rustc"
+      "rustc-msrv-1.89"
       "rustdoc"
+      "rustdoc-msrv-1.89"
       "rustfmt"
+      "sqlite3"
       "uv"
       "uvx"
       "wasm-pack"
       "wild"
       "yarn"
     ] ++ pkgs.lib.optionals (system == "x86_64-linux") [
+      "Xvfb"
+      "sqld"
+      "x86_64-linux-musl-ar"
+      "x86_64-linux-musl-g++"
+      "x86_64-linux-musl-gcc"
+      "x86_64-linux-musl-ranlib"
       "x86_64-unknown-linux-musl-ar"
+      "x86_64-unknown-linux-musl-g++"
       "x86_64-unknown-linux-musl-gcc"
       "x86_64-unknown-linux-musl-ranlib"
     ];
+  };
+  # The only real-home profile element carries its own desktop integration.
+  # Per-user desktop files would be parallel shadows of these package-owned
+  # entries, so the launchers re-enter through the sole `.nix-profile` route.
+  lifeos_foundation_yzx_desktop_launch = pkgs.writeShellScriptBin "yzx-desktop-launch" ''
+    set -eu
+    profile_home="''${YAZELIX_PROFILE_HOME:-''${HOME:?HOME is required}}"
+    profile="$profile_home/.nix-profile"
+    if [ ! -L "$profile" ] || [ ! -x "$profile/bin/yzx" ]; then
+      printf 'yzx-desktop-launch: real-home profile frontdoor is missing: %s\n' "$profile" >&2
+      exit 78
+    fi
+    exec "$profile/bin/yzx" desktop launch
+  '';
+  lifeos_foundation_yzx_agent_launch = pkgs.writeShellScriptBin "yzx-agent-workspace-launch" ''
+    set -eu
+    profile_home="''${YAZELIX_PROFILE_HOME:-''${HOME:?HOME is required}}"
+    profile="$profile_home/.nix-profile"
+    layout="$profile/configs/zellij/layouts/flexnetos_agent_workspace.kdl"
+    if [ ! -L "$profile" ] || [ ! -x "$profile/bin/yzx" ]; then
+      printf 'yzx-agent-workspace-launch: real-home profile frontdoor is missing: %s\n' "$profile" >&2
+      exit 78
+    fi
+    if [ ! -s "$layout" ]; then
+      printf 'yzx-agent-workspace-launch: profile-owned layout is missing: %s\n' "$layout" >&2
+      exit 78
+    fi
+    YAZELIX_LAYOUT_OVERRIDE="$layout"
+    export YAZELIX_LAYOUT_OVERRIDE
+    exec "$profile/bin/yzx" desktop launch
+  '';
+  lifeos_foundation_yzx_desktop = pkgs.runCommand
+    "lifeos-foundation-yzx-desktop-integration"
+    { nativeBuildInputs = [ pkgs.desktop-file-utils ]; }
+    ''
+      mkdir -p "$out/bin" "$out/share/applications"
+      ln -s "${lifeos_foundation_yzx_desktop_launch}/bin/yzx-desktop-launch" \
+        "$out/bin/yzx-desktop-launch"
+      ln -s "${lifeos_foundation_yzx_agent_launch}/bin/yzx-agent-workspace-launch" \
+        "$out/bin/yzx-agent-workspace-launch"
+
+      cat > "$out/share/applications/com.yazelix.Yazelix.Kitty.desktop" <<'EOF'
+      [Desktop Entry]
+      Version=1.4
+      Type=Application
+      Name=New Yazelix - Kitty
+      Comment=Yazi + Zellij + Helix integrated terminal environment
+      Icon=yazelix
+      StartupWMClass=com.yazelix.Yazelix
+      Terminal=false
+      X-Yazelix-Managed=true
+      Exec=/usr/bin/env sh -lc "exec ~/.nix-profile/bin/yzx-desktop-launch"
+      Categories=Development;
+      EOF
+
+      cat > "$out/share/applications/com.flexnetos.Yazelix.Agent.desktop" <<'EOF'
+      [Desktop Entry]
+      Version=1.4
+      Type=Application
+      Name=FlexNetOS Yazelix Agent
+      Comment=Yazelix Kitty with the profile-owned FlexNetOS agent workspace layout
+      Icon=yazelix
+      StartupWMClass=com.yazelix.Yazelix
+      Terminal=false
+      X-Yazelix-Managed=true
+      X-FlexNetOS-Managed=true
+      Exec=/usr/bin/env sh -lc "exec ~/.nix-profile/bin/yzx-agent-workspace-launch"
+      Categories=Development;
+      EOF
+
+      desktop-file-validate "$out/share/applications/com.yazelix.Yazelix.Kitty.desktop"
+      desktop-file-validate "$out/share/applications/com.flexnetos.Yazelix.Agent.desktop"
+      for size in 48x48 64x64 128x128 256x256; do
+        destination="$out/share/icons/hicolor/$size/apps"
+        mkdir -p "$destination"
+        ln -s "${lifeos_foundation_yzx_base}/assets/icons/$size/yazelix.png" \
+          "$destination/yazelix.png"
+      done
+    '';
+  lifeos_foundation_yzx = pkgs.symlinkJoin {
+    name = "lifeos-foundation-yzx";
+    paths = [ lifeos_foundation_yzx_base ]
+      ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+        lifeos_foundation_yzx_desktop
+      ];
+    meta = lifeos_foundation_yzx_base.meta;
   };
   packages =
     {
