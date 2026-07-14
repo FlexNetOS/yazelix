@@ -188,9 +188,7 @@ fn refresh_desktop_database(updater: &Path, applications_dir: &Path) -> Result<(
 #[cfg(test)]
 mod tests {
     use std::{
-        env, fs,
-        os::unix::fs::PermissionsExt,
-        process,
+        env, fs, process,
         time::{Duration, SystemTime, UNIX_EPOCH},
     };
 
@@ -209,17 +207,11 @@ mod tests {
     fn install_and_uninstall_manage_one_built_entry() {
         let root = fixture_root();
         let source = root.join("source.desktop");
-        let updater = root.join("update-desktop-database");
+        let updater = env::current_exe().expect("test executable");
         let applications = root.join("data/applications");
         let entry = b"[Desktop Entry]\nType=Application\nName=Yazelix\n";
         fs::create_dir_all(&root).expect("fixture root");
         fs::write(&source, entry).expect("desktop source");
-        fs::write(&updater, b"#!/bin/sh\nexit 0\n").expect("desktop updater");
-        let mut permissions = fs::metadata(&updater)
-            .expect("updater metadata")
-            .permissions();
-        permissions.set_mode(0o755);
-        fs::set_permissions(&updater, permissions).expect("executable updater");
 
         assert!(install_at(&source, &updater, &applications, Duration::ZERO).is_ok());
         let installed = applications.join(DESKTOP_ENTRY_NAME);
