@@ -733,9 +733,30 @@
       };
       flexnetosRunnerPolicy = nuApplication "flexnetos_runner_policy" ./nushell/runner/runner_policy.nu {};
       flexnetosRunnerService = nuApplication "flexnetos_runner_service" ./nushell/runner/runner_service.nu {};
+      flexnetosHostPolicy = nuApplication "yazelix_host_policy" ./nushell/system/host_policy.nu {};
+      flexnetosVolatileRuntime = nuApplication "yazelix_volatile_runtime" ./nushell/system/volatile_runtime.nu {};
       flexnetosRunnerSystemd = pkgs.writeTextDir
         "lib/systemd/user/flexnetos_runner@.service"
         (builtins.readFile (./systemd/user + "/flexnetos_runner@.service"));
+      flexnetosHostPolicyBundle = pkgs.symlinkJoin {
+        name = "yazelix-host-policy";
+        paths = [
+          (pkgs.writeTextDir "share/yazelix/host-policy/nix.conf" (builtins.readFile ./host-policy/nix.conf))
+          (pkgs.writeTextDir "share/yazelix/host-policy/nix.custom.conf" (builtins.readFile ./host-policy/nix.custom.conf))
+          (pkgs.writeTextDir "share/yazelix/host-policy/determinate-config.json" (builtins.readFile ./host-policy/determinate-config.json))
+          (pkgs.writeTextDir "share/yazelix/host-policy/shells" (builtins.readFile ./host-policy/shells))
+          (pkgs.writeTextDir "lib/systemd/system/yazelix_host_policy.service" (builtins.readFile ./systemd/system/yazelix_host_policy.service))
+          (pkgs.writeTextDir "lib/systemd/system/yazelix_host_policy.path" (builtins.readFile ./systemd/system/yazelix_host_policy.path))
+          (pkgs.writeTextDir "lib/systemd/system/nix-daemon.service.d/10-yazelix-host-policy.conf" (builtins.readFile ./systemd/system/nix-daemon.service.d/10-yazelix-host-policy.conf))
+        ];
+      };
+      flexnetosVolatileRuntimeBundle = pkgs.symlinkJoin {
+        name = "yazelix-volatile-runtime";
+        paths = [
+          (pkgs.writeTextDir "share/yazelix/environment.d/10-yazelix-volatile.conf" (builtins.readFile ./host-policy/10-yazelix-volatile.conf))
+          (pkgs.writeTextDir "lib/systemd/user/yazelix_volatile_runtime.service" (builtins.readFile ./systemd/user/yazelix_volatile_runtime.service))
+        ];
+      };
       flexnetosRustToolchain = fenixPkgs.combine (
         [
           fenixPkgs.latest.cargo
@@ -811,6 +832,8 @@
         "fxrun-dispatch" = "${flexnetosRunner}/bin/fxrun-dispatch";
         flexnetos_runner_policy = "${flexnetosRunnerPolicy}/bin/flexnetos_runner_policy";
         flexnetos_runner_service = "${flexnetosRunnerService}/bin/flexnetos_runner_service";
+        yazelix_host_policy = "${flexnetosHostPolicy}/bin/yazelix_host_policy";
+        yazelix_volatile_runtime = "${flexnetosVolatileRuntime}/bin/yazelix_volatile_runtime";
         git-kb = "${flexnetosGitKb}/bin/git-kb";
         grit = "${flexnetosGrit}/bin/grit";
         home-manager = "${home-manager.packages.${system}.default}/bin/home-manager";
@@ -824,6 +847,12 @@
         meta-mcp = "${flexnetosMeta}/bin/meta-mcp";
         meta-project = "${flexnetosMeta}/bin/meta-project";
         node = "${pkgs.nodejs_24}/bin/node";
+        nix = "${pkgs.nix}/bin/nix";
+        nix-build = "${pkgs.nix}/bin/nix-build";
+        nix-env = "${pkgs.nix}/bin/nix-env";
+        nix-instantiate = "${pkgs.nix}/bin/nix-instantiate";
+        nix-shell = "${pkgs.nix}/bin/nix-shell";
+        nix-store = "${pkgs.nix}/bin/nix-store";
         notebooklm = "${flexnetosNotebooklm}/bin/notebooklm";
         npm = "${pkgs.nodejs_24}/bin/npm";
         nu = "${pkgs.nushell}/bin/nu";
@@ -841,6 +870,7 @@
         sqld = "${pkgs.sqld}/bin/sqld";
         sqlite3 = "${pkgs.sqlite}/bin/sqlite3";
         tu = "${tokenusage}/bin/tu";
+        usermod = "${pkgs.shadow}/bin/usermod";
         uv = "${pkgs.uv}/bin/uv";
         uvx = "${pkgs.uv}/bin/uvx";
         wasm-pack = "${pkgs.wasm-pack}/bin/wasm-pack";
@@ -901,7 +931,8 @@
       };
       lifeosFoundationYzx = pkgs.symlinkJoin {
         name = "lifeos-foundation-yzx";
-        paths = [flexnetosYzxBase flexnetosTools flexnetosDesktopSource flexnetosRunnerSystemd];
+        paths = [flexnetosYzxBase flexnetosTools flexnetosDesktopSource flexnetosRunnerSystemd flexnetosHostPolicyBundle flexnetosVolatileRuntimeBundle];
+        nativeBuildInputs = [pkgs.desktop-file-utils];
         postBuild = ''
           install -D -m 644 ${flexnetosZellijLayout}/layout.kdl \
             "$out/configs/zellij/layouts/flexnetos_agent_workspace.kdl"
@@ -1223,8 +1254,13 @@
         test -x ${foundation}/bin/fxrun-dispatch
         test -x ${foundation}/bin/flexnetos_runner_policy
         test -x ${foundation}/bin/flexnetos_runner_service
+        test -x ${foundation}/bin/yazelix_host_policy
+        test -x ${foundation}/bin/yazelix_volatile_runtime
         test -x ${foundation}/bin/kache
         test -x ${foundation}/bin/kache-rustc-wrapper
+        test -x ${foundation}/bin/nix
+        test -x ${foundation}/bin/nix-store
+        test -x ${foundation}/bin/usermod
         test -x ${foundation}/toolbin/nu
         test ! -e ${foundation}/bin/yzx-desktop-launch
         test ! -e ${foundation}/bin/yzx-agent-workspace-launch
@@ -1284,6 +1320,34 @@
         grep -Fx 'ExecStart=/home/flexnetos/.nix-profile/bin/flexnetos_runner_service %i' "$runner_unit"
         grep -Fx 'Environment=SHELL=/home/flexnetos/.nix-profile/toolbin/nu' "$runner_unit"
         grep -Fx 'Environment=KACHE_CACHE_DIR=/home/flexnetos/.cache/kache/runners/%i' "$runner_unit"
+        YAZELIX_HOST_POLICY_ROOT=${foundation}/share/yazelix/host-policy \
+          ${foundation}/bin/yazelix_host_policy check-bundle
+        host_policy_test_root="$TMPDIR/host-policy-root"
+        YAZELIX_HOST_POLICY_ROOT=${foundation}/share/yazelix/host-policy \
+          YAZELIX_HOST_POLICY_TARGET_ROOT="$host_policy_test_root" \
+          ${foundation}/bin/yazelix_host_policy apply-nix
+        YAZELIX_HOST_POLICY_ROOT=${foundation}/share/yazelix/host-policy \
+          YAZELIX_HOST_POLICY_TARGET_ROOT="$host_policy_test_root" \
+          ${foundation}/bin/yazelix_host_policy check-files
+        grep -Fx 'substitute = false' ${foundation}/share/yazelix/host-policy/nix.conf
+        grep -Fx 'substituters =' ${foundation}/share/yazelix/host-policy/nix.conf
+        grep -Fx 'trusted-substituters =' ${foundation}/share/yazelix/host-policy/nix.conf
+        grep -Fx 'keep-build-log = false' ${foundation}/share/yazelix/host-policy/nix.conf
+        grep -Fx 'compress-build-log = false' ${foundation}/share/yazelix/host-policy/nix.conf
+        grep -F '"endpoint": null' ${foundation}/share/yazelix/host-policy/determinate-config.json
+        grep -Fx '/home/flexnetos/.nix-profile/toolbin/nu' ${foundation}/share/yazelix/host-policy/shells
+        grep -Fx 'ExecStart=/home/flexnetos/.nix-profile/bin/yazelix_host_policy apply-nix' ${foundation}/lib/systemd/system/yazelix_host_policy.service
+        test -f ${foundation}/lib/systemd/system/yazelix_host_policy.path
+        test -f ${foundation}/lib/systemd/system/nix-daemon.service.d/10-yazelix-host-policy.conf
+        test -f ${foundation}/lib/systemd/user/yazelix_volatile_runtime.service
+        grep -Fx 'ExecStart=/home/flexnetos/.nix-profile/bin/yazelix_volatile_runtime ensure' ${foundation}/lib/systemd/user/yazelix_volatile_runtime.service
+        volatile_env=${foundation}/share/yazelix/environment.d/10-yazelix-volatile.conf
+        grep -Fx 'XDG_CACHE_HOME=/run/user/1001/yazelix/volatile/cache' "$volatile_env"
+        grep -Fx 'TMPDIR=/run/user/1001/yazelix/volatile/tmp' "$volatile_env"
+        grep -Fx 'KACHE_CACHE_DIR=/home/flexnetos/.cache/kache' "$volatile_env"
+        grep -Fx 'RUSTC_WRAPPER=/home/flexnetos/.nix-profile/bin/kache-rustc-wrapper' "$volatile_env"
+        grep -F 'legacy Kache root must not exist' ${./nushell/system/volatile_runtime.nu}
+        grep -F 'legacy Kache delivery artifact must not exist' ${./nushell/system/volatile_runtime.nu}
 
         export YAZELIX_CONFIG_HOME="$TMPDIR/config"
         export YAZELIX_STATE_DIR="$TMPDIR/state"
