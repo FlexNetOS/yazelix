@@ -2,6 +2,16 @@
 
 const VOLATILE_ROOT = "/run/user/1001/yazelix/volatile"
 const KACHE_ROOT = "/home/flexnetos/.cache/kache"
+const DURABLE_CACHE_ROOT = "/home/flexnetos/.cache"
+# Immutable, expensive-to-refetch artifacts (model weights, browser binaries)
+# and the starship log dir live on durable home storage, never the tmpfs that a
+# reboot wipes. Same persistence class as KACHE_ROOT.
+const DURABLE_DIRS = [
+    "/home/flexnetos/.cache/huggingface"
+    "/home/flexnetos/.cache/torch"
+    "/home/flexnetos/.cache/playwright"
+    "/home/flexnetos/.cache/starship"
+]
 const LEGACY_KACHE_ROOTS = [
     "/home/flexnetos/meta/.cache/kache"
     "/home/flexnetos/meta/var/cache/kache"
@@ -112,6 +122,10 @@ def ensure [] {
         route_volatile $route
     }
     mkdir $KACHE_ROOT
+    mkdir $DURABLE_CACHE_ROOT
+    for path in $DURABLE_DIRS {
+        mkdir $path
+    }
 }
 
 def check [] {
@@ -130,6 +144,14 @@ def check [] {
     }
     if ($KACHE_ROOT | str starts-with $VOLATILE_ROOT) {
         error make {msg: "Kache must remain outside the volatile runtime root"}
+    }
+    for path in $DURABLE_DIRS {
+        if not ($path | path exists) {
+            error make {msg: $"durable cache directory is missing: ($path)"}
+        }
+        if ($path | str starts-with $VOLATILE_ROOT) {
+            error make {msg: $"durable cache must remain outside the volatile runtime root: ($path)"}
+        }
     }
     for path in $LEGACY_KACHE_ROOTS {
         if ($path | path exists) {
