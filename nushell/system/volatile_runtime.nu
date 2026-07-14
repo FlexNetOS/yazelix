@@ -11,7 +11,17 @@ const DURABLE_DIRS = [
     "/home/flexnetos/.cache/torch"
     "/home/flexnetos/.cache/playwright"
     "/home/flexnetos/.cache/starship"
+    "/home/flexnetos/.cache/icm/models"
 ]
+# icm's embedding model persists primarily through HF_HOME (durable above): its
+# fastembed backend downloads via the HuggingFace hub, so the ~615 MB Jina model
+# lands in ~/.cache/huggingface. As defence-in-depth, also point the volatile
+# icm cache dir (fastembed's *declared* cache_dir, $XDG_CACHE_HOME/icm/models per
+# fastembed_embedder.rs) at a durable target, so the model survives regardless of
+# which path a future fastembed version honours. (Reverse of VOLATILE_ROUTES: a
+# volatile link -> durable target.) Best-effort — not a hard activation gate.
+const ICM_VOLATILE_CACHE = "/run/user/1001/yazelix/volatile/cache/icm"
+const ICM_DURABLE_CACHE = "/home/flexnetos/.cache/icm"
 const LEGACY_KACHE_ROOTS = [
     "/home/flexnetos/meta/.cache/kache"
     "/home/flexnetos/meta/var/cache/kache"
@@ -126,6 +136,12 @@ def ensure [] {
     for path in $DURABLE_DIRS {
         mkdir $path
     }
+    if (($ICM_VOLATILE_CACHE | path type) == "symlink") {
+        rm --force $ICM_VOLATILE_CACHE
+    } else if ($ICM_VOLATILE_CACHE | path exists) {
+        rm --recursive --force $ICM_VOLATILE_CACHE
+    }
+    ^/home/flexnetos/.nix-profile/bin/ln --symbolic --no-target-directory $ICM_DURABLE_CACHE $ICM_VOLATILE_CACHE
 }
 
 def check [] {
