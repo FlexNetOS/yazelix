@@ -18,7 +18,7 @@ use crate::{
 const DESKTOP_ENTRY_NAME: &str = "com.flexnetos.Yazelix.Agent.desktop";
 const DESKTOP_CACHE_DELAY: Duration = Duration::from_secs(6);
 const HIDDEN_DESKTOP_ENTRY: &[u8] =
-    b"[Desktop Entry]\nHidden=true\nType=Application\nVersion=1.5\n";
+    b"[Desktop Entry]\nHidden=true\nName=FlexNetOS Yazelix Agent\nType=Application\nVersion=1.5\n";
 
 pub(crate) fn run(args: Vec<OsString>) -> Result<(), AppError> {
     let Some((command, args)) = args.split_first() else {
@@ -115,11 +115,19 @@ fn install_at(
 
     if !desktop_path.exists() {
         write_entry(&desktop_path, HIDDEN_DESKTOP_ENTRY)?;
-        refresh_desktop_database(updater, applications_dir)?;
+        if let Err(error) = refresh_desktop_database(updater, applications_dir) {
+            rollback_first_install(&desktop_path)?;
+            return Err(error);
+        }
         thread::sleep(cache_delay);
+        if let Err(error) = write_entry(&desktop_path, &source_entry) {
+            rollback_first_install(&desktop_path)?;
+            return Err(error);
+        }
+    } else {
+        write_entry(&desktop_path, &source_entry)?;
     }
 
-    write_entry(&desktop_path, &source_entry)?;
     refresh_desktop_database(updater, applications_dir)
 }
 
@@ -135,7 +143,7 @@ fn uninstall_at(updater: &Path, applications_dir: &Path) -> Result<(), AppError>
 }
 
 fn write_entry(path: &Path, contents: &[u8]) -> Result<(), AppError> {
-    let temporary = path.with_file_name(format!(".{DESKTOP_ENTRY_NAME}.tmp"));
+    let temporary = temporary_path(path);
     if let Err(error) = fs::remove_file(&temporary)
         && error.kind() != std::io::ErrorKind::NotFound
     {
@@ -157,6 +165,26 @@ fn write_entry(path: &Path, contents: &[u8]) -> Result<(), AppError> {
         .map_err(|error| path_error("write desktop entry", &temporary, path, error))?;
     fs::rename(&temporary, path)
         .map_err(|error| path_error("install desktop entry", path, path, error))
+}
+
+fn rollback_first_install(path: &Path) -> Result<(), AppError> {
+    for candidate in [temporary_path(path), path.to_path_buf()] {
+        if let Err(error) = fs::remove_file(&candidate)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            return Err(path_error(
+                "roll back failed desktop entry install",
+                &candidate,
+                path,
+                error,
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn temporary_path(path: &Path) -> PathBuf {
+    path.with_file_name(format!(".{DESKTOP_ENTRY_NAME}.tmp"))
 }
 
 fn refresh_desktop_database(updater: &Path, applications_dir: &Path) -> Result<(), AppError> {
@@ -227,6 +255,26 @@ mod tests {
 
         assert!(uninstall_at(&updater, &applications).is_ok());
         assert!(!installed.exists());
+        fs::remove_dir_all(root).expect("fixture cleanup");
+    }
+
+    // Regression: a failed first database refresh must not leave a same-ID hidden tombstone.
+    #[test]
+    fn failed_initial_refresh_rolls_back_hidden_entry() {
+        let root = fixture_root();
+        let source = root.join("source.desktop");
+        let missing_updater = root.join("missing-update-desktop-database");
+        let applications = root.join("data/applications");
+        fs::create_dir_all(&root).expect("fixture root");
+        fs::write(
+            &source,
+            b"[Desktop Entry]\nType=Application\nName=Yazelix\n",
+        )
+        .expect("desktop source");
+
+        assert!(install_at(&source, &missing_updater, &applications, Duration::ZERO,).is_err());
+        assert!(!applications.join(DESKTOP_ENTRY_NAME).exists());
+        assert!(!temporary_path(&applications.join(DESKTOP_ENTRY_NAME)).exists());
         fs::remove_dir_all(root).expect("fixture cleanup");
     }
 }
