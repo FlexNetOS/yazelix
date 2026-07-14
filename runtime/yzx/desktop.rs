@@ -133,11 +133,17 @@ fn install_at(
 
 fn uninstall_at(updater: &Path, applications_dir: &Path) -> Result<(), AppError> {
     let desktop_path = applications_dir.join(DESKTOP_ENTRY_NAME);
-    if desktop_path.exists() {
-        fs::remove_file(&desktop_path).map_err(|error| {
-            path_error("remove desktop entry", &desktop_path, &desktop_path, error)
-        })?;
-        refresh_desktop_database(updater, applications_dir)?;
+    match fs::remove_file(&desktop_path) {
+        Ok(()) => refresh_desktop_database(updater, applications_dir)?,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(path_error(
+                "remove desktop entry",
+                &desktop_path,
+                &desktop_path,
+                error,
+            ));
+        }
     }
     Ok(())
 }
@@ -216,7 +222,9 @@ fn refresh_desktop_database(updater: &Path, applications_dir: &Path) -> Result<(
 #[cfg(test)]
 mod tests {
     use std::{
-        env, fs, process,
+        env, fs,
+        os::unix::fs::symlink,
+        process,
         time::{Duration, SystemTime, UNIX_EPOCH},
     };
 
@@ -275,6 +283,25 @@ mod tests {
         assert!(install_at(&source, &missing_updater, &applications, Duration::ZERO,).is_err());
         assert!(!applications.join(DESKTOP_ENTRY_NAME).exists());
         assert!(!temporary_path(&applications.join(DESKTOP_ENTRY_NAME)).exists());
+        fs::remove_dir_all(root).expect("fixture cleanup");
+    }
+
+    // Regression: uninstall must remove a managed launcher symlink after its target disappears.
+    #[test]
+    fn uninstall_removes_dangling_launcher_symlink() {
+        let root = fixture_root();
+        let updater = env::current_exe().expect("test executable");
+        let applications = root.join("data/applications");
+        let installed = applications.join(DESKTOP_ENTRY_NAME);
+        fs::create_dir_all(&applications).expect("applications fixture");
+        symlink(root.join("garbage_collected.desktop"), &installed)
+            .expect("dangling desktop symlink");
+
+        assert!(uninstall_at(&updater, &applications).is_ok());
+        assert!(matches!(
+            fs::symlink_metadata(&installed),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound
+        ));
         fs::remove_dir_all(root).expect("fixture cleanup");
     }
 }
