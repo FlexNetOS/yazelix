@@ -571,6 +571,8 @@
         configKdl ? yzxConfigKdl,
         shellPackage ? yzxShell,
         extraPathPrefix ? [],
+        desktopEntrySource ? "",
+        desktopDatabaseUpdater ? "",
       }: let
         packageVariant = if withMars then "full" else "runtime";
         marsPath = if withMars then "${marsPackage}/bin/mars" else "";
@@ -584,6 +586,7 @@
           yzxEnvSupervisor = "${yzxEnvSupervisor}/bin/yzx-env-supervisor";
           zellij = "${yazelixZellijPackage}/bin/zellij";
           mars = marsPath;
+          inherit desktopEntrySource desktopDatabaseUpdater;
           layout = "${layoutPackage}/layout.kdl";
           layoutTemplate = "${layoutTemplate}";
           layoutSwapTemplate = "${./defaults/zellij/layout.swap.kdl}";
@@ -642,9 +645,12 @@
         nuConfig ? yzxNuConfig,
         shellPackage ? yzxShell,
         extraPathPrefix ? [],
+        desktopEntrySource ? "",
+        desktopDatabaseUpdater ? "",
       }: let
         command = mkYzxCommand {
           inherit withMars layoutPackage layoutTemplate configKdl shellPackage extraPathPrefix;
+          inherit desktopEntrySource desktopDatabaseUpdater;
         };
         desktop = pkgs.makeDesktopItem {
           name = "yzx";
@@ -915,6 +921,23 @@
           '') flexnetosExecutables
         )
       );
+      flexnetosDesktopSource = pkgs.makeDesktopItem {
+        name = "com.flexnetos.Yazelix.Agent";
+        destination = "/share/yazelix/applications";
+        desktopName = "FlexNetOS Yazelix Agent";
+        genericName = "Terminal Emulator";
+        comment = "Yazelix Nova with the profile-owned FlexNetOS agent workspace";
+        exec = "/home/flexnetos/.nix-profile/bin/yzx launch";
+        icon = "/home/flexnetos/.nix-profile/share/pixmaps/yazelix.png";
+        terminal = false;
+        categories = ["System" "TerminalEmulator"];
+        startupNotify = true;
+        startupWMClass = "mars";
+        extraConfig = {
+          "X-Yazelix-Managed" = "true";
+          "X-FlexNetOS-Managed" = "true";
+        };
+      };
       flexnetosYzxBase = mkYzx {
         name = "lifeos-foundation-yzx-base";
         withMars = true;
@@ -925,11 +948,12 @@
         nuConfig = flexnetosYzxNuConfig;
         shellPackage = flexnetosYzxShell;
         extraPathPrefix = [flexnetosTools];
+        desktopEntrySource = "${flexnetosDesktopSource}/share/yazelix/applications/com.flexnetos.Yazelix.Agent.desktop";
+        desktopDatabaseUpdater = "${pkgs.desktop-file-utils}/bin/update-desktop-database";
       };
       lifeosFoundationYzx = pkgs.symlinkJoin {
         name = "lifeos-foundation-yzx";
-        paths = [flexnetosYzxBase flexnetosTools];
-        nativeBuildInputs = [pkgs.desktop-file-utils];
+        paths = [flexnetosYzxBase flexnetosTools flexnetosDesktopSource];
         postBuild = ''
           install -D -m 644 ${flexnetosZellijLayout}/layout.kdl \
             "$out/configs/zellij/layouts/flexnetos_agent_workspace.kdl"
@@ -937,22 +961,6 @@
           install -D -m 644 ${./nushell/config/rtk_wrappers.nu} "$out/nushell/config/rtk_wrappers.nu"
           install -D -m 644 ${./nushell/config/stack_prompt_guard.nu} "$out/nushell/config/stack_prompt_guard.nu"
           install -D -m 644 ${./nushell/scripts/flexnetos_init.nu} "$out/nushell/scripts/flexnetos_init.nu"
-
-          install -D -m 644 /dev/stdin "$out/share/applications/com.flexnetos.Yazelix.Agent.desktop" <<'EOF'
-          [Desktop Entry]
-          Version=1.4
-          Type=Application
-          Name=FlexNetOS Yazelix Agent
-          Comment=Yazelix Nova with the profile-owned FlexNetOS agent workspace
-          Icon=/home/flexnetos/.nix-profile/share/pixmaps/yazelix.png
-          StartupWMClass=mars
-          Terminal=false
-          X-Yazelix-Managed=true
-          X-FlexNetOS-Managed=true
-          Exec=/home/flexnetos/.nix-profile/bin/yzx launch
-          Categories=System;TerminalEmulator;
-          EOF
-          desktop-file-validate "$out/share/applications/com.flexnetos.Yazelix.Agent.desktop"
 
           for icon in ${marsPackage}/share/icons/hicolor/*/apps/mars.png; do
             size="$(basename "$(dirname "$(dirname "$icon")")")"
@@ -1257,19 +1265,34 @@
         test ! -e ${foundation}/bin/yzx-desktop-launch
         test ! -e ${foundation}/bin/yzx-agent-workspace-launch
 
-        desktop_count="$(find ${foundation}/share/applications -maxdepth 1 -name '*.desktop' | wc -l)"
+        test ! -e ${foundation}/share/applications
+        desktop_count="$(find ${foundation}/share/yazelix/applications -maxdepth 1 -name '*.desktop' | wc -l)"
         test "$desktop_count" = 1
-        desktop=${foundation}/share/applications/com.flexnetos.Yazelix.Agent.desktop
+        desktop=${foundation}/share/yazelix/applications/com.flexnetos.Yazelix.Agent.desktop
         test -f "$desktop"
-        test ! -e ${foundation}/share/applications/com.flexnetos.Yazelix.desktop
-        test ! -e ${foundation}/share/applications/com.yazelix.Yazelix.Kitty.desktop
+        test ! -e ${foundation}/share/yazelix/applications/com.flexnetos.Yazelix.desktop
+        test ! -e ${foundation}/share/yazelix/applications/com.yazelix.Yazelix.Kitty.desktop
         grep -Fx 'Name=FlexNetOS Yazelix Agent' "$desktop"
+        grep -Fx 'GenericName=Terminal Emulator' "$desktop"
         grep -Fx 'Exec=/home/flexnetos/.nix-profile/bin/yzx launch' "$desktop"
         grep -Fx 'Icon=/home/flexnetos/.nix-profile/share/pixmaps/yazelix.png' "$desktop"
+        grep -Fx 'StartupNotify=true' "$desktop"
         grep -Fx 'StartupWMClass=mars' "$desktop"
-        grep -Fx 'Categories=System;TerminalEmulator;' "$desktop"
+        grep -Fx 'Categories=System;TerminalEmulator' "$desktop"
+        grep -Fx 'X-Yazelix-Managed=true' "$desktop"
+        grep -Fx 'X-FlexNetOS-Managed=true' "$desktop"
         test -f ${foundation}/share/pixmaps/yazelix.png
         test -s ${foundation}/share/pixmaps/yazelix.png
+
+        export HOME="$TMPDIR/home"
+        export XDG_DATA_HOME="$TMPDIR/data"
+        mkdir -p "$HOME" "$XDG_DATA_HOME"
+        installed_desktop="$(${foundation}/bin/yzx desktop install --print-path)"
+        test "$installed_desktop" = "$XDG_DATA_HOME/applications/com.flexnetos.Yazelix.Agent.desktop"
+        cmp "$desktop" "$installed_desktop"
+        removed_desktop="$(${foundation}/bin/yzx desktop uninstall --print-path)"
+        test "$removed_desktop" = "$installed_desktop"
+        test ! -e "$installed_desktop"
 
         layout=${foundation}/configs/zellij/layouts/flexnetos_agent_workspace.kdl
         test -f "$layout"
@@ -1290,7 +1313,6 @@
         grep -F ${./nushell/config/rtk_wrappers.nu} ${flexnetosNuConfig}
         grep -F ${./nushell/scripts/flexnetos_init.nu} ${flexnetosNuConfig}
 
-        export HOME="$TMPDIR/home"
         export YAZELIX_CONFIG_HOME="$TMPDIR/config"
         export YAZELIX_STATE_DIR="$TMPDIR/state"
         mkdir -p "$HOME" "$YAZELIX_CONFIG_HOME" "$YAZELIX_STATE_DIR"
