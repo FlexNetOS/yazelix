@@ -186,7 +186,6 @@
         zoxideInit = "${yzxZoxideInit}";
       };
       flexnetosNuConfig = pkgs.replaceVars ./nushell/config/config.nu {
-        rtkWrappers = "${./nushell/config/rtk_wrappers.nu}";
         stackPromptGuard = "${./nushell/config/stack_prompt_guard.nu}";
         flexnetosInit = "${./nushell/scripts/flexnetos_init.nu}";
         profileNu = "/home/flexnetos/.nix-profile/toolbin/nu";
@@ -937,7 +936,6 @@
           install -D -m 644 ${flexnetosZellijLayout}/layout.kdl \
             "$out/configs/zellij/layouts/flexnetos_agent_workspace.kdl"
           install -D -m 644 ${./nushell/config/config.nu} "$out/nushell/config/config.nu"
-          install -D -m 644 ${./nushell/config/rtk_wrappers.nu} "$out/nushell/config/rtk_wrappers.nu"
           install -D -m 644 ${./nushell/config/stack_prompt_guard.nu} "$out/nushell/config/stack_prompt_guard.nu"
           install -D -m 644 ${./nushell/scripts/flexnetos_init.nu} "$out/nushell/scripts/flexnetos_init.nu"
 
@@ -1236,7 +1234,6 @@
       flexnetos_foundation_contracts = let
         foundation = self.packages.${system}.lifeos_foundation_yzx;
         flexnetosNuConfig = pkgs.replaceVars ./nushell/config/config.nu {
-          rtkWrappers = "${./nushell/config/rtk_wrappers.nu}";
           stackPromptGuard = "${./nushell/config/stack_prompt_guard.nu}";
           flexnetosInit = "${./nushell/scripts/flexnetos_init.nu}";
           profileNu = "/home/flexnetos/.nix-profile/toolbin/nu";
@@ -1306,11 +1303,9 @@
         grep -Eq '^default_shell "/nix/store/[^/]+-flexnetos-yzx-shell/bin/yzx-shell"$' "$config"
 
         test -f ${foundation}/nushell/config/config.nu
-        test -f ${foundation}/nushell/config/rtk_wrappers.nu
         test -f ${foundation}/nushell/config/stack_prompt_guard.nu
         test -f ${foundation}/nushell/scripts/flexnetos_init.nu
         grep -F 'source "${flexnetosNuConfig}"' ${foundation}/share/yazelix/nu/config.nu
-        grep -F ${./nushell/config/rtk_wrappers.nu} ${flexnetosNuConfig}
         grep -F ${./nushell/scripts/flexnetos_init.nu} ${flexnetosNuConfig}
         ${pkgs.file}/bin/file -L ${foundation}/bin/kache-rustc-wrapper | grep -F ELF
         ${pkgs.file}/bin/file -L ${foundation}/libexec/kache/rustc | grep -F ELF
