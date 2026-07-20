@@ -55,7 +55,7 @@ def generation-links [selector: string] {
   | where {|entry|
       let name = ($entry.name | path basename)
       let body = ($name | str replace $prefix "")
-      ($name | str starts-with $prefix) and ($body =~ '^[0-9]+-link$')
+      ($name | str starts-with $prefix) and ($body =~ '^[0-9]+-link(-[0-9]+-link)*$')
     }
   | get name
 }

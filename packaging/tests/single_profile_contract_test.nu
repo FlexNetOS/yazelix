@@ -67,7 +67,8 @@ def make-profile-dir [store: string, name: string, foundation: string] {
 # Legacy fixture:
 #   home/.nix-profile        -> state/nix/profile
 #   state/nix/profile        -> profile-1-link
-#   state/nix/profile-1-link -> profile output
+#   state/nix/profile-1-link -> profile-1-link-1-link
+#   state/nix/profile-1-link-1-link -> profile output
 def make-fixture [--legacy] {
   let root = (^mktemp -d | str trim)
   let store = ($root | path join "store")
@@ -77,7 +78,8 @@ def make-fixture [--legacy] {
   let home = ($root | path join "home")
   mkdir $state $home
   if $legacy {
-    ^ln -s $profile_dir ($state | path join "profile-1-link")
+    ^ln -s $profile_dir ($state | path join "profile-1-link-1-link")
+    ^ln -s "profile-1-link-1-link" ($state | path join "profile-1-link")
     ^ln -s "profile-1-link" ($state | path join "profile")
     ^ln -s ($state | path join "profile") ($home | path join ".nix-profile")
   } else {
@@ -238,7 +240,7 @@ def main [packaging_dir: string] {
   let rec8 = (read-receipt $rdir8)
   expect ($rec8.schema == "yazelix.single-profile-migration.receipt.v2") "dry-run receipt: v2 schema"
   expect ($rec8.mode == "dry-run") "dry-run receipt: mode"
-  expect (($rec8.archive_entries | length) == 3) "dry-run receipt: alias, legacy selector, and generation"
+  expect (($rec8.archive_entries | length) == 4) "dry-run receipt: alias, selector, and complete legacy generation chain"
   expect ($rec8.prior_manifest_sha256 != "") "dry-run receipt: prior manifest hash"
   expect ($rec8.install_command | str contains "profile add") "dry-run receipt: explicit add command"
   expect ($rec8.verified == null and $rec8.rollback_performed == false) "dry-run receipt: no execution"
@@ -275,9 +277,10 @@ def main [packaging_dir: string] {
   expect ($rec10.verification_stdout_sha256 != "") "execute receipt: verification log hash"
   expect ($rec10.rollback_performed == false) "execute receipt: no rollback"
   expect ($rec10.new_manifest_sha256 != "") "execute receipt: new manifest hash"
-  for name in [".nix-profile" "profile" "profile-1-link"] {
+  for name in [".nix-profile" "profile" "profile-1-link" "profile-1-link-1-link"] {
     expect (($rec10.archive_path | path join "prior" | path join $name | path type) == "symlink") $"execute archive contains ($name)"
   }
+  expect ((resolve ($rec10.archive_path | path join "prior" | path join "profile")) == ($fx10.profile_dir | path expand)) "execute archive: legacy generation graph resolves"
 
   # 11. A failed candidate is archived and the complete legacy state restored.
   let fx11 = (make-fixture --legacy)
@@ -299,6 +302,7 @@ def main [packaging_dir: string] {
   expect ($r11.exit_code != 0) "failed cutover: nonzero exit"
   expect ((^readlink $fx11.profile_link | str trim) == $fx11.legacy_profile) "failed cutover: profile alias restored"
   expect ((^readlink $fx11.legacy_profile | str trim) == "profile-1-link") "failed cutover: legacy selector restored"
+  expect ((^readlink ($fx11.state | path join "profile-1-link") | str trim) == "profile-1-link-1-link") "failed cutover: chained generation restored"
   expect ((resolve $fx11.profile_link) == ($fx11.profile_dir | path expand)) "failed cutover: original closure restored"
   let rec11 = (read-receipt $rdir11)
   expect ($rec11.verified == false and $rec11.rollback_performed == true) "failed receipt: rollback recorded"
