@@ -1534,7 +1534,7 @@
         ln -s ${foundation}/bin "$staging/profile-dir/bin"
         ln -s ${foundation}/toolbin "$staging/profile-dir/toolbin"
         cat > "$staging/profile-dir/manifest.json" <<EOF
-        {"version":3,"elements":{"lifeos_foundation_yzx":{"active":true,"attrPath":"packages.${system}.lifeos_foundation_yzx","originalUrl":"path:.","outputs":null,"priority":5,"storePaths":["${foundation}"],"url":"path:."}}}
+        {"version":3,"elements":{"lifeos-foundation-yzx":{"active":true,"attrPath":"packages.${system}.lifeos_foundation_yzx","originalUrl":"path:.","outputs":null,"priority":5,"storePaths":["${foundation}"],"url":"path:."}}}
         EOF
         ln -s "$staging/profile-dir" "$staging/home/.nix-profile-1-link"
         ln -s .nix-profile-1-link "$staging/home/.nix-profile"
