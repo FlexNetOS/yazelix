@@ -17,7 +17,8 @@ def expect [cond: bool, msg: string] {
 
 def make-exec [path: string] {
   mkdir ($path | path dirname)
-  "#!/bin/sh\nexit 0\n" | save --force $path
+  let nu_bin = (which nu | get path.0)
+  [$"#!($nu_bin)" "exit 0" ""] | str join "\n" | save --force $path
   ^chmod +x $path
 }
 
@@ -233,7 +234,8 @@ def main [packaging_dir: string] {
   let xdg10 = ($fx10.state | path join "profiles" | path join "profile")
   ^ln -s $other10 $xdg10
   let stub10 = ($fx10.root | path join "stub-nix")
-  "#!/bin/sh\nset -e\nif [ \"$1 $2\" = \"profile install\" ]; then\n  ln -sfn \"$STUB_TARGET\" \"$STUB_PROFILE\"\nfi\nexit 0\n" | save --force $stub10
+  let nu_bin10 = (which nu | get path.0)
+  [$"#!($nu_bin10)" '^ln -sfn $env.STUB_TARGET $env.STUB_PROFILE' 'exit 0' ''] | str join "\n" | save --force $stub10
   ^chmod +x $stub10
   let rdir10 = ($fx10.root | path join "receipts")
   mkdir $rdir10
@@ -261,7 +263,8 @@ def main [packaging_dir: string] {
   mkdir $broken11
   ^ln -s $broken11 ($fx11.state | path join "profile-3-link")
   let stub11 = ($fx11.root | path join "stub-nix")
-  "#!/bin/sh\nset -e\nif [ \"$1 $2\" = \"profile install\" ]; then\n  ln -sfn \"$STUB_TARGET\" \"$STUB_PROFILE\"\nfi\nexit 0\n" | save --force $stub11
+  let nu_bin11 = (which nu | get path.0)
+  [$"#!($nu_bin11)" '^ln -sfn $env.STUB_TARGET $env.STUB_PROFILE' 'exit 0' ''] | str join "\n" | save --force $stub11
   ^chmod +x $stub11
   let rdir11 = ($fx11.root | path join "receipts")
   mkdir $rdir11
