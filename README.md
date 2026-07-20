@@ -50,6 +50,11 @@ nix profile add --refresh github:luccahuguet/yazelix
 yzx launch
 ```
 
+The FlexNetOS foundation install uses an explicit
+`/home/flexnetos/.nix-profile` and verifies it with
+`yazelix_profile_check`; an XDG profile alias is a stale shadow, not a second
+supported owner.
+
 ### Install with Home Manager
 
 Use the [Home Manager module](docs/installation.md#home-manager) for a declarative install
@@ -217,6 +222,6 @@ popup contracts live in [Runtime Notes](docs/runtime-notes.md)
 
 ## LOC Scorecard
 
-Nova owns **21,267 lines** of tracked text project files. The
+Nova owns **21,449 lines** of tracked text project files. The
 [reproducible scorecard](docs/development.md#loc-scorecard) excludes Beads,
 lockfiles, and binary assets

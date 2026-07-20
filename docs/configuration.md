@@ -37,7 +37,9 @@ under `CODEX_HOME`, with source hashes and do-not-edit markers. Edit the Yazelix
 inputs, never those generated outputs. Auth, sessions, databases, and Codex hook
 trust state remain runtime-owned and are not copied into either source.
 
-The profile-owned Codex binary remains the only installed selector. A cutover
+The profile-owned Codex binary remains the only installed runtime. Its selector
+is the explicit `~/.nix-profile` generation, never an alias through
+`~/.local/state/nix/profile`. A cutover
 backs up existing generated files, materializes both outputs together, runs
 `tests/codex_config_provenance.nu`, and retains the backup until the installed
 runtime starts successfully.

@@ -67,15 +67,15 @@ git ls-files
 | --- | ---: |
 | Ignore (`.gitignore`) | 19 |
 | License | 201 |
-| Markdown | 2071 |
-| Nix | 2294 |
+| Markdown | 2108 |
+| Nix | 2292 |
 | Shell | 0 |
 | YAML | 242 |
 | TOML | 308 |
 | KDL | 251 |
-| Nu | 1959 |
+| Nu | 2106 |
 | Lua | 247 |
 | Rust | 13486 |
 | Host policy (conf/JSON/shells) | 94 |
 | Systemd units | 95 |
-| Total | 21267 |
+| Total | 21449 |

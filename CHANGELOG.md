@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Make `/home/flexnetos/.nix-profile` the literal foundation selector instead
+  of accepting an alias through `~/.local/state/nix/profile`. The v2 profile
+  checker rejects even convergent or broken XDG shadows; the dry-run-first
+  migration archives all prior links, records manifest hashes, verifies the
+  expected closure, and restores the complete prior selector state on failure.
+
 - Make the pinned Rust 1.89 foundation lane evaluate reliably on clean Nix
   runners by importing its hash-pinned manifest directly, and include the
   Codex config/rules materializer in branch CI.

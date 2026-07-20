@@ -23,6 +23,13 @@ The entry executes `/home/flexnetos/.nix-profile/bin/yzx launch` directly;
 there is no launcher wrapper or parallel regular/agent entry. Use
 `yzx desktop uninstall` to remove the managed entry
 
+The FlexNetOS foundation uses `/home/flexnetos/.nix-profile` as an explicit
+profile, including its generation links. `~/.local/state/nix/profile` is a
+legacy shadow, not an equivalent selector, and must be archived during the
+checked migration. Run `~/.nix-profile/bin/yazelix_profile_check` after every
+foundation update; it fails when the XDG selector exists even if both paths
+resolve to identical bytes.
+
 Install the Mars-free variant with:
 
 ```nu

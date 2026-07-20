@@ -78,6 +78,9 @@ One owner per concern. Paths are the durable map.
 
 | Path | Owns |
 | --- | --- |
+| `packaging/single_profile_check.nu` | Proves that `~/.nix-profile` is an explicit selector, the XDG selector is inactive, and the one foundation closure owns every PATH resolution |
+| `packaging/profile_migration.nu` | Dry-run-first archive, cutover, hash receipt, verification, and complete automatic rollback for the explicit profile selector |
+| `packaging/tests/single_profile_contract_test.nu` | Hermetic direct-selector, stale-shadow, success, and recovery contracts |
 | `runtime/yzx/` | CLI, startup env, launch/enter handoff |
 | `runtime/yzx-menu.rs` | Menu palette |
 | `runtime/yzx-agent.rs` | Agent provider bootstrap (`codex resume` → `grok` → `opencode` → `pi` → `claude --resume`) |
