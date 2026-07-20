@@ -4,7 +4,7 @@
 
 - Make `/home/flexnetos/.nix-profile` the literal foundation selector instead
   of accepting an alias through `~/.local/state/nix/profile`. The v2 profile
-  checker rejects even convergent or broken XDG shadows; the dry-run-first
+  checker rejects convergent, chained, or broken XDG shadows; the dry-run-first
   migration archives all prior links under Meta's authoritative
   `/home/flexnetos/.local/state/meta/archives/` root, records manifest hashes,
   verifies the expected closure, and restores the complete prior selector state
@@ -15,10 +15,17 @@
   Codex config/rules materializer in branch CI.
 
 - Extend Yazelix Codex authorship to the mandatory durable `RULES.md` surface.
-  Reviewed config and rules inputs now validate before either generated file is
-  written, both outputs carry source hashes, and the runtime provenance gate
-  verifies deployed-input, review-copy, and generated-output parity without
-  authoring Codex auth, sessions, databases, or hook trust state.
+  The foundation profile now ships both review inputs, the materializer source,
+  and `yazelix_codex_materialize`. Reviewed config and rules inputs validate and
+  stage together before either generated file is replaced; both mode-0644
+  outputs carry exact source hashes. Reviewed top-level config tables replace
+  stale live tables while live-only runtime tables such as `hooks.state` survive,
+  and a durable journal restores the exact prior pair after an interruption
+  between the two published paths. The
+  runtime provenance gate enforces the
+  exact lexical profile selector and deployed/review/generated parity without
+  authoring Codex auth, sessions, databases, hooks, or user preferences.
+
 - Pin the profile-owned RTK package to the Blueprint-verified FlexNetOS
   `rtk-tokenkill` develop revision (`44cf84e…`), retaining the single native
   RTK binary and Nushell dispatcher ownership model.

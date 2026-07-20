@@ -23,6 +23,7 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [features]
+hooks = true
 plugins = false
 remote_plugin = false
 

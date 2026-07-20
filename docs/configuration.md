@@ -31,18 +31,38 @@ FlexNetOS reviews Codex configuration and durable operating rules in
 ~/.config/yazelix/agents/codex/RULES.md.src
 ```
 
-`nushell/scripts/materialize_codex_config.nu` validates both inputs before it
-writes either generated output. It renders them as `config.toml` and `RULES.md`
-under `CODEX_HOME`, with source hashes and do-not-edit markers. Edit the Yazelix
-inputs, never those generated outputs. Auth, sessions, databases, and Codex hook
-trust state remain runtime-owned and are not copied into either source.
+The profile installs immutable review copies under
+`~/.nix-profile/share/yazelix/agent_configs/codex/`, the materializer under
+`~/.nix-profile/share/yazelix/nushell/scripts/`, and the executable
+`~/.nix-profile/bin/yazelix_codex_materialize`. Copy a reviewed input into the
+editable tree only as a deliberate source update; the profile copy is not an
+alternate editable owner.
 
-The profile-owned Codex binary remains the only installed runtime. Its selector
-is the explicit `~/.nix-profile` generation, never an alias through
-`~/.local/state/nix/profile`. A cutover
-backs up existing generated files, materializes both outputs together, runs
-`tests/codex_config_provenance.nu`, and retains the backup until the installed
+The materializer validates both inputs and completes both mode-`0644` staged
+files before replacing either live path. POSIX has no atomic rename for two
+independent pathnames, so publication uses a durable recovery journal and
+rollback copies rather than claiming a two-path atomic rename. If interrupted
+after one replacement, the next invocation restores the exact prior pair before
+continuing. It writes `config.toml` and `RULES.md` under `CODEX_HOME`
+with exact source hashes and do-not-edit markers.
+
+For `config.toml`, every top-level key or table declared by the reviewed source
+belongs to that source and replaces the corresponding live value. Live-only
+top-level tables, including Codex-managed `hooks.state`, survive materialization.
+Edit declarative preferences in the Yazelix input, never in the generated file.
+Auth, sessions, databases, and other non-config runtime state are untouched.
+
+The lexical selector must be exactly
+`/home/flexnetos/.nix-profile/bin/codex`; resolving to the same store payload
+through another path is not sufficient. An approved cutover archives the prior
+generated pair, runs `yazelix_codex_materialize`, checks
+`tests/codex_config_provenance.nu`, and retains the archive until the installed
 runtime starts successfully.
+
+The profile selector itself must likewise be a direct, relative Nix generation:
+`/home/flexnetos/.nix-profile -> .nix-profile-<generation>-link`. An alias
+through `~/.local/state/nix/profile`, even when it resolves to identical store
+bytes, is a second ownership layer and fails the installed profile contract.
 
 ## Main settings
 

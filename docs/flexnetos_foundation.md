@@ -34,9 +34,11 @@ Yazelix and agent Yazelix are the same path.
 `.nix-profile-N-link` generation beside the frontdoor. It must not alias
 `~/.local/state/nix/profile`, even when both links currently resolve to the same
 store closure. The migration archives that XDG selector and its generation
-links under Yazelix-generated proof storage before creating the explicit
-profile. A failed install or closure verification archives the candidate and
-restores every prior link.
+links under Meta's authoritative
+`/home/flexnetos/.local/state/meta/archives/yazelix-nix-profile/` root before
+creating the explicit profile. Generated Yazelix runtime state is proof only.
+A failed install or closure verification archives the candidate and restores
+every prior link.
 
 ## Nushell
 
