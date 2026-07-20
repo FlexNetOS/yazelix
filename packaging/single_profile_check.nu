@@ -4,8 +4,8 @@
 #   1. direct_profile_selector     ~/.nix-profile is the explicit selector and
 #                                  points to its own .nix-profile-N-link
 #   2. selector_resolves           the selected profile has manifest.json
-#   3. single_foundation_element   the manifest contains only
-#                                  lifeos_foundation_yzx
+#   3. single_foundation_element   the manifest contains only the installed
+#                                  lifeos-foundation-yzx package
 #   4. legacy_xdg_inactive         ~/.local/state/nix/profile is absent, even
 #                                  when it would resolve to the same closure
 #   5. foundation_binaries_resolve the product, agent, intelligence, Beads,
@@ -76,8 +76,8 @@ def main [] {
     let manifest = (open --raw ($resolved_profile | path join "manifest.json") | from json)
     if ($manifest.version? | default 0) == 3 {
       let names = ($manifest.elements | columns)
-      if $names == ["lifeos_foundation_yzx"] {
-        let paths = ($manifest.elements.lifeos_foundation_yzx.storePaths? | default [])
+      if $names == ["lifeos-foundation-yzx"] {
+        let paths = ($manifest.elements.lifeos-foundation-yzx.storePaths? | default [])
         if ($paths | length) == 1 and ($paths | all {|p| $p | str starts-with $store_prefix }) {
           $single_element = true
           $element_paths = $paths

@@ -48,7 +48,7 @@ def make-profile-dir [store: string, name: string, foundation: string] {
   {
     version: 3
     elements: {
-      lifeos_foundation_yzx: {
+      lifeos-foundation-yzx: {
         active: true
         attrPath: "packages.x86_64-linux.lifeos_foundation_yzx"
         originalUrl: "path:."
