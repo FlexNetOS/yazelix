@@ -64,6 +64,16 @@ One owner per concern. Paths are the durable map.
 | `flake.nix` | Fixed full/runtime composition, inputs, helpers, desktop entry, HM export |
 | `home-manager/module.nix` | `programs.yazelix.enable` / package; optional config files; no default generation |
 
+### Codex authored inputs
+
+| Path | Owns |
+| --- | --- |
+| `agent_configs/codex/config.toml.src` | Reviewed Codex configuration copied to the user-editable Yazelix input tree |
+| `agent_configs/codex/RULES.md.src` | Reviewed durable Codex operating rules copied to the same input tree |
+| `nushell/scripts/materialize_codex_config.nu` | Validates both inputs before writing provenance-bound `config.toml` and `RULES.md` under `CODEX_HOME` |
+| `tests/codex_config_materializer.nu` | Determinism and fail-closed materialization contract |
+| `tests/codex_config_provenance.nu` | Deployed-input, profile selector, and generated-runtime parity gate |
+
 ### Front door and helpers
 
 | Path | Owns |

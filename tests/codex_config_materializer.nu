@@ -1,44 +1,63 @@
-# Contract check for the Codex config materializer (YZXCONV-004)
+# Contract check for the Codex config and rules materializer (YZXCONV-004)
 #
 # Proves:
-#   1. the reviewed input agent_configs/codex/config.toml.src exists, parses
-#      as TOML, and contains no retired-workspace or profile-bypassing paths
-#   2. materialization is deterministic: same input -> byte-identical output
-#   3. the materialized output is parseable TOML carrying the generated marker
-#   4. the materializer fails closed on retired workspace mirrors, raw
-#      /nix/store pins, Nix profile-generation pins, and invalid TOML
+#   1. both reviewed inputs exist and satisfy their format contracts
+#   2. materialization is deterministic for config.toml and RULES.md
+#   3. both outputs carry source hashes and generated markers
+#   4. every input validates before either output changes
+#   5. forbidden config paths, invalid TOML, malformed rules, and missing inputs
+#      fail closed
 
 def fail [message: string] {
     print --stderr $"codex materializer contract: ($message)"
     exit 1
 }
 
-def expect-reject [materializer: path, workdir: path, label: string, content: string] {
-    let src = ($workdir | path join $"reject-($label).toml.src")
-    $content | save --force --raw $src
-    let out = ($workdir | path join $"reject-($label).toml")
-    let result = (do { ^$nu.current-exe $materializer $src $out } | complete)
+def invoke-materializer [materializer: path, config_src: path, config_out: path, rules_src: path, rules_out: path] {
+    do { ^$nu.current-exe $materializer $config_src $config_out $rules_src $rules_out } | complete
+}
+
+def expect-config-reject [materializer: path, workdir: path, rules_src: path, label: string, content: string] {
+    let config_src = ($workdir | path join $"reject-config-($label).toml.src")
+    $content | save --force --raw $config_src
+    let config_out = ($workdir | path join $"reject-config-($label).toml")
+    let rules_out = ($workdir | path join $"reject-config-($label).md")
+    let result = (invoke-materializer $materializer $config_src $config_out $rules_src $rules_out)
     if $result.exit_code == 0 {
-        fail $"materializer accepted forbidden input: ($label)"
+        fail $"materializer accepted forbidden config input: ($label)"
     }
-    if ($out | path exists) {
-        fail $"materializer wrote output despite rejecting input: ($label)"
+    if ($config_out | path exists) or ($rules_out | path exists) {
+        fail $"materializer wrote output despite rejecting config input: ($label)"
+    }
+}
+
+def expect-rules-reject [materializer: path, workdir: path, config_src: path, label: string, content: string] {
+    let rules_src = ($workdir | path join $"reject-rules-($label).md.src")
+    $content | save --force --raw $rules_src
+    let config_out = ($workdir | path join $"reject-rules-($label).toml")
+    let rules_out = ($workdir | path join $"reject-rules-($label).md")
+    let result = (invoke-materializer $materializer $config_src $config_out $rules_src $rules_out)
+    if $result.exit_code == 0 {
+        fail $"materializer accepted malformed rules input: ($label)"
+    }
+    if ($config_out | path exists) or ($rules_out | path exists) {
+        fail $"materializer wrote output despite rejecting rules input: ($label)"
     }
 }
 
 def main [root: path] {
     let materializer = ($root | path join "nushell/scripts/materialize_codex_config.nu")
-    let repo_src = ($root | path join "agent_configs/codex/config.toml.src")
-    if not ($materializer | path exists) {
-        fail $"materializer missing: ($materializer)"
-    }
-    if not ($repo_src | path exists) {
-        fail $"reviewed input missing: ($repo_src)"
+    let config_src = ($root | path join "agent_configs/codex/config.toml.src")
+    let rules_src = ($root | path join "agent_configs/codex/RULES.md.src")
+    for required in [$materializer $config_src $rules_src] {
+        if not ($required | path exists) {
+            fail $"required source missing: ($required)"
+        }
     }
 
-    let raw = (open --raw $repo_src)
-    try { $raw | from toml | ignore } catch {
-        fail "reviewed input is not valid TOML"
+    let config_raw = (open --raw $config_src)
+    try { $config_raw | from toml | ignore } catch {
+        fail "reviewed config input is not valid TOML"
     }
     let forbidden = [
         "/home/flexnetos/FlexNetOS"
@@ -47,44 +66,88 @@ def main [root: path] {
         ".local/state/nix/profiles/profile-"
     ]
     for pattern in $forbidden {
-        if ($raw | str contains $pattern) {
-            fail $"reviewed input contains forbidden path ($pattern)"
+        if ($config_raw | str contains $pattern) {
+            fail $"reviewed config input contains forbidden path ($pattern)"
         }
+    }
+
+    let rules_raw = (open --raw $rules_src)
+    if not ($rules_raw | str starts-with "# FlexNetOS Codex Durable Rules\n") {
+        fail "reviewed rules input lacks the durable rules heading"
     }
 
     let workdir = (mktemp --directory --tmpdir "codex-materializer-check.XXXXXX")
-    let out_a = ($workdir | path join "a" "config.toml")
-    let out_b = ($workdir | path join "b" "config.toml")
-    for out in [$out_a $out_b] {
-        let result = (do { ^$nu.current-exe $materializer $repo_src $out } | complete)
+    let config_out_a = ($workdir | path join "a" "config.toml")
+    let config_out_b = ($workdir | path join "b" "config.toml")
+    let rules_out_a = ($workdir | path join "a" "RULES.md")
+    let rules_out_b = ($workdir | path join "b" "RULES.md")
+    for pair in [
+        {config: $config_out_a, rules: $rules_out_a}
+        {config: $config_out_b, rules: $rules_out_b}
+    ] {
+        let result = (invoke-materializer $materializer $config_src $pair.config $rules_src $pair.rules)
         if $result.exit_code != 0 {
-            fail $"materializer failed on reviewed input: ($result.stderr)"
+            fail $"materializer failed on reviewed inputs: ($result.stderr)"
         }
     }
-    let hash_a = (open --raw $out_a | hash sha256)
-    let hash_b = (open --raw $out_b | hash sha256)
-    if $hash_a != $hash_b {
-        fail $"non-deterministic output: ($hash_a) vs ($hash_b)"
+
+    let config_hash_a = (open --raw $config_out_a | hash sha256)
+    let config_hash_b = (open --raw $config_out_b | hash sha256)
+    let rules_hash_a = (open --raw $rules_out_a | hash sha256)
+    let rules_hash_b = (open --raw $rules_out_b | hash sha256)
+    if $config_hash_a != $config_hash_b {
+        fail $"non-deterministic config output: ($config_hash_a) vs ($config_hash_b)"
+    }
+    if $rules_hash_a != $rules_hash_b {
+        fail $"non-deterministic rules output: ($rules_hash_a) vs ($rules_hash_b)"
     }
 
-    let rendered = (open --raw $out_a)
-    try { $rendered | from toml | ignore } catch {
-        fail "materialized output is not valid TOML"
+    let rendered_config = (open --raw $config_out_a)
+    try { $rendered_config | from toml | ignore } catch {
+        fail "materialized config output is not valid TOML"
     }
-    if not ($rendered | str contains "GENERATED by yazelix codex config materializer") {
-        fail "materialized output missing generated marker"
+    if not ($rendered_config | str contains "GENERATED by yazelix codex config materializer") {
+        fail "materialized config output lacks its generated marker"
     }
-
-    expect-reject $materializer $workdir "retired-workspace" ('[projects."/home/flexnetos/FlexNetOS"]' + "\ntrust_level = \"trusted\"\n")
-    expect-reject $materializer $workdir "raw-store-pin" ("[mcp_servers.icm]\ncommand = \"/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-icm-0.0.1/bin/icm\"\n")
-    expect-reject $materializer $workdir "system-profile-pin" ("[mcp_servers.icm]\ncommand = \"/nix/var/nix/profiles/default/bin/icm\"\n")
-    expect-reject $materializer $workdir "user-profile-generation-pin" ("[mcp_servers.icm]\ncommand = \"/home/flexnetos/.local/state/nix/profiles/profile-4-link/bin/icm\"\n")
-    expect-reject $materializer $workdir "invalid-toml" "[unterminated\n"
-
-    let missing = (do { ^$nu.current-exe $materializer ($workdir | path join "does-not-exist.toml.src") ($workdir | path join "never.toml") } | complete)
-    if $missing.exit_code == 0 {
-        fail "materializer accepted a missing input path"
+    let rendered_rules = (open --raw $rules_out_a)
+    if not ($rendered_rules | str contains "GENERATED by yazelix codex rules materializer") {
+        fail "materialized rules output lacks its generated marker"
+    }
+    if not ($rendered_rules | str contains "# FlexNetOS Codex Durable Rules") {
+        fail "materialized rules output lacks its durable rules body"
     }
 
-    print "ok codex config materializer: deterministic, parseable, fail-closed"
+    expect-config-reject $materializer $workdir $rules_src "retired-workspace" ('[projects."/home/flexnetos/FlexNetOS"]' + "\ntrust_level = \"trusted\"\n")
+    expect-config-reject $materializer $workdir $rules_src "raw-store-pin" ("[mcp_servers.icm]\ncommand = \"/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-icm-0.0.1/bin/icm\"\n")
+    expect-config-reject $materializer $workdir $rules_src "system-profile-pin" ("[mcp_servers.icm]\ncommand = \"/nix/var/nix/profiles/default/bin/icm\"\n")
+    expect-config-reject $materializer $workdir $rules_src "user-profile-generation-pin" ("[mcp_servers.icm]\ncommand = \"/home/flexnetos/.local/state/nix/profiles/profile-4-link/bin/icm\"\n")
+    expect-config-reject $materializer $workdir $rules_src "invalid-toml" "[unterminated\n"
+    expect-rules-reject $materializer $workdir $config_src "missing-heading" "# Different Rules\n"
+    expect-rules-reject $materializer $workdir $config_src "generated-input" "# FlexNetOS Codex Durable Rules\nGENERATED by yazelix codex rules materializer\n"
+
+    let missing_config = (invoke-materializer $materializer ($workdir | path join "missing.toml.src") ($workdir | path join "never-config.toml") $rules_src ($workdir | path join "never-rules.md"))
+    if $missing_config.exit_code == 0 {
+        fail "materializer accepted a missing config input"
+    }
+    let missing_rules = (invoke-materializer $materializer $config_src ($workdir | path join "never-config-2.toml") ($workdir | path join "missing-rules.md.src") ($workdir | path join "never-rules-2.md"))
+    if $missing_rules.exit_code == 0 {
+        fail "materializer accepted a missing rules input"
+    }
+
+    let sentinel_config = ($workdir | path join "sentinel" "config.toml")
+    let sentinel_rules = ($workdir | path join "sentinel" "RULES.md")
+    mkdir ($sentinel_config | path dirname)
+    "preserve-config" | save --raw $sentinel_config
+    "preserve-rules" | save --raw $sentinel_rules
+    let invalid_rules = ($workdir | path join "invalid-rules.md.src")
+    "# Wrong heading\n" | save --raw $invalid_rules
+    let failed_update = (invoke-materializer $materializer $config_src $sentinel_config $invalid_rules $sentinel_rules)
+    if $failed_update.exit_code == 0 {
+        fail "materializer accepted invalid rules during an update"
+    }
+    if (open --raw $sentinel_config) != "preserve-config" or (open --raw $sentinel_rules) != "preserve-rules" {
+        fail "materializer changed an existing output before all inputs validated"
+    }
+
+    print "ok codex materializer: config and rules deterministic, parseable, provenance-bound, fail-closed"
 }

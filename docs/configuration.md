@@ -21,6 +21,27 @@ ${XDG_DATA_HOME:-$HOME/.local/share}/yazelix
 
 Set `YAZELIX_STATE_DIR` to use another state directory
 
+## Codex configuration and rules
+
+FlexNetOS reviews Codex configuration and durable operating rules in
+`agent_configs/codex/`. Their user-editable deploy copies live at:
+
+```text
+~/.config/yazelix/agents/codex/config.toml.src
+~/.config/yazelix/agents/codex/RULES.md.src
+```
+
+`nushell/scripts/materialize_codex_config.nu` validates both inputs before it
+writes either generated output. It renders them as `config.toml` and `RULES.md`
+under `CODEX_HOME`, with source hashes and do-not-edit markers. Edit the Yazelix
+inputs, never those generated outputs. Auth, sessions, databases, and Codex hook
+trust state remain runtime-owned and are not copied into either source.
+
+The profile-owned Codex binary remains the only installed selector. A cutover
+backs up existing generated files, materializes both outputs together, runs
+`tests/codex_config_provenance.nu`, and retains the backup until the installed
+runtime starts successfully.
+
 ## Main settings
 
 The optional root config lives at `~/.config/yazelix/config.toml`. Opening

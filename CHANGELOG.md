@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Extend Yazelix Codex authorship to the mandatory durable `RULES.md` surface.
+  Reviewed config and rules inputs now validate before either generated file is
+  written, both outputs carry source hashes, and the runtime provenance gate
+  verifies deployed-input, review-copy, and generated-output parity without
+  authoring Codex auth, sessions, databases, or hook trust state.
 - Pin the profile-owned RTK package to the Blueprint-verified FlexNetOS
   `rtk-tokenkill` develop revision (`44cf84e…`), retaining the single native
   RTK binary and Nushell dispatcher ownership model.
