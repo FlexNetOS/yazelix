@@ -43,7 +43,10 @@ mod tests {
     fn desktop_command_reports_one_profile_owned_entry() {
         let path =
             "/home/flexnetos/.nix-profile/share/applications/com.flexnetos.Yazelix.Agent.desktop";
-        assert_eq!(profile_desktop_path(path).unwrap(), Path::new(path));
+        assert!(matches!(
+            profile_desktop_path(path),
+            Ok(actual) if actual == Path::new(path)
+        ));
         assert!(matches!(profile_desktop_path(""), Err(AppError::Usage(_))));
     }
 }
