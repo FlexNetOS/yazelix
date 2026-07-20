@@ -38,12 +38,19 @@ The profile installs immutable review copies under
 editable tree only as a deliberate source update; the profile copy is not an
 alternate editable owner.
 
-The materializer validates both inputs, renders both complete files in one
-staging directory, fixes their modes to `0644`, and only then replaces the live
-pair. It writes `config.toml` and `RULES.md` under `CODEX_HOME` with exact source
-hashes and do-not-edit markers. Edit the Yazelix inputs, never those generated
-outputs. Auth, sessions, databases, hook trust state, and other runtime
-preferences remain runtime-owned and are not synthesized by the materializer.
+The materializer validates both inputs and completes both mode-`0644` staged
+files before replacing either live path. POSIX has no atomic rename for two
+independent pathnames, so publication uses a durable recovery journal and
+rollback copies rather than claiming a two-path atomic rename. If interrupted
+after one replacement, the next invocation restores the exact prior pair before
+continuing. It writes `config.toml` and `RULES.md` under `CODEX_HOME`
+with exact source hashes and do-not-edit markers.
+
+For `config.toml`, every top-level key or table declared by the reviewed source
+belongs to that source and replaces the corresponding live value. Live-only
+top-level tables, including Codex-managed `hooks.state`, survive materialization.
+Edit declarative preferences in the Yazelix input, never in the generated file.
+Auth, sessions, databases, and other non-config runtime state are untouched.
 
 The lexical selector must be exactly
 `/home/flexnetos/.nix-profile/bin/codex`; resolving to the same store payload
