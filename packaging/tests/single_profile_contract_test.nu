@@ -30,7 +30,7 @@ def make-exec [path: string] {
 
 def make-foundation [store: string, name: string] {
   let foundation = ($store | path join $name)
-  for b in [yzx codex claude rtk] {
+  for b in [yzx codex claude rtk br bun git-kb icm nix] {
     make-exec ($foundation | path join "bin" | path join $b)
   }
   make-exec ($foundation | path join "toolbin" | path join "nu")
@@ -172,6 +172,16 @@ def main [packaging_dir: string] {
   expect ($r3.exit_code != 0) "absolute selector alias: nonzero exit"
   let j3 = ($r3.stdout | from json)
   expect ($j3.clauses.direct_profile_selector == false) "absolute selector alias: clause false"
+
+  # A chained selector name is not a Nix-owned direct generation.
+  let fx3b = (make-fixture)
+  ^rm $fx3b.profile_link
+  let chained3b = ($fx3b.home | path join ".nix-profile-1-link-2-link")
+  ^ln -s $fx3b.profile_dir $chained3b
+  ^ln -s ($chained3b | path basename) $fx3b.profile_link
+  let r3b = (run-check $check $fx3b {})
+  expect ($r3b.exit_code != 0) "chained selector alias: nonzero exit"
+  expect (($r3b.stdout | from json).clauses.direct_profile_selector == false) "chained selector alias: clause false"
 
   # 4. A broken legacy symlink is still an active stale shadow.
   let fx4 = (make-fixture)

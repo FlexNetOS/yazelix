@@ -8,8 +8,9 @@
 #                                  lifeos_foundation_yzx
 #   4. legacy_xdg_inactive         ~/.local/state/nix/profile is absent, even
 #                                  when it would resolve to the same closure
-#   5. foundation_binaries_resolve yzx/codex/claude/rtk (bin) and nu (toolbin)
-#                                  are executable and store-backed
+#   5. foundation_binaries_resolve yzx/codex/claude/rtk/br/bun/git-kb/icm/nix
+#                                  (bin) and nu (toolbin) are executable and
+#                                  store-backed
 #   6. path_single_owner           (YZX_CHECK_PATH=1) every PATH resolution of
 #                                  the foundation binaries resolves identically
 #   7. closure_matches_expected    (YZX_EXPECTED_CLOSURE set) the manifest
@@ -57,7 +58,7 @@ def main [] {
     $selector_link.ok
     and not ($selector_link.target | str contains "/")
     and ($selector_link.target | str starts-with $generation_prefix)
-    and ($generation_body =~ '^[0-9]+-link(-[0-9]+-link)*$')
+    and ($generation_body =~ '^[0-9]+-link$')
   )
 
   let resolved_profile = (resolve $profile_link)
@@ -89,7 +90,18 @@ def main [] {
     not $legacy_probe.ok and not ($legacy_xdg_profile | path exists)
   )
 
-  let bin_specs = [[dir name]; [bin yzx] [bin codex] [bin claude] [bin rtk] [toolbin nu]]
+  let bin_specs = [[dir name];
+    [bin yzx]
+    [bin codex]
+    [bin claude]
+    [bin rtk]
+    [bin br]
+    [bin bun]
+    [bin git-kb]
+    [bin icm]
+    [bin nix]
+    [toolbin nu]
+  ]
   let binary_reports = if $selector_resolves {
     $bin_specs | each {|s|
       let p = ($resolved_profile | path join $s.dir | path join $s.name)

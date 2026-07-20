@@ -26,7 +26,10 @@ there is no launcher wrapper or parallel regular/agent entry. Use
 The FlexNetOS foundation uses `/home/flexnetos/.nix-profile` as an explicit
 profile, including its generation links. `~/.local/state/nix/profile` is a
 legacy shadow, not an equivalent selector, and must be archived during the
-checked migration. Run `~/.nix-profile/bin/yazelix_profile_check` after every
+checked migration under Meta's authoritative
+`/home/flexnetos/.local/state/meta/archives/yazelix-nix-profile/` root. Generated
+runtime under `~/.local/share/yazelix` is evidence only and never owns profile
+archives. Run `~/.nix-profile/bin/yazelix_profile_check` after every
 foundation update; it fails when the XDG selector exists even if both paths
 resolve to identical bytes.
 

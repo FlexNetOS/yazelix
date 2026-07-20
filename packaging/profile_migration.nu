@@ -12,7 +12,7 @@
 #
 #   nu packaging/profile_migration.nu --closure /nix/store/...-lifeos-foundation-yzx \
 #     [--flake-ref path:/home/flexnetos/meta/src/yazelix] \
-#     [--archive-dir /home/flexnetos/.local/share/yazelix/archives/nix-profile] \
+#     [--archive-dir /home/flexnetos/.local/state/meta/archives/yazelix-nix-profile] \
 #     [--receipt-dir DIR] [--execute]
 #
 # Environment overrides (fixtures/staging): YZX_PROFILE_LINK,
@@ -55,7 +55,7 @@ def generation-links [selector: string] {
   | where {|entry|
       let name = ($entry.name | path basename)
       let body = ($name | str replace $prefix "")
-      ($name | str starts-with $prefix) and ($body =~ '^[0-9]+-link(-[0-9]+-link)*$')
+      ($name | str starts-with $prefix) and ($body =~ '^[0-9]+-link$')
     }
   | get name
 }
@@ -99,7 +99,7 @@ def archive-candidate [profile_link: string, destination: string] {
 def main [
   --closure: string = ""     # freshly built lifeos-foundation-yzx store path (required)
   --flake-ref: string = "path:/home/flexnetos/meta/src/yazelix"  # install source
-  --archive-dir: string = "/home/flexnetos/.local/share/yazelix/archives/nix-profile"
+  --archive-dir: string = "/home/flexnetos/.local/state/meta/archives/yazelix-nix-profile"
   --receipt-dir: string = "."  # where the migration receipt is written
   --execute                    # actually mutate; default is a read-only dry-run
 ] {
