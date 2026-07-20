@@ -2,9 +2,9 @@
 # This source remains editable in the Yazelix repository; Nix substitutes the
 # owned store paths before the generated runtime config sources it.
 
-use @rtkWrappers@ *
 source @stackPromptGuard@
 source @flexnetosInit@
+use rtk_wrappers.nu *
 
 # The installed FlexNetOS product has one Nushell owner. Refuse to publish a
 # different shell path when running under the real product home.
