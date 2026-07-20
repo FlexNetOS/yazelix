@@ -27,8 +27,10 @@ Operators edit `~/.config/yazelix`; they do not patch generated files.
 The sole Nix profile element is `lifeos_foundation_yzx`. It provides the
 profile-owned agent layout at
 `configs/zellij/layouts/flexnetos_agent_workspace.kdl`, and its only desktop
-entry runs `/home/flexnetos/.nix-profile/bin/yzx launch` directly. Regular
-Yazelix and agent Yazelix are the same path.
+entry lives under the profile's standard `share/applications`, runs
+`/home/flexnetos/.nix-profile/bin/yzx launch` directly, and is reported
+read-only by `yzx desktop`. Regular Yazelix and agent Yazelix are the same path;
+no user-local launcher is an ownership layer.
 
 ## Nushell
 
@@ -46,6 +48,8 @@ nix build .#checks.x86_64-linux.flexnetos_foundation_contracts --no-link
 nix build .#lifeos_foundation_yzx --no-link --print-out-paths
 ```
 
-The contract checks one desktop file, the direct profile `Exec`, absence of
-launcher wrappers, the profile layout, both Nushell source directories,
-mandatory Nushell, `yzx status`, `yzx doctor`, and generated runtime identity.
+The contract checks one profile-owned desktop file, the direct profile `Exec`,
+the terminal-metadata provenance that defines its identity, absence of launcher
+wrappers and user-local materialization, the profile layout, both Nushell source
+directories, mandatory Nushell, `yzx status`, `yzx doctor`, and generated
+runtime identity.

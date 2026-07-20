@@ -2,11 +2,34 @@
 
 ## Unreleased
 
-- Pin the profile-owned RTK package to the Blueprint-verified FlexNetOS
-  `rtk-tokenkill` develop revision (`44cf84e…`), retaining the single native
-  RTK binary and Nushell dispatcher ownership model.
+- Add read-only `yzx inspect` human and schema-1 JSON receipts for the invoked
+  and resolved profile frontdoor, runtime/config/state ownership, local shadow
+  detection, and current session identity.
+- Keep the Helix bridge on a short runtime-root path and propagate that one root
+  through `yzx run`, `yzx-open`, and every managed editor pane. The packaged
+  Helix fork is synchronized to its latest authoritative upstream while
+  retaining the FlexNetOS bridge contract.
+- Consume the latest FlexNetOS Yazi asset package as the sole owner of the
+  auto-layout, Git, and Starship plugins and Starship configuration instead of
+  maintaining parallel upstream inputs.
+- Consume schema-2 Mars-only terminal metadata from the FlexNetOS terminal
+  support package, and install the resulting single agent desktop entry only
+  under the profile's standard `share/applications` path. `yzx desktop` is now
+  a read-only ownership report and never copies into user-local data.
+- Package `bv` beside `br` in the FlexNetOS foundation profile and contract-test
+  both Beads execution and graph-aware robot triage frontdoors.
+- Pin the profile-owned RTK package to the latest FlexNetOS `rtk-tokenkill`
+  develop revision (`0dd13a4…`). The same source now provides native `rtk` and
+  the byte-exact `rtk_nu` adapter required by the blueprint, with retired Claude
+  shell hooks removed.
 - Package the canonical Nushell RTK dispatcher with the foundation profile so
   Codex and Cargo routing have one profile-owned source.
+- Package Neovim as the alternate Engine Room editor, and enforce Bun/Bunx as
+  the only JavaScript package frontdoors by removing npm, npx, pnpm, Yarn, and
+  Corepack from the foundation profile.
+- Advance the profile-owned ICM source to the blueprint-verified FlexNetOS main
+  revision (`03d63a9…`) so its current memory, retrieval, topic, hygiene, update,
+  service, and code-context surfaces share one pinned executable.
 
 User-visible runtime changes for Yazelix Nova live here.
 

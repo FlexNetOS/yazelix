@@ -14,14 +14,13 @@ so use `enter` for the managed workspace. Both package and app outputs exist for
 
 The `x86_64-linux`-only `lifeos_foundation_yzx` output composes canonical Nova
 with the FlexNetOS toolchain. It deliberately owns one profile element, one
-`bin/yzx` frontdoor, one desktop-entry source, and one default agent workspace.
-Run `yzx desktop install` after installing or upgrading the profile package. It
-materializes that source as the single active entry under
-`$XDG_DATA_HOME/applications` (or `~/.local/share/applications`) so GNOME sees a
-real applications-directory change when the Nix profile generation changes.
-The entry executes `/home/flexnetos/.nix-profile/bin/yzx launch` directly;
-there is no launcher wrapper or parallel regular/agent entry. Use
-`yzx desktop uninstall` to remove the managed entry
+`bin/yzx` frontdoor, one profile-owned desktop entry, and one default agent
+workspace. The profile materializes that entry directly at
+`/home/flexnetos/.nix-profile/share/applications/com.flexnetos.Yazelix.Agent.desktop`;
+`yzx desktop --print-path` reports it without copying or mutating user-local
+applications. The entry executes `/home/flexnetos/.nix-profile/bin/yzx launch`
+directly; there is no launcher wrapper, user-local shadow, or parallel
+regular/agent entry
 
 Install the Mars-free variant with:
 

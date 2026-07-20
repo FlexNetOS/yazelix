@@ -41,6 +41,7 @@ If the one-off launch fails, inspect the owned runtime setup with:
 
 ```nu
 nix run github:luccahuguet/yazelix -- doctor
+nix run github:luccahuguet/yazelix -- inspect
 ```
 
 ### Install in a Nix profile
@@ -166,8 +167,10 @@ Move mode is unbound. Managed popup triggers can be remapped through
 | `yzx config` | Open the Ratconfig-backed config UI |
 | `yzx menu` | Open the command palette |
 | `yzx doctor` | Check owned runtime setup without launching Mars or Zellij |
+| `yzx inspect [--json]` | Report runtime, profile-frontdoor, shadow, and session provenance |
 | `yzx status` | Print config/runtime paths and selected settings |
 | `yzx status --json` | Print the versioned machine-readable status record |
+| `yzx desktop [--print-path]` | Report the profile-owned desktop entry without copying it |
 | `yzx env` | Open the managed shell without launching the UI |
 | `yzx tutor [lesson]` | Print guided Yazelix lessons |
 | `yzx screen [style]` | Show a terminal welcome screen |
@@ -177,6 +180,11 @@ Status JSON contains numeric `schema_version = 1`, plus `name`, `version`,
 `package`, `config_home`, `state_dir`, `shell`, `editor_command`, `editor`,
 `agent_command`, and `inside_zellij`. The sponsor URL remains in `yzx help`
 without a public `sponsor` command
+
+Inspect JSON is also schema 1 and adds the invoked and symlink-resolved
+frontdoor, profile manifest, expected single profile root, local shadow state,
+runtime identity, and optional session identity. It is read-only and works
+outside Zellij
 
 The top-right Zellij corner shows the compact release line derived from the
 same version: `NOVA DEV` in development, `NOVA βN` during the v1 beta line,
@@ -215,8 +223,12 @@ See [Development](docs/development.md) for CI, local checks, runtime input
 overrides, and the LOC scorecard. Lower-level launch, config, editor, shell, and
 popup contracts live in [Runtime Notes](docs/runtime-notes.md)
 
+The [RuVector blueprint provenance ledger](docs/ruvector_blueprint_provenance.md)
+maps every applicable Engine Room and formerly optional capability to its one
+repository owner and verification surface
+
 ## LOC Scorecard
 
-Nova owns **20,069 lines** of tracked text project files. The
+Nova owns **21,339 lines** of tracked text project files. The
 [reproducible scorecard](docs/development.md#loc-scorecard) excludes Beads,
 lockfiles, and binary assets

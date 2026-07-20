@@ -24,7 +24,7 @@
       flake = false;
     };
     yazelixHelix = {
-      url = "github:luccahuguet/yazelix-helix";
+      url = "github:FlexNetOS/yazelix-helix/2657bf0f8e0f183c0e9bca7e6b1b42f75416be7c";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     yazelixZellijPopup = {
@@ -44,27 +44,27 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     yazelixYaziAssets = {
-      url = "github:FlexNetOS/yazelix-yazi-assets/0935209c3c7d8407c12c9a1a61bd0df6e8fd6a58";
+      url = "github:FlexNetOS/yazelix-yazi-assets/54a4dee3b9696d546cf26a876e83b3290143a363";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    yazelixTerminalSupport = {
+      url = "github:FlexNetOS/yazelix-terminal-support/873f64b77eda3a39609d154bda192a2ad8405955";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     ratconfig = {
       url = "github:luccahuguet/ratconfig";
       flake = false;
     };
-    autoLayoutYazi = {
-      url = "github:luccahuguet/auto-layout.yazi";
-      flake = false;
-    };
-    starshipYazi = {
-      url = "github:Rolv-Apneseth/starship.yazi";
-      flake = false;
-    };
     beads_rust_source = {
       url = "github:FlexNetOS/beads_rust/2498339168b8e88d641e8ae1664843fc69740012";
       flake = false;
     };
+    beads_viewer = {
+      url = "github:FlexNetOS/beads_viewer/37d7c2a69797db37d373646ba50e5d0c62d9984a";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     rtk_source = {
-      url = "github:FlexNetOS/rtk-tokenkill/44cf84e71c87a1a45da6ed218f92edb88e4336f5";
+      url = "github:FlexNetOS/rtk-tokenkill/0dd13a48b81ac083d8a39351a6a72ca4e7b715c0";
       flake = false;
     };
     grit_source = {
@@ -72,7 +72,7 @@
       flake = false;
     };
     icm_source = {
-      url = "github:FlexNetOS/icm/ae4ed52c6bbf806e45f9c5b425e15b44398de4b7";
+      url = "github:FlexNetOS/icm/03d63a9102ce7f2c17cc7df66ac1aded46def88e";
       flake = false;
     };
     weave_source = {
@@ -103,10 +103,10 @@
     yazelixZellijPaneOrchestrator,
     yazelixScreen,
     yazelixYaziAssets,
+    yazelixTerminalSupport,
     ratconfig,
-    autoLayoutYazi,
-    starshipYazi,
     beads_rust_source,
+    beads_viewer,
     rtk_source,
     grit_source,
     icm_source,
@@ -342,14 +342,6 @@
         yzxEditor = "${yzxEditor}/bin/yzx-editor";
         yzxHelix = "${yzxHelix}/bin/yzx-hx";
       };
-      yaziAssetsSelection = pkgs.fetchFromGitHub {
-        owner = "luccahuguet";
-        repo = "yazelix-yazi-assets";
-        rev = "aea0703247479e1fa373be6b305e24e568cb30c7";
-        sparseCheckout = ["plugins/git.yazi" "yazelix_starship.toml"];
-        nonConeMode = true;
-        hash = "sha256-eHt6kRaLcXgjhdnmhI2QY2O1tF9wGFXbIjXc4pObF4U=";
-      };
       yzxOpenCore = pkgs.rustPlatform.buildRustPackage {
         pname = "yzx-open";
         version = "0.1.0";
@@ -364,14 +356,14 @@
         install -D -m 644 ${./defaults/yazi/init.lua} "$out/init.lua"
         install -D -m 644 ${./defaults/yazi/keymap.toml} "$out/keymap.toml"
         install -D -m 644 ${yzxYaziToml} "$out/yazi.toml"
-        install -D -m 644 ${yaziAssetsSelection}/yazelix_starship.toml "$out/yazelix_starship.toml"
+        install -D -m 644 ${flexnetosYaziAssetsRoot}/yazelix_starship.toml "$out/yazelix_starship.toml"
         mkdir -p "$out/plugins"
         install -D -m 644 ${./defaults/yazi/plugins/sidebar-state.yazi/main.lua} "$out/plugins/sidebar-state.yazi/main.lua"
         install -D -m 644 ${./defaults/yazi/plugins/sidebar-status.yazi/main.lua} "$out/plugins/sidebar-status.yazi/main.lua"
         install -D -m 644 ${./defaults/yazi/plugins/zoxide-editor.yazi/main.lua} "$out/plugins/zoxide-editor.yazi/main.lua"
-        ln -s ${autoLayoutYazi} "$out/plugins/auto-layout.yazi"
-        ln -s ${yaziAssetsSelection}/plugins/git.yazi "$out/plugins/git.yazi"
-        ln -s ${starshipYazi} "$out/plugins/starship.yazi"
+        ln -s ${flexnetosYaziAssetsRoot}/plugins/auto-layout.yazi "$out/plugins/auto-layout.yazi"
+        ln -s ${flexnetosYaziAssetsRoot}/plugins/git.yazi "$out/plugins/git.yazi"
+        ln -s ${flexnetosYaziAssetsRoot}/plugins/starship.yazi "$out/plugins/starship.yazi"
       '';
       yzxYaziMaterializer = pkgs.rustPlatform.buildRustPackage {
         pname = "yzx-yazi-config";
@@ -437,6 +429,19 @@
         install -D -m 644 ${yzxLayoutSwapKdl} "$out/layout.swap.kdl"
       '';
       flexnetosYaziAssets = yazelixYaziAssets.packages.${system}.yazelix_yazi_assets;
+      flexnetosYaziAssetsRoot = "${flexnetosYaziAssets}/share/yazelix_yazi_assets";
+      flexnetosTerminalSupport = yazelixTerminalSupport.packages.${system}.yazelix_terminal_support;
+      flexnetosTerminalSupportMetadata = builtins.fromTOML (
+        builtins.readFile "${yazelixTerminalSupport}/config_metadata/terminal_support.toml"
+      );
+      flexnetosTerminalSupportContract =
+        assert flexnetosTerminalSupportMetadata.schema_version == 2;
+        assert flexnetosTerminalSupportMetadata.default_terminal == "mars";
+        assert flexnetosTerminalSupportMetadata.launch_order == ["mars"];
+        assert flexnetosTerminalSupportMetadata.desktop_id_prefix == "com.flexnetos.Yazelix";
+        assert flexnetosTerminalSupportMetadata.terminals.mars.desktop_suffix == "Agent";
+        assert flexnetosTerminalSupportMetadata.terminals.mars.startup_wm_class == "mars";
+        true;
       flexnetosCcboard = "${flexnetosYaziAssets}/share/yazelix_yazi_assets/runtime_tools/ccboard/bin/ccboard";
       flexnetosCodedb = "${flexnetosYaziAssets}/share/yazelix_yazi_assets/runtime_tools/codedb/bin/codedb";
       flexnetosNuPluginCodedb = "${flexnetosYaziAssets}/share/yazelix_yazi_assets/runtime_tools/codedb/bin/nu_plugin_codedb";
@@ -522,7 +527,6 @@
         shellPackage ? yzxShell,
         extraPathPrefix ? [],
         desktopEntrySource ? "",
-        desktopDatabaseUpdater ? "",
       }: let
         packageVariant = if withMars then "full" else "runtime";
         marsPath = if withMars then "${marsPackage}/bin/mars" else "";
@@ -536,7 +540,7 @@
           yzxEnvSupervisor = "${yzxEnvSupervisor}/bin/yzx-env-supervisor";
           zellij = "${yazelixZellijPackage}/bin/zellij";
           mars = marsPath;
-          inherit desktopEntrySource desktopDatabaseUpdater;
+          inherit desktopEntrySource;
           layout = "${layoutPackage}/layout.kdl";
           layoutTemplate = "${layoutTemplate}";
           layoutSwapTemplate = "${./defaults/zellij/layout.swap.kdl}";
@@ -596,11 +600,10 @@
         shellPackage ? yzxShell,
         extraPathPrefix ? [],
         desktopEntrySource ? "",
-        desktopDatabaseUpdater ? "",
       }: let
         command = mkYzxCommand {
           inherit withMars layoutPackage layoutTemplate configKdl shellPackage extraPathPrefix;
-          inherit desktopEntrySource desktopDatabaseUpdater;
+          inherit desktopEntrySource;
         };
         desktop = pkgs.makeDesktopItem {
           name = "yzx";
@@ -669,6 +672,7 @@
         beadsSource = beads_rust_source;
         rustPlatform = flexnetosRustPlatform;
       };
+      flexnetosBeadsViewer = beads_viewer.packages.${system}.bv;
       flexnetosClaude = import ./packaging/claude_code_release.nix {
         inherit pkgs;
         version = "2.1.207";
@@ -812,6 +816,7 @@
         Xvfb = "${pkgs.xorg-server}/bin/Xvfb";
         actionlint = "${pkgs.actionlint}/bin/actionlint";
         br = "${flexnetosBeads}/bin/br";
+        bv = "${flexnetosBeadsViewer}/bin/bv";
         bun = "${flexnetosBun}/bin/bun";
         bunx = "${flexnetosBun}/bin/bunx";
         cargo = "${flexnetosRustToolchain}/bin/cargo";
@@ -828,7 +833,6 @@
         clippy-driver = "${flexnetosRustToolchain}/bin/clippy-driver";
         codedb = flexnetosCodedb;
         codex = "${flexnetosCodex}/bin/codex";
-        corepack = "${pkgs.corepack}/bin/corepack";
         file = "${pkgs.file}/bin/file";
         fxrun = "${flexnetosRunner}/bin/fxrun";
         "fxrun-actions" = "${flexnetosRunner}/bin/fxrun-actions";
@@ -860,13 +864,13 @@
         journalctl = "${pkgs.systemd}/bin/journalctl";
         ln = "${pkgs.coreutils}/bin/ln";
         notebooklm = "${flexnetosNotebooklm}/bin/notebooklm";
-        npm = "${pkgs.nodejs_24}/bin/npm";
+        nvim = "${pkgs.neovim}/bin/nvim";
         nu = "${pkgs.nushell}/bin/nu";
         nu_plugin_codedb = flexnetosNuPluginCodedb;
         obscura = "${flexnetosObscura}/bin/obscura";
         pkg-config = "${pkgs.pkg-config}/bin/pkg-config";
-        pnpm = "${pkgs.corepack}/bin/pnpm";
         rtk = "${flexnetosRtk}/bin/rtk";
+        rtk_nu = "${flexnetosRtk}/bin/rtk_nu";
         systemctl = "${pkgs.systemd}/bin/systemctl";
         rust-analyzer = "${flexnetosRustToolchain}/bin/rust-analyzer";
         rustc = "${flexnetosRustToolchain}/bin/rustc";
@@ -883,7 +887,6 @@
         wasm-pack = "${pkgs.wasm-pack}/bin/wasm-pack";
         weave = "${flexnetosWeave}/bin/weave";
         wild = "${pkgs.wild}/bin/wild";
-        yarn = "${pkgs.corepack}/bin/yarn";
         x86_64-linux-musl-ar = "${flexnetosMuslToolchain}/bin/x86_64-linux-musl-ar";
         "x86_64-linux-musl-g++" = "${flexnetosMuslToolchain}/bin/x86_64-linux-musl-g++";
         x86_64-linux-musl-gcc = "${flexnetosMuslToolchain}/bin/x86_64-linux-musl-gcc";
@@ -933,7 +936,7 @@
       '';
       flexnetosDesktopSource = pkgs.makeDesktopItem {
         name = "com.flexnetos.Yazelix.Agent";
-        destination = "/share/yazelix/applications";
+        destination = "/share/applications";
         desktopName = "FlexNetOS Yazelix Agent";
         genericName = "Terminal Emulator";
         comment = "Yazelix Nova with the profile-owned FlexNetOS agent workspace";
@@ -958,12 +961,11 @@
         nuConfig = flexnetosYzxNuConfig;
         shellPackage = flexnetosYzxShell;
         extraPathPrefix = [flexnetosTools];
-        desktopEntrySource = "${flexnetosDesktopSource}/share/yazelix/applications/com.flexnetos.Yazelix.Agent.desktop";
-        desktopDatabaseUpdater = "${pkgs.desktop-file-utils}/bin/update-desktop-database";
+        desktopEntrySource = "/home/flexnetos/.nix-profile/share/applications/com.flexnetos.Yazelix.Agent.desktop";
       };
-      lifeosFoundationYzx = pkgs.symlinkJoin {
+      lifeosFoundationYzx = assert flexnetosTerminalSupportContract; pkgs.symlinkJoin {
         name = "lifeos-foundation-yzx";
-        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosDesktopSource flexnetosRunnerSystemd flexnetosHostPolicyBundle flexnetosVolatileRuntimeBundle];
+        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosDesktopSource flexnetosTerminalSupport flexnetosRunnerSystemd flexnetosHostPolicyBundle flexnetosVolatileRuntimeBundle];
         nativeBuildInputs = [pkgs.desktop-file-utils];
         postBuild = ''
           install -D -m 644 ${flexnetosZellijLayout}/layout.kdl \
@@ -1289,7 +1291,27 @@
         };
       in pkgs.runCommand "flexnetos-foundation-contracts" {} ''
         test -x ${foundation}/bin/yzx
+        test -x ${foundation}/bin/br
+        test -x ${foundation}/bin/bv
+        ${foundation}/bin/bv --version | grep -Fx 'bv v0.16.1'
         test -x ${foundation}/bin/rtk
+        test -x ${foundation}/bin/rtk_nu
+        test -x ${foundation}/bin/nvim
+        test -x ${foundation}/bin/bun
+        test -x ${foundation}/bin/bunx
+        ${foundation}/bin/rtk --version | grep -F '0.43.0'
+        ${foundation}/bin/rtk_nu --help | grep -F 'lossless Nushell ingestion envelope'
+        PATH=${foundation}/bin:$PATH ${foundation}/bin/rtk_nu --format json -- \
+          ${pkgs.coreutils}/bin/printf rtk-nu-proof > rtk-nu-proof.json
+        grep -F '"schema_version": "flexnetos.rtk_nu.envelope.v1"' rtk-nu-proof.json
+        grep -F '"payload_base64": "cnRrLW51LXByb29m"' rtk-nu-proof.json
+        ${foundation}/bin/nvim --version | grep -F 'NVIM v'
+        test "$(${foundation}/bin/bun --version)" = 1.3.14
+        test ! -e ${foundation}/bin/npm
+        test ! -e ${foundation}/bin/npx
+        test ! -e ${foundation}/bin/pnpm
+        test ! -e ${foundation}/bin/corepack
+        test ! -e ${foundation}/bin/yarn
         test -x ${foundation}/bin/codex
         test -x ${foundation}/bin/claude
         test -x ${foundation}/bin/ccboard
@@ -1319,13 +1341,13 @@
         test ! -e ${foundation}/bin/yzx-desktop-launch
         test ! -e ${foundation}/bin/yzx-agent-workspace-launch
 
-        test ! -e ${foundation}/share/applications
-        desktop_count="$(find ${foundation}/share/yazelix/applications -maxdepth 1 -name '*.desktop' | wc -l)"
+        test ! -e ${foundation}/share/yazelix/applications
+        desktop_count="$(find ${foundation}/share/applications -maxdepth 1 -name '*.desktop' | wc -l)"
         test "$desktop_count" = 1
-        desktop=${foundation}/share/yazelix/applications/com.flexnetos.Yazelix.Agent.desktop
+        desktop=${foundation}/share/applications/com.flexnetos.Yazelix.Agent.desktop
         test -f "$desktop"
-        test ! -e ${foundation}/share/yazelix/applications/com.flexnetos.Yazelix.desktop
-        test ! -e ${foundation}/share/yazelix/applications/com.yazelix.Yazelix.Kitty.desktop
+        test ! -e ${foundation}/share/applications/com.flexnetos.Yazelix.desktop
+        test ! -e ${foundation}/share/applications/com.yazelix.Yazelix.Kitty.desktop
         grep -Fx 'Name=FlexNetOS Yazelix Agent' "$desktop"
         grep -Fx 'GenericName=Terminal Emulator' "$desktop"
         grep -Fx 'Exec=/home/flexnetos/.nix-profile/bin/yzx launch' "$desktop"
@@ -1337,16 +1359,31 @@
         grep -Fx 'X-FlexNetOS-Managed=true' "$desktop"
         test -f ${foundation}/share/pixmaps/yazelix.png
         test -s ${foundation}/share/pixmaps/yazelix.png
+        terminal_metadata=${foundation}/share/yazelix_terminal_support/terminal_support.toml
+        test -f "$terminal_metadata"
+        ${pkgs.python3}/bin/python - "$terminal_metadata" "$desktop" <<'PY'
+        import pathlib
+        import sys
+        import tomllib
+
+        metadata_path = pathlib.Path(sys.argv[1])
+        desktop_path = pathlib.Path(sys.argv[2])
+        with metadata_path.open("rb") as metadata_file:
+            metadata = tomllib.load(metadata_file)
+        mars = metadata["terminals"][metadata["default_terminal"]]
+        expected_name = f"{metadata['desktop_id_prefix']}.{mars['desktop_suffix']}.desktop"
+        assert metadata["schema_version"] == 2
+        assert metadata["launch_order"] == ["mars"]
+        assert desktop_path.name == expected_name
+        assert f"StartupWMClass={mars['startup_wm_class']}" in desktop_path.read_text()
+        PY
 
         export HOME="$TMPDIR/home"
         export XDG_DATA_HOME="$TMPDIR/data"
         mkdir -p "$HOME" "$XDG_DATA_HOME"
-        installed_desktop="$(${foundation}/bin/yzx desktop install --print-path)"
-        test "$installed_desktop" = "$XDG_DATA_HOME/applications/com.flexnetos.Yazelix.Agent.desktop"
-        cmp "$desktop" "$installed_desktop"
-        removed_desktop="$(${foundation}/bin/yzx desktop uninstall --print-path)"
-        test "$removed_desktop" = "$installed_desktop"
-        test ! -e "$installed_desktop"
+        reported_desktop="$(${foundation}/bin/yzx desktop --print-path)"
+        test "$reported_desktop" = "/home/flexnetos/.nix-profile/share/applications/com.flexnetos.Yazelix.Agent.desktop"
+        test ! -e "$XDG_DATA_HOME/applications/com.flexnetos.Yazelix.Agent.desktop"
 
         layout=${foundation}/configs/zellij/layouts/flexnetos_agent_workspace.kdl
         test -f "$layout"

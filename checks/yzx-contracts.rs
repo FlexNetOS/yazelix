@@ -9,9 +9,8 @@ use std::{
 mod support;
 
 use support::{
-    binary_text, embedded_store_path, excerpt, expect_contains, expect_order, set_test_nu,
-    successful_output, successful_stdout, write_config_home, write_nu_executable, RuntimeCase,
-    TempDir,
+    RuntimeCase, TempDir, binary_text, embedded_store_path, excerpt, expect_contains, expect_order,
+    set_test_nu, successful_output, successful_stdout, write_config_home, write_nu_executable,
 };
 
 macro_rules! expect_contains_all {
@@ -178,6 +177,7 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         "yzx --version",
         "yzx config",
         "yzx doctor",
+        "yzx inspect [--json]",
         "yzx env",
         "yzx enter [zellij-args...]",
         "yzx launch [zellij-args...]",
@@ -200,7 +200,9 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         .collect::<Vec<_>>();
     assert_eq!(
         menu_ids,
-        ["config", "doctor", "status", "screen", "launch", "help", "tutor"],
+        [
+            "config", "doctor", "status", "inspect", "screen", "launch", "help", "tutor",
+        ],
         "yzx menu command allowlist changed\n{menu}"
     );
     expect_menu_descriptions_match_help(&help, &menu);
@@ -418,6 +420,63 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         "agent_command,config_home,editor,editor_command,inside_zellij,name,package,schema_version,shell,state_dir,version"
     );
 
+    let inspect_case = RuntimeCase::new(&temp.path, "inspect-json");
+    let inspect_home = temp.path.join("inspect-home");
+    let profile_bin = inspect_home.join(".nix-profile/bin");
+    fs::create_dir_all(&profile_bin).unwrap();
+    std::os::unix::fs::symlink(&yzx_bin, profile_bin.join("yzx")).unwrap();
+    let inspect_json = successful_stdout(
+        inspect_case
+            .yzx_command(&yzx_bin, "inspect")
+            .arg("--json")
+            .env("HOME", &inspect_home)
+            .env_remove("ZELLIJ"),
+        "yzx inspect --json",
+    );
+    assert_eq!(
+        jq_output(
+            jq,
+            ".schema_version == 1 and .runtime.name == \"Yazelix Nova\" and .runtime.package == \"full\" and .session.inside_zellij == false",
+            &inspect_json,
+        ),
+        "true"
+    );
+    assert_eq!(
+        jq_output(jq, ".paths.config_home", &inspect_json),
+        inspect_case.config_home.to_string_lossy()
+    );
+    assert_eq!(
+        jq_output(jq, ".paths.state_dir", &inspect_json),
+        inspect_case.state_dir.to_string_lossy()
+    );
+    assert_eq!(
+        jq_output(jq, ".ownership.profile_frontdoor", &inspect_json),
+        profile_bin.join("yzx").to_string_lossy()
+    );
+    assert_eq!(
+        jq_output(
+            jq,
+            ".ownership.profile_frontdoor_exists and .ownership.profile_frontdoor_is_current and (.ownership.local_shadow.exists | not) and (.ownership.local_desktop_shadow.exists | not)",
+            &inspect_json,
+        ),
+        "true"
+    );
+    let inspect = successful_stdout(
+        inspect_case
+            .yzx_command(&yzx_bin, "inspect")
+            .env("HOME", &inspect_home)
+            .env_remove("ZELLIJ"),
+        "yzx inspect",
+    );
+    expect_contains_all! {
+        &inspect, "yzx inspect";
+        "Yazelix Nova inspect",
+        format!("profile frontdoor: {}", profile_bin.join("yzx").display()),
+        "profile frontdoor is current: true",
+        "local binary shadow: absent",
+        "local desktop shadow: absent",
+    }
+
     let run_child = temp.path.join("run-child");
     write_nu_executable(
         &run_child,
@@ -427,11 +486,13 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
     }
     print $"config=<($env.YAZELIX_CONFIG_HOME)>"
     print $"editor=<($env.EDITOR)>"
+    print $"bridge_root=<($env.YAZELIX_HELIX_BRIDGE_ROOT? | default "")>"
     exit 23
 }
 "#,
     );
     let run_case = RuntimeCase::new(&temp.path, "run");
+    let runtime_home = temp.path.join("runtime-home");
     let output = run_case
         .yzx_command(&yzx_bin, "run")
         .args([
@@ -439,6 +500,7 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
             "alpha beta".as_ref(),
             "quote\"slash\\".as_ref(),
         ])
+        .env("XDG_RUNTIME_DIR", &runtime_home)
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(23));
@@ -450,6 +512,10 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         format!("config=<{}>", run_case.config_home.display()),
         "editor=</nix/store/",
         "/bin/yzx-editor>",
+        format!(
+            "bridge_root=<{}>",
+            runtime_home.join("yazelix/helix_bridge").display()
+        ),
     }
     let data_home = temp.path.join("data-home");
     let data_status = successful_stdout(
@@ -704,6 +770,11 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
             "yzx status argument error",
         ),
         (
+            &["inspect", "extra"][..],
+            "yzx inspect accepts only --json",
+            "yzx inspect argument error",
+        ),
+        (
             &["menu", "extra"][..],
             "yzx menu does not accept arguments yet",
             "yzx menu argument error",
@@ -781,6 +852,7 @@ fn expect_narrow_path_launches(yzx: &Path, yzx_shell: &Path) {
         ("help", "Usage:"),
         ("status", "Yazelix Nova status"),
         ("doctor", "Yazelix Nova doctor"),
+        ("inspect", "Yazelix Nova inspect"),
     ] {
         let case = RuntimeCase::new(&temp.path, &format!("narrow-path-{command}"));
         let mut yzx = case.yzx_command(&yzx_bin, command);

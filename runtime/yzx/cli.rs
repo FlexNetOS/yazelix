@@ -1,15 +1,16 @@
 use std::{env, ffi::OsString, path::Path, process::Command};
 
 use crate::{
-    MARS, VERSION, YZX_CONFIG_UI, YZX_ENV_SUPERVISOR, YZX_MENU, YZX_REVEAL, YZX_SCREEN, YZX_SHELL,
-    YZX_TUTOR, YZX_WELCOME, YZX_YA, ZELLIJ,
     command::exec,
     desktop,
     doctor::print_doctor,
-    error::{AppError, startup},
+    error::{startup, AppError},
+    inspect::{print_inspect, print_inspect_json},
     paths::{enter_terminal_label, nonempty_env, runtime_path},
     runtime::Runtime,
     status::{print_status, print_status_json},
+    MARS, VERSION, YZX_CONFIG_UI, YZX_ENV_SUPERVISOR, YZX_MENU, YZX_REVEAL, YZX_SCREEN, YZX_SHELL,
+    YZX_TUTOR, YZX_WELCOME, YZX_YA, ZELLIJ,
 };
 
 pub(crate) fn run() -> Result<(), AppError> {
@@ -45,6 +46,13 @@ pub(crate) fn run() -> Result<(), AppError> {
             expect_no_args("doctor", &args)?;
             print_doctor()
         }
+        "inspect" => match args.as_slice() {
+            [] => print_inspect(),
+            [flag] if flag == "--json" => print_inspect_json(),
+            _ => Err(AppError::Usage(
+                "yzx inspect accepts only --json\n".to_string(),
+            )),
+        },
         "status" => match args.as_slice() {
             [] => print_status(),
             [flag] if flag == "--json" => print_status_json(),
@@ -219,8 +227,9 @@ Usage:
   yzx --version
   yzx help
   yzx config
-  yzx desktop <install|uninstall> [--print-path]
+  yzx desktop [--print-path]
   yzx doctor
+  yzx inspect [--json]
   yzx env
   yzx enter [zellij-args...]
   yzx launch [zellij-args...]
@@ -233,8 +242,9 @@ Usage:
 
 Commands:
   config  Open Yazelix Nova config
-  desktop Install or remove the user-local desktop entry
+  desktop Report the profile-owned desktop entry
   doctor  Check Yazelix runtime setup
+  inspect Show active runtime, profile, and ownership truth
   env     Open the managed shell without launching the UI
   enter   Start Yazelix in the current terminal
   launch  Open Mars and start Yazelix
