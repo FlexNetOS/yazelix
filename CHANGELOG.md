@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Make the pinned Rust 1.89 foundation lane evaluate reliably on clean Nix
+  runners by importing its hash-pinned manifest directly, and include the
+  Codex config/rules materializer in branch CI.
+
 - Extend Yazelix Codex authorship to the mandatory durable `RULES.md` surface.
   Reviewed config and rules inputs now validate before either generated file is
   written, both outputs carry source hashes, and the runtime provenance gate

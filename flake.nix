@@ -772,10 +772,11 @@
           fenixPkgs.targets.x86_64-unknown-linux-musl.latest.rust-std
         ]
       );
-      flexnetosRust189 = fenixPkgs.fromToolchainName {
-        name = "1.89.0";
+      flexnetosRust189Manifest = builtins.fetchurl {
+        url = "https://static.rust-lang.org/dist/channel-rust-1.89.0.toml";
         sha256 = "sha256-+9FmLhAOezBZCOziO0Qct1NOrfpjNsXxc/8I0c7BdKE=";
       };
+      flexnetosRust189 = fenixPkgs.fromManifestFile flexnetosRust189Manifest;
       flexnetosRust189Lane = pkgs.runCommand
         "flexnetos-foundation-rust-1.89-lane"
         {nativeBuildInputs = [pkgs.makeWrapper];}
