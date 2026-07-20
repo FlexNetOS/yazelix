@@ -32,6 +32,16 @@ entry lives under the profile's standard `share/applications`, runs
 read-only by `yzx desktop`. Regular Yazelix and agent Yazelix are the same path;
 no user-local launcher is an ownership layer.
 
+`/home/flexnetos/.nix-profile` is also the selector owner: it points to its own
+`.nix-profile-N-link` generation beside the frontdoor. It must not alias
+`~/.local/state/nix/profile`, even when both links currently resolve to the same
+store closure. The migration archives that XDG selector and its generation
+links under Meta's authoritative
+`/home/flexnetos/.local/state/meta/archives/yazelix-nix-profile/` root before
+creating the explicit profile. Generated Yazelix runtime state is proof only.
+A failed install or closure verification archives the candidate and restores
+every prior link.
+
 ## Nushell
 
 Nushell is the only supported managed shell. Product sources remain under
@@ -45,7 +55,9 @@ Build source contracts before installing:
 
 ```nu
 nix build .#checks.x86_64-linux.flexnetos_foundation_contracts --no-link
+nix build .#checks.x86_64-linux.single_profile_contract --no-link
 nix build .#lifeos_foundation_yzx --no-link --print-out-paths
+~/.nix-profile/bin/yazelix_profile_check
 ```
 
 The contract checks one profile-owned desktop file, the direct profile `Exec`,
@@ -53,3 +65,7 @@ the terminal-metadata provenance that defines its identity, absence of launcher
 wrappers and user-local materialization, the profile layout, both Nushell source
 directories, mandatory Nushell, `yzx status`, `yzx doctor`, and generated
 runtime identity.
+The single-profile gate additionally rejects absolute or XDG selector aliases,
+broken legacy links, extra manifest elements, closure drift, and missing
+frontdoor binaries. `yazelix_profile_migrate --closure <built-closure>` emits a
+read-only plan by default; `--execute` is the explicit Tier-B mutation toggle.
