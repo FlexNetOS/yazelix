@@ -46,10 +46,18 @@ nix run github:FlexNetOS/yazelix -- inspect
 
 ### Install in a Nix profile
 
+On a fresh machine where the literal profile is absent or empty, install the
+single FlexNetOS foundation element with:
+
 ```nu
-nix profile add --profile /home/flexnetos/.nix-profile --refresh github:FlexNetOS/yazelix
+nix profile add --profile /home/flexnetos/.nix-profile --refresh github:FlexNetOS/yazelix#lifeos_foundation_yzx
 yzx launch
 ```
+
+Do not add `#yazelix` or `#runtime` beside the foundation element. Existing
+foundation installations update through the checked migration described in
+[Installation](docs/installation.md#updates), which archives prior selectors
+and verifies the exact replacement closure before declaring success.
 
 ### Install with Home Manager
 
@@ -230,6 +238,6 @@ repository owner and verification surface
 
 ## LOC Scorecard
 
-Nova owns **22,752 lines** of tracked text project files. The
+Nova owns **22,777 lines** of tracked text project files. The
 [reproducible scorecard](docs/development.md#loc-scorecard) excludes Beads,
 lockfiles, and binary assets

@@ -175,6 +175,20 @@ fn expect_explicit_profile_commands<const N: usize>(documents: [&str; N]) {
                     document,
                     index + 1
                 );
+                if owned && command.starts_with("nix profile add ") {
+                    assert!(
+                        command.contains("#lifeos_foundation_yzx"),
+                        "{}:{} adds a non-foundation element to the owned profile: {command}",
+                        document,
+                        index + 1
+                    );
+                }
+                assert!(
+                    !(owned && command.starts_with("nix profile upgrade ")),
+                    "{}:{} bypasses the checked foundation migration: {command}",
+                    document,
+                    index + 1
+                );
             }
         }
     }

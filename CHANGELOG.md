@@ -30,7 +30,8 @@
   archives both generation graphs under Meta's authoritative
   `/home/flexnetos/.local/state/meta/archives/` root, records manifest hashes,
   and requires every imperative profile command to name the literal
-  `/home/flexnetos/.nix-profile` selector,
+  `/home/flexnetos/.nix-profile` selector and sole `lifeos_foundation_yzx`
+  element,
   verifies the expected closure, and restores the complete prior selector state
   on failure.
 - Make the pinned Rust 1.89 foundation lane evaluate reliably on clean Nix
