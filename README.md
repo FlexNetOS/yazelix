@@ -33,21 +33,21 @@ first launch
 ### Try without installing
 
 ```nu
-nix run github:luccahuguet/yazelix -- launch
-nix run github:luccahuguet/yazelix#runtime -- enter
+nix run github:FlexNetOS/yazelix -- launch
+nix run github:FlexNetOS/yazelix#runtime -- enter
 ```
 
 If the one-off launch fails, inspect the owned runtime setup with:
 
 ```nu
-nix run github:luccahuguet/yazelix -- doctor
-nix run github:luccahuguet/yazelix -- inspect
+nix run github:FlexNetOS/yazelix -- doctor
+nix run github:FlexNetOS/yazelix -- inspect
 ```
 
 ### Install in a Nix profile
 
 ```nu
-nix profile add --refresh github:luccahuguet/yazelix
+nix profile add --profile /home/flexnetos/.nix-profile --refresh github:FlexNetOS/yazelix
 yzx launch
 ```
 
@@ -64,8 +64,9 @@ nix run .#runtime -- enter
 
 ### Moving from Yazelix Classic
 
-Use Classic v17.12 once to prepare its config for Nova, then install Nova from
-the canonical repository
+Use upstream Classic v17.12 once to prepare its config for Nova, then install
+Nova from the authoritative FlexNetOS repository. The recovery-only tag below
+belongs to the upstream repository; it is not published on the FlexNetOS remote.
 
 ```nu
 nix run github:luccahuguet/yazelix/v17.12#yazelix -- launch
@@ -229,6 +230,6 @@ repository owner and verification surface
 
 ## LOC Scorecard
 
-Nova owns **23,154 lines** of tracked text project files. The
+Nova owns **22,752 lines** of tracked text project files. The
 [reproducible scorecard](docs/development.md#loc-scorecard) excludes Beads,
 lockfiles, and binary assets

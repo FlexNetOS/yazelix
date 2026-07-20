@@ -634,12 +634,7 @@
               install -D -m 644 ${./defaults/config.toml} "$out/share/yazelix/config.toml"
               install -D -m 644 ${layoutPackage}/layout.kdl "$out/share/yazelix/layout.kdl"
               install -D -m 644 ${layoutPackage}/layout.swap.kdl "$out/share/yazelix/layout.swap.kdl"
-              install -D -m 644 ${yzxYaziConfig}/init.lua "$out/share/yazelix/yazi/init.lua"
-              install -D -m 644 ${yzxYaziConfig}/keymap.toml "$out/share/yazelix/yazi/keymap.toml"
-              install -D -m 644 ${yzxYaziConfig}/plugins/sidebar-state.yazi/main.lua "$out/share/yazelix/yazi/plugins/sidebar-state.yazi/main.lua"
-              install -D -m 644 ${yzxYaziConfig}/plugins/zoxide-editor.yazi/main.lua "$out/share/yazelix/yazi/plugins/zoxide-editor.yazi/main.lua"
-              ln -s ${yzxYaziConfig}/plugins/git.yazi "$out/share/yazelix/yazi/plugins/git.yazi"
-              install -D -m 644 ${yzxYaziConfig}/yazi.toml "$out/share/yazelix/yazi/yazi.toml"
+              ln -s ${yzxYaziConfig} "$out/share/yazelix/yazi"
               install -D -m 644 ${nuConfig}/config.nu "$out/share/yazelix/nu/config.nu"
               install -D -m 644 ${nuConfig}/env.nu "$out/share/yazelix/nu/env.nu"
             ''
@@ -929,6 +924,8 @@
         #!${pkgs.nushell}/bin/nu
         def --wrapped main [...args] {
           \$env.YZX_CHECK_SCRIPT = "$out/share/yazelix/packaging/single_profile_check.nu"
+          \$env.YZX_NIX_BIN = (\$env.YZX_NIX_BIN? | default "${pkgs.nix}/bin/nix")
+          \$env.YZX_NIX_STORE_BIN = (\$env.YZX_NIX_STORE_BIN? | default "${pkgs.nix}/bin/nix-store")
           \$env.YZX_NU_BIN = "${pkgs.nushell}/bin/nu"
           exec ${pkgs.nushell}/bin/nu "$out/share/yazelix/packaging/profile_migration.nu" ...\$args
         }
@@ -1236,6 +1233,10 @@
         runtime="$(${yzxYaziMaterializer}/bin/yzx-yazi-config ${yzx}/share/yazelix/yazi "$user" "$state")"
         YAZI_CONFIG_HOME="$runtime" ${pkgs.yazi}/bin/yazi --debug > yazi-debug
         test -f "$runtime/plugins/smart-enter.yazi/main.lua"
+        for plugin in auto-layout git sidebar-state sidebar-status starship zoxide-editor; do
+          test -f "$runtime/plugins/$plugin.yazi/main.lua"
+        done
+        test -f "$runtime/yazelix_starship.toml"
         grep -q 'require("smart-enter")' "$runtime/init.lua"
         grep -q 'plugin smart-enter' "$runtime/keymap.toml"
         grep -q 'yzx-open' yazi-debug
@@ -1276,7 +1277,9 @@
         touch "$out"
       '';
       contracts = pkgs.runCommand "yzx-contracts" {} ''
-        ${yzxContractsCheck}/bin/yzx-contracts-check ${yzx} ${pkgs.git}/bin/git ${pkgs.jq}/bin/jq ${pkgs.nushell}/bin/nu "$out"
+        ${yzxContractsCheck}/bin/yzx-contracts-check \
+          ${yzx} ${pkgs.git}/bin/git ${pkgs.jq}/bin/jq ${pkgs.nushell}/bin/nu "$out" \
+          ${./README.md} ${./docs/installation.md} ${./docs/development.md} ${./AGENTS.md}
       '';
       runtime_contracts = pkgs.runCommand "yzx-runtime-contracts" {} ''
         test -x ${yzxRuntime}/bin/yzx
@@ -1534,12 +1537,13 @@
         ln -s ${foundation}/bin "$staging/profile-dir/bin"
         ln -s ${foundation}/toolbin "$staging/profile-dir/toolbin"
         cat > "$staging/profile-dir/manifest.json" <<EOF
-        {"version":3,"elements":{"lifeos-foundation-yzx":{"active":true,"attrPath":"packages.${system}.lifeos_foundation_yzx","originalUrl":"path:.","outputs":null,"priority":5,"storePaths":["${foundation}"],"url":"path:."}}}
+        {"version":3,"elements":{"lifeos_foundation_yzx":{"active":true,"attrPath":"packages.${system}.lifeos_foundation_yzx","originalUrl":"path:.","outputs":null,"priority":5,"storePaths":["${foundation}"],"url":"path:."}}}
         EOF
         ln -s "$staging/profile-dir" "$staging/home/.nix-profile-1-link"
         ln -s .nix-profile-1-link "$staging/home/.nix-profile"
         YZX_PROFILE_LINK="$staging/home/.nix-profile" \
           YZX_LEGACY_XDG_PROFILE="$staging/state/nix/profile" \
+          YZX_LEGACY_NESTED_PROFILE="$staging/state/nix/profiles/profile" \
           YZX_EXPECTED_CLOSURE="${foundation}" \
           ${foundation}/bin/yazelix_profile_check > staged-check.json
         grep -F '"pass": true' staged-check.json

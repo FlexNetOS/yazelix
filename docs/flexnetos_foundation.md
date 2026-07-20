@@ -34,10 +34,12 @@ no user-local launcher is an ownership layer.
 
 `/home/flexnetos/.nix-profile` is also the selector owner: it points to its own
 `.nix-profile-N-link` generation beside the frontdoor. It must not alias
-`~/.local/state/nix/profile`, even when both links currently resolve to the same
-store closure. The migration archives that XDG selector and its generation
-links under Meta's authoritative
-`/home/flexnetos/.local/state/meta/archives/yazelix-nix-profile/` root before
+`~/.local/state/nix/profile` or `~/.local/state/nix/profiles/profile`, even when
+the links currently resolve to the same store closure. The migration first
+protects each distinct prior closure with an archive-owned indirect GC root,
+then archives both XDG selectors and their generation links under Meta's
+authoritative `/home/flexnetos/.local/state/meta/archives/yazelix-nix-profile/`
+root before
 creating the explicit profile. Generated Yazelix runtime state is proof only.
 A failed install or closure verification archives the candidate and restores
 every prior link.

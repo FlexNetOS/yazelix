@@ -23,10 +23,14 @@
   the byte-exact `rtk_nu` adapter required by the blueprint, with retired Claude
   shell hooks removed.
 - Make `/home/flexnetos/.nix-profile` the literal foundation selector instead
-  of accepting an alias through `~/.local/state/nix/profile`. The v2 profile
-  checker rejects convergent, chained, or broken XDG shadows; the dry-run-first
-  migration archives all prior links under Meta's authoritative
+  of accepting aliases through `~/.local/state/nix/profile` or
+  `~/.local/state/nix/profiles/profile`. The v2 profile checker rejects
+  convergent, chained, or broken XDG shadows; the dry-run-first migration
+  protects prior closures with verified archive-owned indirect GC roots,
+  archives both generation graphs under Meta's authoritative
   `/home/flexnetos/.local/state/meta/archives/` root, records manifest hashes,
+  and requires every imperative profile command to name the literal
+  `/home/flexnetos/.nix-profile` selector,
   verifies the expected closure, and restores the complete prior selector state
   on failure.
 - Make the pinned Rust 1.89 foundation lane evaluate reliably on clean Nix

@@ -23,10 +23,13 @@ directly; there is no launcher wrapper, user-local shadow, or parallel
 regular/agent entry
 
 The FlexNetOS foundation uses `/home/flexnetos/.nix-profile` as an explicit
-profile, including its generation links. `~/.local/state/nix/profile` is a
-legacy shadow, not an equivalent selector, and must be archived during the
-checked migration under Meta's authoritative
-`/home/flexnetos/.local/state/meta/archives/yazelix-nix-profile/` root. Generated
+profile, including its generation links. Both `~/.local/state/nix/profile` and
+`~/.local/state/nix/profiles/profile` are legacy shadows, not equivalent
+selectors, and must be archived during the checked migration under Meta's
+authoritative `/home/flexnetos/.local/state/meta/archives/yazelix-nix-profile/`
+root. Before moving either generation graph, the migration protects each prior
+store closure with an archive-owned indirect GC root and records live root
+verification in its receipt. Generated
 runtime under `~/.local/share/yazelix` is evidence only and never owns profile
 archives. Run `~/.nix-profile/bin/yazelix_profile_check` after every
 foundation update; it fails when the XDG selector exists even if both paths
@@ -35,7 +38,7 @@ resolve to identical bytes.
 Install the Mars-free variant with:
 
 ```nu
-nix profile add --refresh github:luccahuguet/yazelix#runtime
+nix profile add --profile /home/flexnetos/.nix-profile --refresh github:FlexNetOS/yazelix#runtime
 ```
 
 ## Capability matrix
@@ -168,11 +171,20 @@ configuration. Do not mix both update paths for the same installation
 Update a profile install with:
 
 ```nu
-nix profile upgrade --refresh yazelix
+nix profile upgrade --profile /home/flexnetos/.nix-profile --refresh yazelix
 ```
 
-The Mars-free `#runtime` install uses `nix profile upgrade --refresh runtime`
-Run `nix profile list` when you need to confirm an entry name
+The Mars-free `#runtime` install uses:
+
+```nu
+nix profile upgrade --profile /home/flexnetos/.nix-profile --refresh runtime
+```
+
+Confirm an entry name with:
+
+```nu
+nix profile list --profile /home/flexnetos/.nix-profile
+```
 
 For a Home Manager or nix-darwin install, run this from the configuration that
 declares the Yazelix input:

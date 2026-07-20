@@ -69,7 +69,7 @@ command name
 After changing the flake runtime, keep the user's installed runtime current:
 
 ```sh
-nix profile upgrade --refresh yazelix
+nix profile upgrade --profile /home/flexnetos/.nix-profile --refresh yazelix
 ```
 
 Do not broaden Home Manager, layouts, config generation, plugins, pane policy,

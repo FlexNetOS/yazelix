@@ -1,18 +1,22 @@
 use std::{
     env, fs,
     path::{Path, PathBuf},
+    process::Command,
 };
 
 use crate::{
+    command::{run_checked, trim_output},
     error::{startup, AppError},
-    paths::{nonempty_env, zellij_session_label},
-    runtime::Runtime,
+    paths::{config_home, nonempty_env, state_dir, zellij_session_label},
     status::json_string,
-    PACKAGE_VARIANT, VERSION,
+    DEFAULT_BAR_WIDGETS_JSON, DEFAULT_SHELL_PROGRAM, LAYOUT, PACKAGE_VARIANT, VERSION, YZX_CONFIG,
 };
 
 struct InspectReport {
-    runtime: Runtime,
+    config_home: PathBuf,
+    state_dir: PathBuf,
+    runtime_identity: PathBuf,
+    layout: String,
     current_executable: PathBuf,
     invoked_as: String,
     profile: PathBuf,
@@ -58,8 +62,8 @@ pub(crate) fn print_inspect() -> Result<(), AppError> {
         report.profile_desktop_entry.display(),
         presence(&report.profile_desktop_entry)
     );
-    println!("config home: {}", report.runtime.config_home.display());
-    println!("state dir: {}", report.runtime.state_dir.display());
+    println!("config home: {}", report.config_home.display());
+    println!("state dir: {}", report.state_dir.display());
     println!("local binary shadow: {}", presence(&report.local_shadow));
     println!(
         "local desktop shadow: {}",
@@ -81,7 +85,10 @@ pub(crate) fn print_inspect_json() -> Result<(), AppError> {
 
 impl InspectReport {
     fn collect() -> Result<Self, AppError> {
-        let runtime = Runtime::prepare()?;
+        let config_home = config_home()?;
+        let state_dir = state_dir()?;
+        let runtime_identity = state_dir.join("runtime_identity.json");
+        let layout = inspect_layout(&config_home, &state_dir)?;
         let current_executable = env::current_exe()
             .map_err(|error| {
                 startup(
@@ -125,7 +132,10 @@ impl InspectReport {
         let local_desktop_shadows = local_desktop_shadows(&local_desktop_dir);
 
         Ok(Self {
-            runtime,
+            config_home,
+            state_dir,
+            runtime_identity,
+            layout,
             current_executable,
             invoked_as,
             profile,
@@ -167,10 +177,10 @@ impl InspectReport {
             json_string(PACKAGE_VARIANT),
             json_path(&self.current_executable),
             json_string(&self.invoked_as),
-            json_path(&self.runtime.config_home),
-            json_path(&self.runtime.state_dir),
-            json_path(&self.runtime.runtime_identity),
-            json_string(&self.runtime.layout()),
+            json_path(&self.config_home),
+            json_path(&self.state_dir),
+            json_path(&self.runtime_identity),
+            json_string(&self.layout),
             json_path(&self.profile),
             json_path(&self.profile_manifest),
             path_exists(&self.profile_manifest),
@@ -189,6 +199,28 @@ impl InspectReport {
             zellij_session_label("true", "false"),
         )
     }
+}
+
+fn inspect_layout(config_home: &Path, state_dir: &Path) -> Result<String, AppError> {
+    let config_toml = config_home.join("config.toml");
+    let value = |key: &str| {
+        run_checked(
+            &config_toml,
+            Command::new(YZX_CONFIG)
+                .arg("--get")
+                .arg(key)
+                .env("YAZELIX_CONFIG_HOME", config_home),
+        )
+        .map(trim_output)
+    };
+    let source = if value("bar.widgets")? == DEFAULT_BAR_WIDGETS_JSON
+        && value("shell.program")? == DEFAULT_SHELL_PROGRAM
+    {
+        ("packaged", PathBuf::from(LAYOUT))
+    } else {
+        ("runtime", state_dir.join("zellij/layout.kdl"))
+    };
+    Ok(format!("{} ({})", source.0, source.1.display()))
 }
 
 fn active_profile_element_count(manifest: &Path) -> Option<usize> {

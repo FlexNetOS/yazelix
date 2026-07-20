@@ -2,7 +2,8 @@
 #
 # Converges the LifeOS foundation onto ~/.nix-profile as the sole selector:
 #   * archives the prior ~/.nix-profile alias or generation selector,
-#   * archives ~/.local/state/nix/profile and its profile-N-link generations,
+#   * protects every prior profile closure with an archive-owned indirect GC root,
+#   * archives both legacy XDG profile selectors and their generations,
 #   * creates a fresh explicit ~/.nix-profile with `nix profile add`,
 #   * verifies the expected closure with single_profile_check.nu,
 #   * archives a failed candidate and restores every prior selector link, and
@@ -16,8 +17,8 @@
 #     [--receipt-dir DIR] [--execute]
 #
 # Environment overrides (fixtures/staging): YZX_PROFILE_LINK,
-# YZX_LEGACY_XDG_PROFILE, YZX_STORE_PREFIX, YZX_NIX_BIN, YZX_NU_BIN,
-# YZX_CHECK_SCRIPT.
+# YZX_LEGACY_XDG_PROFILE, YZX_LEGACY_NESTED_PROFILE, YZX_STORE_PREFIX,
+# YZX_NIX_BIN, YZX_NIX_STORE_BIN, YZX_NU_BIN, YZX_CHECK_SCRIPT.
 
 def resolve [path: string] {
   let res = (do { ^readlink -f $path } | complete)
@@ -58,6 +59,86 @@ def generation-links [selector: string] {
       ($name | str starts-with $prefix) and ($body =~ '^[0-9]+-link(-[0-9]+-link)*$')
     }
   | get name
+}
+
+def archive-records [paths: list<string>, archive_path: string, namespace: string] {
+  $paths | each {|source|
+    let probe = (read-link $source)
+    {
+      source: $source
+      archived: ($archive_path | path join "prior" | path join $namespace | path join ($source | path basename))
+      target: $probe.target
+      resolved: (resolve $source)
+    }
+  }
+}
+
+def create-gc-roots [nix_store_bin: string, plans: list<record>] {
+  $plans | each {|plan|
+    mkdir ($plan.root | path dirname)
+    let add = (do {
+      ^$nix_store_bin --add-root $plan.root --indirect --realise $plan.target
+    } | complete)
+    let query = if $add.exit_code == 0 {
+      do { ^$nix_store_bin --query --roots $plan.target } | complete
+    } else {
+      {exit_code: null, stdout: "", stderr: ""}
+    }
+    let expected = $"($plan.root) -> ($plan.target)"
+    let verified = (
+      $add.exit_code == 0
+      and $query.exit_code == 0
+      and ($query.stdout | lines | any {|line| ($line | str trim) == $expected })
+    )
+    {
+      root: $plan.root
+      target: $plan.target
+      add_exit_code: $add.exit_code
+      add_stdout_sha256: ($add.stdout | hash sha256)
+      query_exit_code: $query.exit_code
+      query_stdout_sha256: ($query.stdout | hash sha256)
+      verified: $verified
+      retained: $verified
+      error: (if $verified { null } else {
+        let stderr = ([$add.stderr $query.stderr] | str join " " | str trim)
+        if $stderr == "" { $"GC root verification failed: ($expected)" } else { $stderr }
+      })
+    }
+  }
+}
+
+def release-gc-roots [nix_store_bin: string, roots: list<record>] {
+  let updated = ($roots | each {|root|
+    let remove = if (entry-present $root.root) {
+      do { ^rm -f $root.root } | complete
+    } else {
+      {exit_code: null, stdout: "", stderr: ""}
+    }
+    let query = (do { ^$nix_store_bin --query --roots $root.target } | complete)
+    let observed_retained = (
+      $query.stdout | lines | any {|line| $line | str contains $root.root }
+    )
+    let remove_ok = ($remove.exit_code == null or $remove.exit_code == 0)
+    let cleanup_ok = ($remove_ok and $query.exit_code == 0 and not $observed_retained)
+    let retained = if $cleanup_ok {
+      false
+    } else if $query.exit_code == 0 {
+      $observed_retained
+    } else {
+      $root.retained
+    }
+    let error = if $cleanup_ok { null } else {
+      $"failed to release GC root ($root.root) for ($root.target): remove_exit=($remove.exit_code), query_exit=($query.exit_code), retained=($retained)"
+    }
+    $root
+    | upsert release_remove_exit_code $remove.exit_code
+    | upsert release_query_exit_code $query.exit_code
+    | upsert release_query_stdout_sha256 ($query.stdout | hash sha256)
+    | upsert retained $retained
+    | upsert error $error
+  })
+  let errors = ($updated | where error != null | get error)
+  {ok: (($errors | is-empty)), errors: $errors, roots: $updated}
 }
 
 def refuse [msg: string] {
@@ -107,8 +188,12 @@ def main [
   let legacy_xdg_profile = (
     $env.YZX_LEGACY_XDG_PROFILE? | default "/home/flexnetos/.local/state/nix/profile"
   )
+  let legacy_nested_profile = (
+    $env.YZX_LEGACY_NESTED_PROFILE? | default "/home/flexnetos/.local/state/nix/profiles/profile"
+  )
   let store_prefix = ($env.YZX_STORE_PREFIX? | default "/nix/store")
   let nix_bin = ($env.YZX_NIX_BIN? | default "nix")
+  let nix_store_bin = ($env.YZX_NIX_STORE_BIN? | default "nix-store")
   let nu_bin = ($env.YZX_NU_BIN? | default "nu")
   let check_script = ($env.YZX_CHECK_SCRIPT? | default ($env.FILE_PWD | path join "single_profile_check.nu"))
 
@@ -130,16 +215,34 @@ def main [
   let legacy_paths = if (entry-present $legacy_xdg_profile) {
     (generation-links $legacy_xdg_profile) | append $legacy_xdg_profile
   } else { [] }
-  let prior_paths = ($profile_paths | append $legacy_paths | uniq)
-  let prior_entries = ($prior_paths | each {|source|
-    let probe = (read-link $source)
-    {
-      source: $source
-      archived: ($archive_path | path join "prior" | path join ($source | path basename))
-      target: $probe.target
-      resolved: (resolve $source)
-    }
-  })
+  let nested_paths = if (entry-present $legacy_nested_profile) {
+    (generation-links $legacy_nested_profile) | append $legacy_nested_profile
+  } else { [] }
+  let prior_entries = (
+    (archive-records $profile_paths $archive_path "profile")
+    | append (archive-records $legacy_paths $archive_path "legacy-xdg")
+    | append (archive-records $nested_paths $archive_path "legacy-nested")
+  )
+  let gc_root_plans = (
+    $prior_entries
+    | get resolved
+    | where {|target| $target | str starts-with $"($store_prefix)/" }
+    | uniq
+    | enumerate
+    | each {|item|
+        {
+          root: ($archive_path | path join "gcroots" | path join $"prior-profile-($item.index)")
+          target: $item.item
+          add_exit_code: null
+          add_stdout_sha256: null
+          query_exit_code: null
+          query_stdout_sha256: null
+          verified: null
+          retained: null
+          error: null
+        }
+      }
+  )
 
   let install_command = $"($nix_bin) profile add --profile '($profile_link)' '($flake_ref)#lifeos_foundation_yzx'"
   let mode = if $execute { "execute" } else { "dry-run" }
@@ -150,6 +253,7 @@ def main [
     mode: $mode
     profile_link: $profile_link
     legacy_xdg_profile: $legacy_xdg_profile
+    legacy_nested_profile: $legacy_nested_profile
     prior_profile_target: $prior_profile_target
     prior_profile_resolved: $prior_profile_resolved
     prior_manifest_sha256: (file-sha256 $prior_manifest)
@@ -157,6 +261,8 @@ def main [
     flake_ref: $flake_ref
     archive_path: $archive_path
     archive_entries: $prior_entries
+    gc_roots: $gc_root_plans
+    gc_root_cleanup: null
     install_command: $install_command
     install_exit_code: null
     rollback_actions: ($prior_entries | reverse | each {|entry| {from: $entry.archived, to: $entry.source}})
@@ -173,96 +279,136 @@ def main [
 
   mut failed = false
   if $execute {
-    let archive_result = (try {
+    let protect_result = (try {
       mkdir $archive_path
-      archive-entries $prior_entries
-      {ok: true, error: null}
+      let roots = (create-gc-roots $nix_store_bin $gc_root_plans)
+      let ok = ($roots | all {|root| $root.verified })
+      let errors = ($roots | where verified == false | get error)
+      {ok: $ok, roots: $roots, error: (if $ok { null } else { $errors | str join "; " })}
     } catch {|err|
-      {ok: false, error: ($err.msg? | default ($err | to json --raw))}
+      {
+        ok: false
+        roots: $gc_root_plans
+        error: ($err.msg? | default ($err | to json --raw))
+      }
     })
+    $receipt.gc_roots = $protect_result.roots
 
-    if not $archive_result.ok {
-      $receipt.failure_stage = "archive-prior"
-      $receipt.errors = ($receipt.errors | append $archive_result.error)
-      let restore_result = (try {
-        restore-entries $prior_entries
-        {ok: true, error: null}
-      } catch {|err|
-        {ok: false, error: ($err.msg? | default ($err | to json --raw))}
-      })
-      $receipt.rollback_performed = $restore_result.ok
-      if not $restore_result.ok {
-        $receipt.errors = ($receipt.errors | append $restore_result.error)
+    if not $protect_result.ok {
+      $receipt.failure_stage = "protect-prior"
+      $receipt.errors = ($receipt.errors | append $protect_result.error)
+      let cleanup = (release-gc-roots $nix_store_bin $protect_result.roots)
+      $receipt.gc_root_cleanup = $cleanup
+      $receipt.gc_roots = $cleanup.roots
+      if not $cleanup.ok {
+        $receipt.errors = ($receipt.errors | append $cleanup.errors)
       }
       $receipt.verified = false
       $failed = true
     } else {
-      let install = (do {
-        ^$nix_bin profile add --profile $profile_link $"($flake_ref)#lifeos_foundation_yzx"
-      } | complete)
-      $receipt.install_exit_code = $install.exit_code
-      if $install.exit_code != 0 {
-        print -e $install.stderr
-        $receipt.failure_stage = "install-profile"
-        let install_error = ($install.stderr | str trim)
-        $receipt.errors = ($receipt.errors | append (
-          if $install_error == "" { $"profile install exited ($install.exit_code)" } else { $install_error }
-        ))
-      }
+      let archive_result = (try {
+        archive-entries $prior_entries
+        {ok: true, error: null}
+      } catch {|err|
+        {ok: false, error: ($err.msg? | default ($err | to json --raw))}
+      })
 
-      let verified = if $install.exit_code != 0 {
-        false
-      } else {
-        let verify = (with-env {
-          YZX_PROFILE_LINK: $profile_link
-          YZX_LEGACY_XDG_PROFILE: $legacy_xdg_profile
-          YZX_STORE_PREFIX: $store_prefix
-          YZX_EXPECTED_CLOSURE: $closure
-        } {
-          do { ^$nu_bin $check_script } | complete
-        })
-        $receipt.verification_exit_code = $verify.exit_code
-        $receipt.verification_stdout_sha256 = ($verify.stdout | hash sha256)
-        print $verify.stdout
-        if $verify.exit_code != 0 {
-          print -e $verify.stderr
-          $receipt.failure_stage = "verify-profile"
-          let verify_error = ($verify.stderr | str trim)
-          $receipt.errors = ($receipt.errors | append (
-            if $verify_error == "" { $"profile verification exited ($verify.exit_code)" } else { $verify_error }
-          ))
-        }
-        $verify.exit_code == 0
-      }
-      $receipt.verified = $verified
-
-      if $verified {
-        let new_profile = (resolve $profile_link)
-        $receipt.new_profile_resolved = $new_profile
-        $receipt.new_manifest_sha256 = (file-sha256 ($new_profile | path join "manifest.json"))
-      } else {
-        let failed_archive = ($archive_path | path join "failed-candidate")
-        let candidate_result = (try {
-          archive-candidate $profile_link $failed_archive
-          {ok: true, error: null}
-        } catch {|err|
-          {ok: false, error: ($err.msg? | default ($err | to json --raw))}
-        })
-        if not $candidate_result.ok {
-          $receipt.errors = ($receipt.errors | append $candidate_result.error)
-        }
+      if not $archive_result.ok {
+        $receipt.failure_stage = "archive-prior"
+        $receipt.errors = ($receipt.errors | append $archive_result.error)
         let restore_result = (try {
           restore-entries $prior_entries
           {ok: true, error: null}
         } catch {|err|
           {ok: false, error: ($err.msg? | default ($err | to json --raw))}
         })
+        let cleanup = (release-gc-roots $nix_store_bin $protect_result.roots)
+        $receipt.gc_root_cleanup = $cleanup
+        $receipt.gc_roots = $cleanup.roots
+        $receipt.rollback_performed = ($restore_result.ok and $cleanup.ok)
         if not $restore_result.ok {
           $receipt.errors = ($receipt.errors | append $restore_result.error)
         }
-        $receipt.rollback_performed = $restore_result.ok
-        $receipt.failed_candidate_archive = $failed_archive
+        if not $cleanup.ok {
+          $receipt.errors = ($receipt.errors | append $cleanup.errors)
+        }
+        $receipt.verified = false
         $failed = true
+      } else {
+        let install = (do {
+          ^$nix_bin profile add --profile $profile_link $"($flake_ref)#lifeos_foundation_yzx"
+        } | complete)
+        $receipt.install_exit_code = $install.exit_code
+        if $install.exit_code != 0 {
+          print -e $install.stderr
+          $receipt.failure_stage = "install-profile"
+          let install_error = ($install.stderr | str trim)
+          $receipt.errors = ($receipt.errors | append (
+            if $install_error == "" { $"profile install exited ($install.exit_code)" } else { $install_error }
+          ))
+        }
+
+        let verified = if $install.exit_code != 0 {
+          false
+        } else {
+          let verify = (with-env {
+            YZX_PROFILE_LINK: $profile_link
+            YZX_LEGACY_XDG_PROFILE: $legacy_xdg_profile
+            YZX_LEGACY_NESTED_PROFILE: $legacy_nested_profile
+            YZX_STORE_PREFIX: $store_prefix
+            YZX_EXPECTED_CLOSURE: $closure
+          } {
+            do { ^$nu_bin $check_script } | complete
+          })
+          $receipt.verification_exit_code = $verify.exit_code
+          $receipt.verification_stdout_sha256 = ($verify.stdout | hash sha256)
+          print $verify.stdout
+          if $verify.exit_code != 0 {
+            print -e $verify.stderr
+            $receipt.failure_stage = "verify-profile"
+            let verify_error = ($verify.stderr | str trim)
+            $receipt.errors = ($receipt.errors | append (
+              if $verify_error == "" { $"profile verification exited ($verify.exit_code)" } else { $verify_error }
+            ))
+          }
+          $verify.exit_code == 0
+        }
+        $receipt.verified = $verified
+
+        if $verified {
+          let new_profile = (resolve $profile_link)
+          $receipt.new_profile_resolved = $new_profile
+          $receipt.new_manifest_sha256 = (file-sha256 ($new_profile | path join "manifest.json"))
+        } else {
+          let failed_archive = ($archive_path | path join "failed-candidate")
+          let candidate_result = (try {
+            archive-candidate $profile_link $failed_archive
+            {ok: true, error: null}
+          } catch {|err|
+            {ok: false, error: ($err.msg? | default ($err | to json --raw))}
+          })
+          if not $candidate_result.ok {
+            $receipt.errors = ($receipt.errors | append $candidate_result.error)
+          }
+          let restore_result = (try {
+            restore-entries $prior_entries
+            {ok: true, error: null}
+          } catch {|err|
+            {ok: false, error: ($err.msg? | default ($err | to json --raw))}
+          })
+          let cleanup = (release-gc-roots $nix_store_bin $protect_result.roots)
+          $receipt.gc_root_cleanup = $cleanup
+          $receipt.gc_roots = $cleanup.roots
+          if not $restore_result.ok {
+            $receipt.errors = ($receipt.errors | append $restore_result.error)
+          }
+          if not $cleanup.ok {
+            $receipt.errors = ($receipt.errors | append $cleanup.errors)
+          }
+          $receipt.rollback_performed = ($restore_result.ok and $cleanup.ok)
+          $receipt.failed_candidate_archive = $failed_archive
+          $failed = true
+        }
       }
     }
   }
@@ -273,7 +419,9 @@ def main [
   print $"receipt: ($receipt_path)"
   print ($receipt | to json --indent 2)
   if $failed {
-    if $receipt.rollback_performed {
+    if $receipt.failure_stage == "protect-prior" {
+      print -e "cutover refused before selector mutation; prior state is unchanged"
+    } else if $receipt.rollback_performed {
       print -e "cutover failed; every prior selector link was restored"
     } else {
       print -e $"cutover failed and automatic recovery was incomplete; follow receipt rollback_actions: ($receipt_path)"
