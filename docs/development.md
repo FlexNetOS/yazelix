@@ -1,0 +1,79 @@
+# Development
+
+## CI
+
+Normal CI runs Linux checks on push, pull request, and manual dispatch with
+Nushell as the run-step shell. No workflow restores or publishes a remote
+build cache; Kache is the only persistent build cache. `Version Gate` is manual and
+includes both Linux profile shapes, both `aarch64-darwin` packages, and the
+Darwin Home Manager closure. `Darwin Package Smoke` runs those three Darwin
+builds weekly on Monday when `main` has commits in the last 7 days, and on
+manual dispatch always, while idle weeks skip the macOS build. Both macOS jobs
+assert that Darwin packages contain no Linux desktop entry
+Use Version Gate before publishing a release
+
+## Local development
+
+Use local sibling repositories while hacking runtime inputs:
+
+```nu
+nix run --override-input mars ../mars
+nix run --override-input yazelixZellij ../yazelix-zellij
+nix run --override-input yazelixHelix ../yazelix-helix
+nix run --override-input yazelixZellijPopup ../yazelix-zellij-popup
+nix run --override-input yazelixZellijBar ../yazelix-zellij-bar
+nix run --override-input yazelixZellijPaneOrchestrator ../yazelix-zellij-pane-orchestrator
+nix build --override-input flexnetos_runner_source ../flexnetos_runner .#lifeos_foundation_yzx
+```
+
+Useful local checks:
+
+```nu
+nix flake check
+nix flake show --all-systems
+nix build .#yazelix --no-link --print-build-logs
+nix build .#runtime --no-link --print-build-logs
+nix build .#checks.x86_64-linux.yzx_yazi_materialization --no-link
+nix build .#checks.x86_64-linux.cache_shell_policy --no-link
+```
+
+Runtime package changes should also pass a temporary profile install:
+
+```nu
+nix profile add --refresh /absolute/path/to/yazelix --profile /tmp/yzx-profile
+```
+
+Detailed launch, config, editor, and shell contracts live in
+[Runtime Notes](runtime-notes.md)
+
+## LOC scorecard
+
+Counts **tracked text** project files. Excludes Beads state (`.beads/`),
+lockfiles (`*.lock`), and binary assets. New owned sources count automatically
+once committed
+
+```nu
+git ls-files
+| lines
+| where {|path|
+    not ($path | str starts-with ".beads/")
+    and not ($path | str starts-with "assets/")
+    and not ($path | str ends-with ".lock")
+}
+| each {|path| {path: $path, lines: (open --raw $path | str stats | get lines)}}
+```
+
+| Language | Lines |
+| --- | ---: |
+| Ignore (`.gitignore`) | 19 |
+| License | 201 |
+| Markdown | 1913 |
+| Nix | 2101 |
+| Shell | 0 |
+| YAML | 241 |
+| TOML | 246 |
+| KDL | 251 |
+| Nu | 509 |
+| Lua | 247 |
+| Rust | 13172 |
+| Total | 18900 |
