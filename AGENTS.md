@@ -70,7 +70,7 @@ After changing the flake runtime, keep the user's installed runtime current:
 
 ```sh
 closure=$(nix build .#lifeos_foundation_yzx --no-link --print-out-paths)
-/home/flexnetos/.nix-profile/bin/yazelix_profile_migrate --closure "$closure" --flake-ref "path:$PWD" --execute
+"${closure}/bin/yazelix_profile_migrate" --closure "$closure" --flake-ref "path:$PWD" --execute
 ```
 
 Do not broaden Home Manager, layouts, config generation, plugins, pane policy,

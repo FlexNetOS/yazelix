@@ -428,8 +428,15 @@
         install -D -m 644 ${yzxLayoutKdl} "$out/layout.kdl"
         install -D -m 644 ${yzxLayoutSwapKdl} "$out/layout.swap.kdl"
       '';
-      flexnetosYaziAssets = yazelixYaziAssets.packages.${system}.yazelix_yazi_assets;
+      # The portable asset layer evaluates on every advertised platform.  The
+      # mandatory ccboard/CodeDB tooling is a Linux-only Foundation concern:
+      # CodeDB retains its upstream Bubblewrap sandbox rather than receiving a
+      # fictional Darwin substitute.
+      flexnetosYaziAssets = yazelixYaziAssets.packages.${system}.yazi_assets_only;
       flexnetosYaziAssetsRoot = "${flexnetosYaziAssets}/share/yazelix_yazi_assets";
+      flexnetosLinuxYaziRuntimeTools =
+        assert pkgs.stdenv.hostPlatform.isLinux;
+        yazelixYaziAssets.packages.${system}.yazelix_yazi_assets;
       flexnetosTerminalSupport = yazelixTerminalSupport.packages.${system}.yazelix_terminal_support;
       flexnetosTerminalSupportMetadata = builtins.fromTOML (
         builtins.readFile "${yazelixTerminalSupport}/config_metadata/terminal_support.toml"
@@ -442,9 +449,9 @@
         assert flexnetosTerminalSupportMetadata.terminals.mars.desktop_suffix == "Agent";
         assert flexnetosTerminalSupportMetadata.terminals.mars.startup_wm_class == "mars";
         true;
-      flexnetosCcboard = "${flexnetosYaziAssets}/share/yazelix_yazi_assets/runtime_tools/ccboard/bin/ccboard";
-      flexnetosCodedb = "${flexnetosYaziAssets}/share/yazelix_yazi_assets/runtime_tools/codedb/bin/codedb";
-      flexnetosNuPluginCodedb = "${flexnetosYaziAssets}/share/yazelix_yazi_assets/runtime_tools/codedb/bin/nu_plugin_codedb";
+      flexnetosCcboard = "${flexnetosLinuxYaziRuntimeTools}/share/yazelix_yazi_assets/runtime_tools/ccboard/bin/ccboard";
+      flexnetosCodedb = "${flexnetosLinuxYaziRuntimeTools}/share/yazelix_yazi_assets/runtime_tools/codedb/bin/codedb";
+      flexnetosNuPluginCodedb = "${flexnetosLinuxYaziRuntimeTools}/share/yazelix_yazi_assets/runtime_tools/codedb/bin/nu_plugin_codedb";
       flexnetosLayoutTemplate = pkgs.runCommand "flexnetos-agent-workspace-template.kdl" {} ''
         substitute ${./defaults/zellij/flexnetos_agent_workspace.kdl} "$out" \
           --replace-fail '@yazi@' '${yzxYazi}/bin/yzx-yazi' \

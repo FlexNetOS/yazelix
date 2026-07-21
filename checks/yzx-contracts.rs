@@ -163,6 +163,11 @@ fn main() {
 fn expect_explicit_profile_commands<const N: usize>(documents: [&str; N]) {
     for document in documents {
         let text = fs::read_to_string(document).unwrap();
+        assert!(
+            !text.contains("/home/flexnetos/.nix-profile/bin/yazelix_profile_migrate"),
+            "{} invokes the incumbent profile migrator instead of the newly built closure tool",
+            document
+        );
         for (index, line) in text.lines().enumerate() {
             let command = line.trim();
             if command.starts_with("nix profile ") {

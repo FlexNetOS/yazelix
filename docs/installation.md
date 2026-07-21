@@ -178,7 +178,8 @@ single replacement element, and verify it:
 
 ```nu
 let closure = (nix build github:FlexNetOS/yazelix#lifeos_foundation_yzx --no-link --print-out-paths | str trim)
-/home/flexnetos/.nix-profile/bin/yazelix_profile_migrate --closure $closure --flake-ref github:FlexNetOS/yazelix --execute
+let migrator = ($closure | path join "bin" "yazelix_profile_migrate")
+^$migrator --closure $closure --flake-ref github:FlexNetOS/yazelix --execute
 ```
 
 Confirm an entry name with:
