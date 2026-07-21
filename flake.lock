@@ -864,17 +864,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1784130778,
-        "narHash": "sha256-nvDEsHT0phEHTrC2nmw5Py6f0VhykVfVzEPNoFZRUSg=",
+        "lastModified": 1784594956,
+        "narHash": "sha256-bUAFWdBeYTiEHEoItADU4jlD3cQ7YtHttlyf6sr+18Y=",
         "owner": "FlexNetOS",
         "repo": "yazelix-yazi-assets",
-        "rev": "54a4dee3b9696d546cf26a876e83b3290143a363",
+        "rev": "bd0deff7e83ecd7788b61f5c0cda122272826f74",
         "type": "github"
       },
       "original": {
         "owner": "FlexNetOS",
         "repo": "yazelix-yazi-assets",
-        "rev": "54a4dee3b9696d546cf26a876e83b3290143a363",
+        "rev": "bd0deff7e83ecd7788b61f5c0cda122272826f74",
         "type": "github"
       }
     },
