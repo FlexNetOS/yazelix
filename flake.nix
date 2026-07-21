@@ -1097,7 +1097,7 @@
         def --wrapped main [...args] {
           if (\$args | is-empty) {
             let profile = "/home/flexnetos/.nix-profile"
-            let claude_home = "/run/user/1001/yazelix/profile-runtime/claude"
+            let claude_home = "/home/flexnetos/meta/var/lib/claude"
             exec ${pkgs.nushell}/bin/nu \
               "$out/share/yazelix/nushell/scripts/materialize_claude_config.nu" \
               (\$profile | path join "share/yazelix/agent_configs/claude/settings.json.src") \
@@ -1115,14 +1115,14 @@
       '';
       flexnetosCodexFrontdoor = nuApplication "codex" ./nushell/agent/profile_frontdoor.nu {
         agent = "codex";
-        runtimeTarget = "/run/user/1001/yazelix/profile-runtime";
+        stateHome = "/run/user/1001/yazelix/profile-runtime/codex";
         payload = "${flexnetosCodex}/bin/codex";
         materializer = "/home/flexnetos/.nix-profile/bin/yazelix_codex_materialize";
         chmod = "${pkgs.coreutils}/bin/chmod";
       };
       flexnetosClaudeFrontdoor = nuApplication "claude" ./nushell/agent/profile_frontdoor.nu {
         agent = "claude";
-        runtimeTarget = "/run/user/1001/yazelix/profile-runtime";
+        stateHome = "/home/flexnetos/meta/var/lib/claude";
         payload = "${flexnetosClaude}/bin/claude";
         materializer = "/home/flexnetos/.nix-profile/bin/yazelix_claude_materialize";
         chmod = "${pkgs.coreutils}/bin/chmod";
@@ -1736,7 +1736,7 @@
         grep -Fx 'Environment=SHELL=/home/flexnetos/.nix-profile/toolbin/nu' "$runner_unit"
         grep -Fx 'Environment=KACHE_CACHE_DIR=/home/flexnetos/.cache/kache/runners/%i' "$runner_unit"
         grep -Fx 'Environment=CODEX_HOME=/run/user/1001/yazelix/profile-runtime/codex' "$runner_unit"
-        grep -Fx 'Environment=CLAUDE_CONFIG_DIR=/run/user/1001/yazelix/profile-runtime/claude' "$runner_unit"
+        grep -Fx 'Environment=CLAUDE_CONFIG_DIR=/home/flexnetos/meta/var/lib/claude' "$runner_unit"
         grep -Fx 'Environment=XDG_DATA_HOME=/home/flexnetos/meta/var/lib' "$runner_unit"
         grep -Fx 'Environment=XDG_STATE_HOME=/home/flexnetos/meta/var/lib' "$runner_unit"
         grep -Fx 'Environment=YAZELIX_STATE_DIR=/run/user/1001/yazelix/runners/%i/yazelix' "$runner_unit"

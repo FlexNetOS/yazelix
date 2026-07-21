@@ -59,7 +59,9 @@ generated pair, runs `yazelix_codex_materialize`, and checks
 `tests/codex_config_provenance.nu` before the installed runtime starts.
 
 The profile-owned `claude` wrapper applies the same boundary through
-`CLAUDE_CONFIG_DIR=/run/user/1001/yazelix/profile-runtime/claude`. Reviewed
+`CLAUDE_CONFIG_DIR=/home/flexnetos/meta/var/lib/claude`. Unlike Codex, whose
+state is volatile, Claude's home is durable under Meta so sessions and history
+persist across reboots; reviewed config is still re-materialized on each launch. Reviewed
 `settings.json`, `CLAUDE.md`, and `RTK.md` inputs live in
 `agent_configs/claude/`; the profile installs them and
 `yazelix_claude_materialize`, then the wrapper publishes exact copies before
