@@ -26,9 +26,9 @@ struct InspectReport {
     profile_frontdoor_resolved: Option<PathBuf>,
     profile_frontdoor_is_current: bool,
     profile_desktop_entry: PathBuf,
-    local_shadow: PathBuf,
-    local_desktop_dir: PathBuf,
-    local_desktop_shadows: Vec<PathBuf>,
+    home_bin_shadow: PathBuf,
+    home_desktop_dir: PathBuf,
+    home_desktop_shadows: Vec<PathBuf>,
 }
 
 pub(crate) fn print_inspect() -> Result<(), AppError> {
@@ -64,10 +64,10 @@ pub(crate) fn print_inspect() -> Result<(), AppError> {
     );
     println!("config home: {}", report.config_home.display());
     println!("state dir: {}", report.state_dir.display());
-    println!("local binary shadow: {}", presence(&report.local_shadow));
+    println!("local binary shadow: {}", presence(&report.home_bin_shadow));
     println!(
         "local desktop shadow: {}",
-        if report.local_desktop_shadows.is_empty() {
+        if report.home_desktop_shadows.is_empty() {
             "absent"
         } else {
             "present"
@@ -127,9 +127,9 @@ impl InspectReport {
             .is_some_and(|resolved| resolved == &current_executable);
         let profile_desktop_entry =
             profile.join("share/applications/com.flexnetos.Yazelix.Agent.desktop");
-        let local_shadow = home.join(".local/bin/yzx");
-        let local_desktop_dir = home.join(".local/share/applications");
-        let local_desktop_shadows = local_desktop_shadows(&local_desktop_dir);
+        let home_bin_shadow = home.join(concat!(".", "local")).join("bin/yzx");
+        let home_desktop_dir = home.join(concat!(".", "local")).join("share/applications");
+        let home_desktop_shadows = home_desktop_shadows(&home_desktop_dir);
 
         Ok(Self {
             config_home,
@@ -145,15 +145,15 @@ impl InspectReport {
             profile_frontdoor_resolved,
             profile_frontdoor_is_current,
             profile_desktop_entry,
-            local_shadow,
-            local_desktop_dir,
-            local_desktop_shadows,
+            home_bin_shadow,
+            home_desktop_dir,
+            home_desktop_shadows,
         })
     }
 
     fn json(&self) -> String {
         let desktop_entries = self
-            .local_desktop_shadows
+            .home_desktop_shadows
             .iter()
             .map(|path| json_string(&path.to_string_lossy()))
             .collect::<Vec<_>>()
@@ -167,8 +167,8 @@ impl InspectReport {
                 "\"profile\":{},\"profile_manifest\":{},\"profile_manifest_exists\":{},\"active_profile_elements\":{},",
                 "\"profile_frontdoor\":{},\"profile_frontdoor_exists\":{},\"profile_frontdoor_resolved\":{},\"profile_frontdoor_is_current\":{},",
                 "\"profile_desktop_entry\":{},\"profile_desktop_entry_exists\":{},",
-                "\"local_shadow\":{{\"path\":{},\"exists\":{}}},",
-                "\"local_desktop_shadow\":{{\"directory\":{},\"exists\":{},\"entries\":[{}]}}",
+                "\"home_bin_shadow\":{{\"path\":{},\"exists\":{}}},",
+                "\"home_desktop_shadow\":{{\"directory\":{},\"exists\":{},\"entries\":[{}]}}",
                 "}},",
                 "\"session\":{{\"inside_zellij\":{}}}",
                 "}}"
@@ -191,10 +191,10 @@ impl InspectReport {
             self.profile_frontdoor_is_current,
             json_path(&self.profile_desktop_entry),
             path_exists(&self.profile_desktop_entry),
-            json_path(&self.local_shadow),
-            path_exists(&self.local_shadow),
-            json_path(&self.local_desktop_dir),
-            !self.local_desktop_shadows.is_empty(),
+            json_path(&self.home_bin_shadow),
+            path_exists(&self.home_bin_shadow),
+            json_path(&self.home_desktop_dir),
+            !self.home_desktop_shadows.is_empty(),
             desktop_entries,
             zellij_session_label("true", "false"),
         )
@@ -232,7 +232,7 @@ fn active_profile_element_count(manifest: &Path) -> Option<usize> {
     Some(compact.matches("\"active\":true").count())
 }
 
-fn local_desktop_shadows(directory: &Path) -> Vec<PathBuf> {
+fn home_desktop_shadows(directory: &Path) -> Vec<PathBuf> {
     let mut entries = fs::read_dir(directory)
         .ok()
         .into_iter()

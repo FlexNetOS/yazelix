@@ -283,7 +283,7 @@ Usage:
   yzx --version
   yzx help
   yzx config
-  yzx desktop [--print-path]
+  yzx desktop <install|uninstall> [--print-path]
   yzx doctor
   yzx inspect [--json]
   yzx env
@@ -298,7 +298,7 @@ Usage:
 
 Commands:
   config  Open Yazelix Nova config
-  desktop Report the profile-owned desktop entry
+  desktop Install or remove an explicit XDG desktop entry
   doctor  Check Yazelix runtime setup
   inspect Show active runtime, profile, and ownership truth
   env     Open the managed shell without launching the UI

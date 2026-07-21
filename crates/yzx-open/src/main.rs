@@ -131,11 +131,10 @@ impl Config {
     fn from_env() -> Result<Self> {
         let state_dir = nonempty_env("YAZELIX_STATE_DIR")
             .map(PathBuf::from)
-            .or_else(|| nonempty_env("XDG_DATA_HOME").map(|dir| PathBuf::from(dir).join("yazelix")))
             .or_else(|| {
-                nonempty_env("HOME").map(|dir| PathBuf::from(dir).join(".local/share/yazelix"))
+                nonempty_env("XDG_RUNTIME_DIR").map(|dir| PathBuf::from(dir).join("yazelix"))
             })
-            .context("HOME is required when YAZELIX_STATE_DIR and XDG_DATA_HOME are unset")?;
+            .context("YAZELIX_STATE_DIR or XDG_RUNTIME_DIR is required")?;
         let bridge_root = nonempty_env("YAZELIX_HELIX_BRIDGE_ROOT")
             .map(PathBuf::from)
             .unwrap_or_else(|| state_dir.join("helix_bridge"));

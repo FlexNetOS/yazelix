@@ -14,26 +14,24 @@ so use `enter` for the managed workspace. Both package and app outputs exist for
 
 The `x86_64-linux`-only `lifeos_foundation_yzx` output composes canonical Nova
 with the FlexNetOS toolchain. It deliberately owns one profile element, one
-`bin/yzx` frontdoor, one profile-owned desktop entry, and one default agent
-workspace. The profile materializes that entry directly at
-`/home/flexnetos/.nix-profile/share/applications/com.flexnetos.Yazelix.Agent.desktop`;
-`yzx desktop --print-path` reports it without copying or mutating user-local
-applications. The entry executes `/home/flexnetos/.nix-profile/bin/yzx launch`
-directly; there is no launcher wrapper, user-local shadow, or parallel
-regular/agent entry
+`bin/yzx` frontdoor, the agent desktop sources, and one default agent workspace.
+The profile exposes one visible Yazelix Agent entry plus one hidden Claude URL
+handler from `share/applications`; no post-install copy is created. The visible
+entry executes
+`/home/flexnetos/.nix-profile/bin/yzx launch` directly, with no parallel
+regular/agent entry. Claude deep links execute
+`/home/flexnetos/.nix-profile/bin/claude --handle-uri %u` through the same
+profile-owned runtime boundary.
 
 The FlexNetOS foundation uses `/home/flexnetos/.nix-profile` as an explicit
-profile, including its generation links. Both `~/.local/state/nix/profile` and
-`~/.local/state/nix/profiles/profile` are legacy shadows, not equivalent
-selectors, and must be archived during the checked migration under Meta's
-authoritative `/home/flexnetos/.local/state/meta/archives/yazelix-nix-profile/`
-root. Before moving either generation graph, the migration protects each prior
-store closure with an archive-owned indirect GC root and records live root
-verification in its receipt. Generated
-runtime under `~/.local/share/yazelix` is evidence only and never owns profile
-archives. Run `~/.nix-profile/bin/yazelix_profile_check` after every
-foundation update; it fails when either XDG selector exists even if every path
-resolves to identical bytes.
+profile, including its generation links. A retired user XDG profile is a
+legacy shadow, not an equivalent selector, and is archived during the checked
+migration under `/home/flexnetos/.cache/flexnetos/archives/yazelix-nix-profile/`.
+Generated runtime beneath the profile runtime link is evidence only and never
+owns profile archives. Run
+`/home/flexnetos/.nix-profile/bin/yazelix_profile_check` after
+every foundation update; it fails when the retired selector exists even if both
+paths resolve to identical bytes.
 
 Evaluate the mutually exclusive Mars-free variant without adding it beside the
 foundation element:

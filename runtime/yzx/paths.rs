@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    error::{startup, AppError},
-    PATH_PREFIX,
+    DEFAULT_STATE_DIR, PATH_PREFIX,
+    error::{AppError, startup},
 };
 
 pub(crate) fn config_home() -> Result<PathBuf, AppError> {
@@ -36,13 +36,13 @@ pub(crate) fn home_dir() -> Result<PathBuf, AppError> {
 pub(crate) fn state_dir() -> Result<PathBuf, AppError> {
     nonempty_env("YAZELIX_STATE_DIR")
         .map(PathBuf::from)
-        .or_else(|| nonempty_env("XDG_DATA_HOME").map(|path| PathBuf::from(path).join("yazelix")))
+        .or_else(|| (!DEFAULT_STATE_DIR.is_empty()).then(|| PathBuf::from(DEFAULT_STATE_DIR)))
         .or_else(|| {
-            nonempty_env("HOME").map(|path| PathBuf::from(path).join(".local/share/yazelix"))
+            nonempty_env("XDG_RUNTIME_DIR").map(|path| PathBuf::from(path).join("yazelix"))
         })
         .ok_or_else(|| {
             startup(
-                "HOME is required when YAZELIX_STATE_DIR and XDG_DATA_HOME are unset.",
+                "YAZELIX_STATE_DIR or XDG_RUNTIME_DIR is required for mutable runtime state.",
                 "",
                 1,
             )
