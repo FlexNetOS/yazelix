@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Run trusted Linux CI on the local self-hosted runner
+  (`self-hosted, linux, x64, local, flexnetos`) as the primary lane, keeping
+  GitHub-hosted `ubuntu-latest` only as the fallback for untrusted fork pull
+  requests. The `linux` job in `ci.yml` and the `linux-profile-smoke` job in
+  `version_gate.yml` now select their runner from
+  `github.event.pull_request.head.repo.fork` so fork PRs never execute on
+  self-hosted hardware. macOS jobs are unchanged.
 - Disable Nix XDG base directories (`use-xdg-base-directories = false` in the
   profile-owned `host-policy/nix.conf`) so Nix keeps its per-user profile at
   `~/.nix-profile` and never re-materializes the retired user XDG profile

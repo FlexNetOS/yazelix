@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   linux:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) && 'ubuntu-latest' || fromJSON('["self-hosted","linux","x64","local","flexnetos"]') }}
     timeout-minutes: 60
     defaults:
       run:
