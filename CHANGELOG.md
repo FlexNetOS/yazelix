@@ -18,7 +18,6 @@
   service restarts, re-materializes the runner tree via `ExecStartPre`, and
   registers the next JIT runner, so the local runner stays available to serve
   CI instead of stopping after a single job.
->>>>>>> origin/main
 - Disable Nix XDG base directories (`use-xdg-base-directories = false` in the
   profile-owned `host-policy/nix.conf`) so Nix keeps its per-user profile at
   `~/.nix-profile` and never re-materializes the retired user XDG profile
