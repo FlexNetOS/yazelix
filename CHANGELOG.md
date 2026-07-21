@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Package PyYAML with the profile-owned Python frontdoor and expose the
+  profile-owned `ar` needed by Cargo native builds, so the shipped Codex
+  `skill-creator` validator and its Rust verification run from the immutable
+  foundation closure without host package installs or alternate tool owners.
 - Make the profile-owned self-hosted runner service persistent: change
   `flexnetos_runner@.service` from `Type=oneshot`/`Restart=no` to
   `Type=exec`/`Restart=always` (RestartSec=3). Each job still runs on a fresh
