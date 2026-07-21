@@ -23,6 +23,9 @@ That volatile directory is created and secured by the profile-owned runtime
 service and frontdoors.
 Non-foundation packages use `YAZELIX_STATE_DIR` or
 `${XDG_RUNTIME_DIR}/yazelix`; they do not fall back to durable home storage.
+The foundation frontdoors also fix `XDG_DATA_HOME` and `XDG_STATE_HOME` to
+`/home/flexnetos/meta/var/lib`, and `XDG_CACHE_HOME` to the volatile Yazelix
+cache. Inherited XDG values cannot establish a competing tool-state owner.
 
 ## Codex configuration and rules
 
@@ -40,7 +43,7 @@ independent pathnames, so publication uses a durable recovery journal and
 rollback copies rather than claiming a two-path atomic rename. If interrupted
 after one replacement, the next invocation restores the exact prior pair before
 continuing. The profile-owned `codex` wrapper fixes `CODEX_HOME` to
-`~/.nix-profile/runtime/codex` and writes `config.toml` and `RULES.md` there
+`/run/user/1001/yazelix/profile-runtime/codex` and writes `config.toml` and `RULES.md` there
 with exact source hashes and do-not-edit markers.
 
 For `config.toml`, every top-level key or table declared by the reviewed source
