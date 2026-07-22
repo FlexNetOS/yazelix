@@ -19,6 +19,11 @@
 #
 # Options (enter/probe):
 #   --id NAME            envelope id (default: yzx-<pid>)
+#   --store PATH         bind PATH (an extracted release closure) at /nix
+#                        instead of the host store — the portable-release
+#                        launcher mode (yzx-iso T10, spine ARCHBP-021): the
+#                        host /nix is hidden, so a workload that runs proves
+#                        the bundle is self-sufficient, never falsely
 #   --durable SRC:DST    bind a durable path read-write (repeatable)
 #   --gpu                pass /dev/dri and /dev/nvidia* through
 #   --device PATH        pass one device node through (repeatable)
@@ -88,6 +93,7 @@ cmd_executor() {
 
 # --- envelope construction --------------------------------------------------
 ENV_ID=""
+STORE_SRC="/nix"
 DURABLES=()
 DEVICES=()
 GPU=0
@@ -99,6 +105,7 @@ parse_opts() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --id) ENV_ID=$2; shift 2 ;;
+      --store) STORE_SRC=$2; shift 2 ;;
       --durable) DURABLES+=("$2"); shift 2 ;;
       --gpu) GPU=1; shift ;;
       --device) DEVICES+=("$2"); shift 2 ;;
@@ -115,9 +122,10 @@ parse_opts() {
 build_args() {
   # A private root: tmpfs /, read-only /nix, minimal read-only /etc, private
   # /proc /dev /tmp, and a tmpfs home overlay. Everything else is absent.
+  [ -d "$STORE_SRC" ] || die "store source missing: $STORE_SRC"
   BWRAP_ARGS=(
     --tmpfs /
-    --ro-bind /nix /nix
+    --ro-bind "$STORE_SRC" /nix
     --ro-bind /etc/resolv.conf /etc/resolv.conf
     --ro-bind /etc/passwd /etc/passwd
     --ro-bind /etc/group /etc/group
