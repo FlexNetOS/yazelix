@@ -1200,12 +1200,19 @@
       # yzx-iso T2 (spine ARCHBP-065): the LifeOS bubblewrap user-namespace
       # envelope, nix-declared with pinned inputs — no host installs required
       # to build.  Runtime executor selection records (never hides) the
-      # AppArmor-profiled host-bwrap fallback on restricted hosts.
-      yzxEnvelope = pkgs.writeShellApplication {
-        name = "yzx-envelope";
-        runtimeInputs = [pkgs.bubblewrap pkgs.coreutils pkgs.gnugrep];
-        text = builtins.readFile ./envelope/yzx-envelope.sh;
-      };
+      # AppArmor-profiled host-bwrap fallback on restricted hosts.  The engine
+      # is Nushell (cache_shell_policy: no POSIX shell sources); the pinned
+      # bwrap path is substituted into the executor candidate list.
+      yzxEnvelope = pkgs.runCommand "yzx-envelope" {} ''
+        mkdir -p $out/bin
+        {
+          echo '#!${pkgs.nushell}/bin/nu'
+          ${pkgs.gnused}/bin/sed 's|@NIX_BWRAP@|${pkgs.bubblewrap}/bin/bwrap|g' ${./envelope/yzx-envelope.nu}
+        } > $out/bin/yzx-envelope
+        chmod +x $out/bin/yzx-envelope
+        # Parse gate: the engine must at least evaluate under the pinned nu.
+        ${pkgs.nushell}/bin/nu --commands "nu-check --debug '$out/bin/yzx-envelope' | ignore; exit 0"
+      '';
     in {
       inherit yazelix;
       runtime = yzxRuntime;
