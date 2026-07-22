@@ -1209,8 +1209,11 @@
     in {
       inherit yazelix;
       runtime = yzxRuntime;
-      yzx-envelope = yzxEnvelope;
       default = yazelix;
+    } // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
+      # bubblewrap is Linux-only; exposing this on darwin fails flake-shape
+      # evaluation ("not available on the requested hostPlatform").
+      yzx-envelope = yzxEnvelope;
     } // pkgs.lib.optionalAttrs (system == "x86_64-linux") {
       lifeos_foundation_yzx = lifeosFoundationYzx;
     });
@@ -1883,11 +1886,14 @@
           type = "app";
           program = "${self.packages.${system}.runtime}/bin/yzx";
         };
+        default = yazelix;
+      }
+      // nixpkgs.lib.optionalAttrs (nixpkgs.lib.hasSuffix "-linux" system) {
+        # Linux-only, matching the packages gate (bubblewrap).
         yzx-envelope = {
           type = "app";
           program = "${self.packages.${system}.yzx-envelope}/bin/yzx-envelope";
         };
-        default = yazelix;
       }
       // nixpkgs.lib.optionalAttrs (system == "x86_64-linux") {
         lifeos_foundation_yzx = {
