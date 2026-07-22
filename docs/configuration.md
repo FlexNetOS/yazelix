@@ -101,7 +101,7 @@ while custom popup ids remain dynamic within the documented `popups.<id>` fields
 | Field | Default | View | Meaning |
 | --- | --- | --- | --- |
 | `open.log_level` | `info` | All | Diagnostics for managed Yazi open requests: `off`, `error`, `info`, `debug` |
-| `shell.program` | `nu` | Core | Packaged shell for new panes: `nu`, `bash`, `zsh`, `fish` |
+| `shell.program` | `nu` | Core | Packaged shell for new panes. This fork is Nushell-only (Kache/Nushell doctrine): `nu` is the sole supported value; other values only change the bar label |
 | `editor.command` | `yzx-hx` | Core | Editor used by Yazi opens, Ratconfig text edits, and Git editor flows |
 | `welcome.enabled` | `true` | Core | Show the startup welcome splash |
 | `welcome.style` | `random` | Core | Startup screen style |

@@ -13,7 +13,7 @@ together as one coherent workspace
 Yazelix Nova is a Nix-packaged terminal workspace built around
 [Mars](https://github.com/luccahuguet/mars) (a Rio-derived fork), a thin
 [Yazelix-owned Zellij fork](https://github.com/luccahuguet/yazelix-zellij),
-Yazi, Nushell (with packaged Bash, Zsh, and Fish alternatives), a lazygit popup (but you can configure other git clients!), and
+Yazi, Nushell (this fork is Nushell-only; upstream offers packaged Bash, Zsh, and Fish alternatives), a lazygit popup (but you can configure other git clients!), and
 an optional coding agent popup. It uses the
 [Yazelix Helix fork](https://github.com/luccahuguet/yazelix-helix) by default
 (but `editor.command` can select your preferred terminal editor). `yzx launch`
@@ -284,10 +284,10 @@ Yazelix assembles focused first-party forks, plugins, libraries, and commands:
 explicit overrides. Core shows the settings most users need. All includes the
 complete inventory.
 
-Set `shell.program` in Ratconfig or `config.toml` to choose packaged Nushell
-(default), Bash, Zsh, or Fish for new panes and sessions.
+This fork is Nushell-only (Kache/Nushell doctrine): `shell.program` supports
+`nu`, and new panes and sessions always launch the packaged Nushell.
 Yazelix initializes Starship, Carapace completions, and zoxide for managed
-Nushell. Bash, Zsh, and Fish use their normal interactive startup files.
+Nushell. Upstream's packaged Bash, Zsh, and Fish alternatives are not shipped here.
 
 See [Configuration](docs/configuration.md) for settings, popups, native files,
 Yazi plugins, cursor ownership, and editor behavior.
