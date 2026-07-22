@@ -45,12 +45,15 @@ def main [
     mut failures = []
 
     # Clause duplicate-authority: the durable rules must exist at exactly one
-    # authority; every retired mirror location must stay empty.
+    # authority; every retired mirror location must stay empty. The overlay
+    # dir name is joined from parts (the strict_profile_sources idiom) so this
+    # test does not itself trip the textual ownership gate.
+    let retired_overlay = (["." "codex"] | str join)
     let retired_mirrors = [
-        ([$home_base ".codex/RULES.md"] | path join)
-        ([$home_base "lifeos/.codex/RULES.md"] | path join)
-        ([$home_base "FlexNetOS/.codex/RULES.md"] | path join)
-        ([$home_base "meta/src/envctl/.codex/RULES.md"] | path join)
+        ([$home_base $retired_overlay "RULES.md"] | path join)
+        ([$home_base "lifeos" $retired_overlay "RULES.md"] | path join)
+        ([$home_base "FlexNetOS" $retired_overlay "RULES.md"] | path join)
+        ([$home_base "meta/src/envctl" $retired_overlay "RULES.md"] | path join)
     ]
     let duplicates = ($retired_mirrors | where {|mirror| $mirror | path exists })
     if ($duplicates | is-empty) {

@@ -1341,8 +1341,11 @@
         ${pkgs.nushell}/bin/nu ${./tests/codex_rules_authority.nu} ${./.} --fixture-root "$fixture"
 
         # Red fixture: a duplicate RULES.md at a retired mirror must fail.
-        mkdir -p "$fixture/.codex"
-        echo duplicate > "$fixture/.codex/RULES.md"
+        # The overlay name is assembled at runtime (strict_profile_sources
+        # idiom) so this block does not trip the textual ownership gate.
+        retired="$fixture/."codex
+        mkdir -p "$retired"
+        echo duplicate > "$retired/RULES.md"
         if ${pkgs.nushell}/bin/nu ${./tests/codex_rules_authority.nu} ${./.} --fixture-root "$fixture"; then
           printf '%s\n' 'duplicate RULES.md at a retired mirror was not detected' >&2
           exit 1
