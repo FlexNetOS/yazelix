@@ -5,6 +5,13 @@ name: flexnetos-runner-smoke
 
 on:
   workflow_dispatch: {}
+  # push trigger so the runner can be exercised from this PR branch before the
+  # workflow reaches the default branch (workflow_dispatch requires default branch).
+  push:
+    branches: [feat/flexnetos-gha-runner-nix-2026-07-23]
+    paths:
+      - 'nix/gha-runner/**'
+      - '.github/workflows/flexnetos-runner-smoke.yml'
 
 permissions:
   contents: read

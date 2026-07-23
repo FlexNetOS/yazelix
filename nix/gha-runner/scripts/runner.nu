@@ -94,15 +94,17 @@ def cmd-register [extra: list<string>] {
     let sd = (state-dir)
     let cfg = (substrate-bin "config.sh")
     cd $sd
-    with-env { RUNNER_ROOT: $sd } {
-        ^$cfg --unattended --replace ...[
-            --url $ORG_URL
-            --token $env.GHA_RUNNER_TOKEN
-            --name "flexnetos-nix"
-            --labels $LABELS
-            --work (work-dir)
-        ] ...$extra
-    }
+    # --disableupdate: the runner lives in the immutable nix store and cannot
+    # self-update; version bumps come through nixpkgs, not GitHub's auto-update
+    # (which would try to rewrite the read-only store path and crash the listener).
+    ^$cfg --unattended --replace ...[
+        --url $ORG_URL
+        --token $env.GHA_RUNNER_TOKEN
+        --name "flexnetos-nix"
+        --labels $LABELS
+        --work (work-dir)
+        --disableupdate
+    ] ...$extra
 }
 
 def cmd-run [] {
@@ -135,6 +137,9 @@ def main [
     command: string = "doctor"   # doctor | register | run | agent
     ...args: string
 ] {
+    # Pin RUNNER_ROOT for every substrate call (incl. doctor's --version), so the
+    # nixpkgs wrapper never falls back to its ~/.github-runner default (path law).
+    $env.RUNNER_ROOT = (state-dir)
     match $command {
         "doctor"   => { cmd-doctor }
         "register" => { cmd-register $args }
