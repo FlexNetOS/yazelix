@@ -1,0 +1,71 @@
+{
+  "description": "FlexNetOS profile-owned RTK and ICM lifecycle hooks. Review command hooks through /hooks before enabling them.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/flexnetos/.nix-profile/bin/icm hook start"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/flexnetos/.nix-profile/bin/rtk hook codex"
+          },
+          {
+            "type": "command",
+            "command": "/home/flexnetos/.nix-profile/bin/icm hook pre"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/flexnetos/.nix-profile/bin/icm hook post"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/flexnetos/.nix-profile/bin/icm hook compact"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/flexnetos/.nix-profile/bin/icm hook prompt"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/flexnetos/.nix-profile/bin/icm hook end"
+          }
+        ]
+      }
+    ]
+  }
+}
