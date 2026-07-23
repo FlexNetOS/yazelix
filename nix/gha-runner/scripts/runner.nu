@@ -1,51 +1,145 @@
 #!/usr/bin/env nu
-# FlexNetOS rUv-native GitHub runner launcher — Nushell, zero OS deps.
+# FlexNetOS composed GitHub runner launcher — Nushell, zero OS deps.
 #
-# Path law: work/config lives under the profile-runtime link, NEVER ~/.local.
+# Layers (env injected by the flake app, closure-only — no host PATH):
+#   GHA_SUBSTRATE — nix store path of nixpkgs github-runner (the real actions/runner)
+#   GHA_BUN       — nix store path of bun (runs the metaharness agent harness)
+#
+# Path law: all mutable state lives under the profile-runtime link, NEVER ~/.local.
 # Secret law: the registration token is minted by envctl and read from the
-#   environment (GHA_RUNNER_TOKEN); it is never hardcoded, logged, or persisted here.
-# Runtime law: the harness (plain-ESM bin/cli.js) runs via `bun run`, never bare node/npx.
+#   environment as GHA_RUNNER_TOKEN; never hardcoded, logged, or persisted here.
+# Runtime law: the harness runs via `bun run`, never bare node/npx.
 #
-# Grounded rUv commands (metaharness primer / ruv-drone bin/cli.js):
-#   <harness> init    — boot the kernel + github-actions host adapter, report status
-#   <harness> doctor  — verify the install end-to-end (kernel + host resolve)
+# Commands:
+#   doctor            — verify both layers resolve; no token needed
+#   register [...]    — configure the runner against the FlexNetOS org (needs GHA_RUNNER_TOKEN)
+#   run               — start the registered runner (executes ALL workflows/actions)
+#   agent <doctor|init> — drive the metaharness harness layer directly
+
+const ORG_URL = "https://github.com/FlexNetOS"
+const LABELS = "flexnetos,nix"
 
 def profile-runtime [] {
     let base = ($env.XDG_RUNTIME_DIR? | default "/run/user/1001")
     $"($base)/yazelix/profile-runtime"
 }
 
-def work-dir [] {
-    let d = $"(profile-runtime)/gha-runner"
+# Mutable runner state (config + credentials + work) — profile-runtime, per path law.
+def state-dir [] {
+    let d = $"(profile-runtime)/gha-runner/state"
     mkdir $d
     $d
 }
 
-# Resolve the harness bin from the nix build output on PATH, or the local scaffold.
+def work-dir [] {
+    let d = $"(profile-runtime)/gha-runner/work"
+    mkdir $d
+    $d
+}
+
+def substrate-bin [name: string] {
+    let root = ($env.GHA_SUBSTRATE? | default "")
+    if ($root | is-empty) {
+        print "[flexnetos-runner] GHA_SUBSTRATE is unset — launch via `nix run .#runner`, not bare nu."
+        exit 2
+    }
+    let p = ($root | path join "bin" $name)
+    if not ($p | path exists) {
+        print $"[flexnetos-runner] substrate binary missing: ($p)"
+        print $"  available: (ls ($root | path join 'bin') | get name | str join ', ')"
+        exit 2
+    }
+    $p
+}
+
+def require-token [] {
+    if ($env.GHA_RUNNER_TOKEN? | default "" | is-empty) {
+        print "[flexnetos-runner] GHA_RUNNER_TOKEN is unset."
+        print "  Mint it via envctl or `gh api -X POST orgs/FlexNetOS/actions/runners/registration-token`."
+        print "  This launcher reads it from the environment only and never stores it."
+        exit 2
+    }
+}
+
+# Resolve the metaharness harness bin from the local scaffold or the nix build output.
 def harness-cli [] {
     let local = ($env.PWD | path join "harness" "bin" "cli.js")
     if ($local | path exists) { $local } else { "flexnetos-runner" }
 }
 
-def main [
-    command: string = "doctor"   # doctor | init | run
-] {
-    let wd = (work-dir)
-    print $"[flexnetos-runner] work-dir: ($wd)  (path-law: profile-runtime, not ~/.local)"
+def bun-bin [] {
+    $env.GHA_BUN? | default "bun"
+}
 
-    if ($env.GHA_RUNNER_TOKEN? | is-empty) {
-        print "[flexnetos-runner] GHA_RUNNER_TOKEN is unset."
-        print "  Mint it via envctl (sole secret boundary), then re-run. This launcher never stores it."
+def cmd-doctor [] {
+    let sd = (state-dir)
+    let wd = (work-dir)
+    print $"[flexnetos-runner] state-dir: ($sd)"
+    print $"[flexnetos-runner] work-dir:  ($wd)"
+    let listener = (substrate-bin "Runner.Listener")
+    print $"[flexnetos-runner] substrate: ($env.GHA_SUBSTRATE)"
+    ^$listener --version | lines | first | print $"[flexnetos-runner] actions/runner version: ($in)"
+    let configured = ($sd | path join ".runner" | path exists)
+    print $"[flexnetos-runner] registered: ($configured)"
+    let token_set = (($env.GHA_RUNNER_TOKEN? | default "" | is-empty) == false)
+    print $"[flexnetos-runner] GHA_RUNNER_TOKEN present: ($token_set)"
+    print $"[flexnetos-runner] labels on register: self-hosted + ($LABELS) → ($ORG_URL)"
+    print "[flexnetos-runner] doctor: substrate OK"
+}
+
+def cmd-register [extra: list<string>] {
+    require-token
+    let sd = (state-dir)
+    let cfg = (substrate-bin "config.sh")
+    cd $sd
+    with-env { RUNNER_ROOT: $sd } {
+        ^$cfg --unattended --replace ...[
+            --url $ORG_URL
+            --token $env.GHA_RUNNER_TOKEN
+            --name "flexnetos-nix"
+            --labels $LABELS
+            --work (work-dir)
+        ] ...$extra
+    }
+}
+
+def cmd-run [] {
+    let sd = (state-dir)
+    if not (($sd | path join ".runner") | path exists) {
+        print "[flexnetos-runner] not registered yet — run `nix run .#runner -- register` first."
         exit 2
     }
+    let listener = (substrate-bin "Runner.Listener")
+    cd $sd
+    with-env { RUNNER_ROOT: $sd } {
+        ^$listener run --startuptype service
+    }
+}
 
+def cmd-agent [sub: string] {
     let cli = (harness-cli)
-    match $command {
-        "doctor" => { ^bun run $cli doctor }
-        "init"   => { with-env { RUNNER_WORKDIR: $wd } { ^bun run $cli init } }
-        "run"    => { with-env { RUNNER_WORKDIR: $wd } { ^bun run $cli run --gha-mode } }
+    let bun = (bun-bin)
+    match $sub {
+        "doctor" => { ^$bun run $cli doctor }
+        "init"   => { with-env { RUNNER_WORKDIR: (work-dir) } { ^$bun run $cli init } }
         _ => {
-            print $"[flexnetos-runner] unknown command: ($command) — expected doctor|init|run"
+            print $"[flexnetos-runner] unknown agent command: ($sub) — expected doctor|init"
+            exit 2
+        }
+    }
+}
+
+def main [
+    command: string = "doctor"   # doctor | register | run | agent
+    ...args: string
+] {
+    match $command {
+        "doctor"   => { cmd-doctor }
+        "register" => { cmd-register $args }
+        "run"      => { cmd-run }
+        "agent"    => { cmd-agent ($args | get 0? | default "doctor") }
+        _ => {
+            print $"[flexnetos-runner] unknown command: ($command) — expected doctor|register|run|agent"
             exit 2
         }
     }

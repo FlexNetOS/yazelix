@@ -1,34 +1,42 @@
-# FlexNetOS rUv-native GitHub runner — pure Nix flake, zero OS deps
+# FlexNetOS self-hosted GitHub runner — composed Nix flake, zero OS deps
 
 A self-hosted GitHub runner for the FlexNetOS org, built as a **hermetic Nix flake** with
-**zero OS system dependencies** — no systemd, no host services, no `apt`, no tsc build. The
-runner is a **rUv-native metaharness agent runner**, not a vanilla `actions/runner`.
+**zero OS system dependencies** — no systemd, no host services, no `apt`. Two layers, one closure:
+
+| Layer | What | Source |
+|---|---|---|
+| **Substrate** | nixpkgs `github-runner` (the **real** `actions/runner`), registered to the FlexNetOS org, `runs-on: [self-hosted, flexnetos, nix]` — executes **ALL** workflows/actions, incl. the `archbp-*` env tests | nixpkgs (pinned to yazelix's lock rev) |
+| **rUv agent** | `@metaharness/host-github-actions` v0.1.2 + `agentic-flow`, invoked **by workflows as a step on the substrate** | ADR-033; `worldgraph/.github/workflows/worldgraph.yml` |
+| **Foundation** | one hermetic flake · yazelix-launched · Nushell scripts · envctl-minted token · profile-runtime state | FlexNetOS constraints |
 
 ## Why this exists
 GitHub-hosted runners cannot execute the FlexNetOS-environment tests (`archbp-*` — cold-reboot,
-os-update, dirty-shutdown, swarm-scale harnesses); they need the nix/yazelix foundation. This
-runner runs them on the local foundation so lifeos CI (`bun run check`) can go legitimately green.
+os-update, dirty-shutdown, swarm-scale harnesses); they need the nix/yazelix foundation. The
+substrate runs them locally so lifeos CI can go legitimately green; the metaharness layer adds
+rUv-native agentic CI jobs (triage, genome reports, audits) on the same runner.
 
-## Architecture (grounded in rUv source)
-- **Runner engine** — a metaharness harness: `@metaharness/kernel` + `@metaharness/host-github-actions`
-  (`metaharness/docs/adrs/ADR-033-host-github-actions.md`; `--gha-mode` = structured stdout, exit 0/1/2).
-- **Shipped as plain ESM `bin/cli.js`, no build step** (`ruv-drone/agent-harness/bin/cli.js`;
-  `metaharness` v0.4.1, bin `metaharness`/`harness`). `init` boots kernel+host; `doctor` verifies.
-- **Orchestration** — `agentic-flow`.
-- **RVM hardware isolation** (`@metaharness/host-rvm`, ADR-018) is **deferred**: RVM is an AArch64
-  bare-metal microhypervisor and is not used on the x86_64 foundation. The flake targets both
-  `x86_64-linux` and `aarch64-linux` so the RVM path is available on ARM64 later.
+## How the layers compose (grounded in rUv source)
+`metaharness/docs/adrs/ADR-033-host-github-actions.md`: the metaharness harness is a
+**composite action + workflow** that runs *on* a GitHub runner — hosted or self-hosted. rUv's
+own `worldgraph.yml` uses `runs-on: ubuntu-latest`; ours points the same shape at
+`runs-on: [self-hosted, flexnetos, nix]`. The substrate executes the job; the harness
+(plain-ESM `bin/cli.js`, `--gha-mode`, exit 0/1/2) is the step. Not competing designs — layers.
 
-## Hard constraints (enforced by `verify.mjs`)
+nixpkgs patches `actions/runner` to resolve mutable state (`.runner`, `.credentials`, work dir)
+from `RUNNER_ROOT` instead of its install dir, so it runs from the immutable store with all
+state under `profile-runtime/gha-runner/` (path law).
+
+## Hard constraints (enforced by `verify.mjs`, 24 gates)
 - ZERO OS system deps · path law (profile-runtime, never `~/.local`) · `bun`/`bunx` runtime
-  (never bare `node`/`npx`) · Nushell scripts · rUv-native harness deps · nixpkgs pinned.
+  (never bare `node`/`npx`) · Nushell scripts · substrate wired (`GHA_SUBSTRATE`, org URL,
+  labels, register/run) · rUv-native harness deps · nixpkgs pinned by exact rev.
 
 ## Layout
 | Path | Role |
 |---|---|
-| `flake.nix` | hermetic flake: `packages.metaharness` (buildNpmPackage), apps `scaffold`/`runner`/`verify`, devShell |
+| `flake.nix` | hermetic flake: `packages.substrate` (github-runner) + `packages.metaharness`, apps `runner`/`scaffold`/`verify`, devShell |
+| `scripts/runner.nu` | Nushell launcher: `doctor` / `register` / `run` / `agent` — closure paths via `GHA_SUBSTRATE`/`GHA_BUN` env |
 | `harness/package.json` | scaffold target — deps on kernel + host-github-actions + agentic-flow |
-| `scripts/runner.nu` | Nushell launcher: profile-runtime work dir, envctl token, `bun run` the harness |
 | `verify.mjs` | offline gate (run: `bun run verify.mjs`) |
 
 ## Build & run
@@ -36,30 +44,27 @@ runner runs them on the local foundation so lifeos CI (`bun run check`) can go l
 # 1. Offline gate (no network):
 bun run nix/gha-runner/verify.mjs
 
-# 2. (network, once) generate the harness bin/cli.js + lockfile into harness/:
-nix run .#scaffold
-
-# 3. Build hermetically. First build prints the correct npmDepsHash — paste it into
-#    flake.nix (replaces lib.fakeHash), then rebuild:
-nix build .#metaharness
-
-# 4. Verify the install (no token needed):
+# 2. Doctor — proves both layers resolve from the closure (no token needed):
 nix run .#runner -- doctor
+
+# 3. Register to the FlexNetOS org (token from envctl or gh, env-only):
+$env.GHA_RUNNER_TOKEN = (gh api -X POST orgs/FlexNetOS/actions/runners/registration-token --jq .token)
+nix run .#runner -- register
+
+# 4. Start the runner — it now executes ALL workflows targeting the labels:
+nix run .#runner -- run
 ```
 
 ## The two boundaries a session cannot cross (owner actions)
-1. **`npmDepsHash`** — computed by the first `nix build` (nix prints the real hash on mismatch).
-   This is the one deliberate, reviewable build step; it pins the npm closure hermetically.
-2. **Live org registration** — the runner registration token is **minted by envctl** (the sole
-   secret boundary) and exported as `GHA_RUNNER_TOKEN`; then:
-   ```nu
-   $env.GHA_RUNNER_TOKEN = (envctl mint gha-runner-token --org FlexNetOS)  # owner action
-   nix run .#runner -- init
-   ```
-   The launcher reads the token from the environment only — it never stores, logs, or hardcodes it.
+1. **`npmDepsHash`** (agent layer only) — after `nix run .#scaffold` generates
+   `harness/bin/cli.js` + lockfile, the first `nix build .#metaharness` prints the real hash;
+   paste it over `lib.fakeHash`. The substrate has no such step — it builds from the binary cache.
+2. **Org registration authority** — minting a registration token requires org-admin scope.
+   The launcher reads `GHA_RUNNER_TOKEN` from the environment only — it never stores, logs,
+   or hardcodes it.
 
 ## Integration
-Once the runner is online (labels `self-hosted, flexnetos, nix`), a lifeos CI job selects it:
+Once the runner is online, a lifeos CI job selects it:
 ```yaml
 jobs:
   check:

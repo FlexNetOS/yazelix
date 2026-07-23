@@ -1,6 +1,7 @@
-// Offline gate for the FlexNetOS rUv-native Nix runner. Every gate is an exit code.
+// Offline gate for the FlexNetOS composed Nix runner. Every gate is an exit code.
 // Enforces the hard constraints: ZERO OS system deps, path law, bun-not-node runtime,
-// Nushell scripts, and rUv-native harness dependencies. Run with: bun run verify.mjs
+// Nushell scripts, the github-runner SUBSTRATE (executes all workflows), and the
+// rUv-native metaharness agent layer. Run with: bun run verify.mjs
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -29,6 +30,7 @@ check('runner.nu present', runner !== null);
 check('harness/package.json present', pkg !== null);
 
 // HARD: zero OS system dependencies — no systemd/service/host-package escape hatches.
+// (`--startuptype service` is a Runner.Listener CLI flag, not an OS service — excluded by the regex shape.)
 const OS_DEP = /\b(systemctl|systemd|System\/Library|apt-get|apt install|yum |dnf |\/etc\/systemd|service\s+\w+\s+start|launchctl)\b/;
 check('flake has NO OS system deps', flakeCode && !OS_DEP.test(flakeCode), 'systemd/service/apt/etc');
 check('runner has NO OS system deps', runnerCode && !OS_DEP.test(runnerCode));
@@ -37,9 +39,19 @@ check('runner has NO OS system deps', runnerCode && !OS_DEP.test(runnerCode));
 check('runner uses profile-runtime', runner && runner.includes('profile-runtime'));
 check('no ~/.local path', [flake, runner].every((s) => s && !/\.local\//.test(s)));
 
-// Runtime law: bun, never bare node/npx at runtime
-check('runner uses bun (not bare node/npx)',
-  runnerCode && /\bbun run\b/.test(runnerCode) && !/\bnpx\b/.test(runnerCode) && !/\^node\b/.test(runnerCode));
+// SUBSTRATE: the real actions/runner from nixpkgs, wired into the launcher.
+check('flake ships github-runner substrate', flakeCode && /pkgs\.github-runner/.test(flakeCode));
+check('flake injects GHA_SUBSTRATE env', flakeCode && /GHA_SUBSTRATE=\$\{pkgs\.github-runner\}/.test(flakeCode));
+check('runner registers to FlexNetOS org', runnerCode && runnerCode.includes('https://github.com/FlexNetOS'));
+check('runner labels flexnetos,nix', runnerCode && /flexnetos,nix/.test(runnerCode));
+check('runner has register command', runnerCode && /config\.sh/.test(runnerCode) && /--unattended/.test(runnerCode));
+check('runner has run command (Runner.Listener)', runnerCode && /Runner\.Listener/.test(runnerCode));
+check('runner state under RUNNER_ROOT', runnerCode && /RUNNER_ROOT/.test(runnerCode));
+
+// Runtime law: bun for the agent layer (GHA_BUN from the closure), never bare node/npx
+check('runner agent layer uses bun (not bare node/npx)',
+  runnerCode && /GHA_BUN/.test(runnerCode) && /run \$cli/.test(runnerCode)
+    && !/\bnpx\b/.test(runnerCode) && !/\^node\b/.test(runnerCode));
 check('flake runtime uses bun/bunx', flakeCode && /\b(bunx|bun run)\b/.test(flakeCode) && !/\bnpx\b/.test(flakeCode));
 
 // Nushell (not bash) for scripts
@@ -49,14 +61,15 @@ check('runner is Nushell', runner && runner.startsWith('#!/usr/bin/env nu'));
 check('token read from env, not hardcoded', runner && runner.includes('GHA_RUNNER_TOKEN')
   && !/ghp_|github_pat_/.test(runner));
 
-// rUv-native harness deps (grounded)
+// rUv-native harness deps (grounded: ADR-033, host-github-actions v0.1.2)
 const deps = pkg ? (JSON.parse(pkg).dependencies || {}) : {};
 check('deps @metaharness/kernel', '@metaharness/kernel' in deps);
 check('deps @metaharness/host-github-actions', '@metaharness/host-github-actions' in deps);
 check('deps agentic-flow', 'agentic-flow' in deps);
 
-// Hermetic flake: pins nixpkgs, exposes runner app + hermetic devShell
+// Hermetic flake: pins nixpkgs by exact rev (yazelix lock rev), exposes runner app
 check('flake pins nixpkgs input', flake && /nixpkgs\.url\s*=\s*"github:NixOS\/nixpkgs/.test(flake));
+check('flake pins exact nixpkgs rev (yazelix lock)', flake && /567a49d1913ce81ac6e9582e3553dd90a955875f/.test(flake));
 check('flake exposes runner app', flake && /runner\s*=\s*{/.test(flake));
 
 let failed = 0;

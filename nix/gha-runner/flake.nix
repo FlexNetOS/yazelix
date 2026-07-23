@@ -1,19 +1,30 @@
 {
-  # FlexNetOS self-hosted GitHub runner — rUv-native agent runner, pure Nix flake.
+  # FlexNetOS self-hosted GitHub runner — composed design, pure Nix flake.
   #
-  # HARD CONSTRAINT: ZERO OS system dependencies. No systemd, no host services, no
-  # apt/host packages, no tsc build. Everything is in the Nix closure. The runner is
-  # a metaharness harness (@metaharness/kernel + @metaharness/host-github-actions),
-  # shipped as plain ESM `bin/cli.js` (no build step), executed by node from the flake.
+  # TWO LAYERS, ONE CLOSURE (zero OS system dependencies — no systemd, no host
+  # services, no apt/host packages):
+  #
+  #   1. SUBSTRATE — nixpkgs `github-runner` (the real actions/runner). Registered
+  #      to the FlexNetOS org with labels [self-hosted, flexnetos, nix]; executes
+  #      ALL GitHub workflows/actions, including the archbp-* environment tests.
+  #      nixpkgs patches it to resolve mutable state from env vars, so it runs
+  #      from the immutable store with state under the profile-runtime link.
+  #
+  #   2. rUv AGENT LAYER — a metaharness harness (@metaharness/kernel +
+  #      @metaharness/host-github-actions + agentic-flow) that workflows invoke
+  #      AS A STEP on the substrate (ADR-033; cf. worldgraph.yml with
+  #      runs-on swapped to the self-hosted labels). Plain ESM bin/cli.js, no
+  #      build step, executed via bun.
   #
   # Grounded in rUv source:
-  #   metaharness/docs/adrs/ADR-033-host-github-actions.md  (GHA host adapter, --gha-mode)
-  #   ruv-drone/agent-harness/bin/cli.js                    (plain-ESM harness bin, no build)
-  #   metaharness packages/create-agent-harness/package.json (v0.4.1, bin: metaharness/harness)
-  description = "FlexNetOS rUv-native self-hosted GitHub runner (metaharness, hermetic Nix, no OS deps)";
+  #   metaharness/docs/adrs/ADR-033-host-github-actions.md   (GHA host adapter, --gha-mode)
+  #   metaharness/packages/host-github-actions/package.json  (v0.1.2)
+  #   worldgraph/.github/workflows/worldgraph.yml            (harness runs ON a runner)
+  description = "FlexNetOS self-hosted GitHub runner: github-runner substrate + rUv metaharness agent layer (hermetic Nix, no OS deps)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # Pinned to the exact rev yazelix's flake.lock uses — one nixpkgs across the foundation.
+    nixpkgs.url = "github:NixOS/nixpkgs/567a49d1913ce81ac6e9582e3553dd90a955875f";
   };
 
   outputs = { self, nixpkgs }:
@@ -22,8 +33,11 @@
       forAll = f: nixpkgs.lib.genAttrs systems (system: f system nixpkgs.legacyPackages.${system});
     in
     {
-      # The metaharness CLI, built hermetically from npm (no OS deps, no global install).
       packages = forAll (system: pkgs: {
+        # Layer 1: the real actions/runner from nixpkgs — executes all workflows.
+        substrate = pkgs.github-runner;
+
+        # Layer 2: the metaharness agent harness, built hermetically from npm.
         metaharness = pkgs.buildNpmPackage {
           pname = "metaharness";
           version = "0.4.1";
@@ -35,30 +49,35 @@
           nativeBuildInputs = [ pkgs.nodejs ];
           meta.description = "FlexNetOS metaharness runner harness (github-actions host)";
         };
-        default = self.packages.${system}.metaharness;
+
+        default = self.packages.${system}.substrate;
       });
 
-      # Apps — all launched via nix, PATH from the closure only.
+      # Apps — all launched via nix, PATH/env from the closure only, Nushell entry.
       apps = forAll (system: pkgs:
         let
           nu = "${pkgs.nushell}/bin/nu";
           runnerScript = ./scripts/runner.nu;
+          # The launcher finds both layers through env — no host PATH involved.
+          launch = pkgs.writeShellScript "flexnetos-runner" ''
+            export GHA_SUBSTRATE=${pkgs.github-runner}
+            export GHA_BUN=${pkgs.bun}/bin/bun
+            exec ${nu} ${runnerScript} "$@"
+          '';
         in
         {
-          # One-time (network) scaffold of the FlexNetOS harness targeting the github-actions host.
+          # doctor | register | run | agent — see scripts/runner.nu
+          runner = {
+            type = "app";
+            program = toString launch;
+          };
+          # One-time (network) scaffold of the harness targeting the github-actions host.
           # Runtime uses bun (bunx) per FlexNetOS convention — never bare npx/node.
           scaffold = {
             type = "app";
             program = toString (pkgs.writeShellScript "mh-scaffold" ''
               exec ${pkgs.bun}/bin/bunx metaharness@0.4.1 scaffold \
                 --name flexnetos-runner --hosts github-actions "$@"
-            '');
-          };
-          # Register + run the runner (Nushell, envctl-minted token, zero OS deps).
-          runner = {
-            type = "app";
-            program = toString (pkgs.writeShellScript "mh-runner" ''
-              exec ${nu} ${runnerScript} "$@"
             '');
           };
           # Offline gate harness (bun run, never bare node).
@@ -74,7 +93,7 @@
       # Hermetic dev shell: bun + node (buildNpmPackage only) + nushell + gh, nothing from the host OS.
       devShells = forAll (system: pkgs: {
         default = pkgs.mkShell {
-          packages = [ pkgs.bun pkgs.nodejs pkgs.nushell pkgs.gh ];
+          packages = [ pkgs.bun pkgs.nodejs pkgs.nushell pkgs.gh pkgs.github-runner ];
           shellHook = ''
             echo "FlexNetOS gha-runner devshell — bun $(bun --version), nu $(nu --version | head -1)"
           '';
