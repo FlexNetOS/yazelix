@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Keep Codex PostToolUse extraction opt-in: the reviewed default hook set no
+  longer installs `icm hook post`, while the materializer preserves an explicit
+  opt-in made through the existing `icm init --mode hook --with-codex-post-hook`
+  command. Harden staged and rollback-file syncing and add third-stage crash
+  recovery coverage for the Codex materializer.
+
 - Package PyYAML with the profile-owned Python frontdoor and expose the
   profile-owned `ar` needed by Cargo native builds, so the shipped Codex
   `skill-creator` validator and its Rust verification run from the immutable
@@ -45,7 +51,7 @@
 - Package `bv` beside `br` in the FlexNetOS foundation profile and contract-test
   both Beads execution and graph-aware robot triage frontdoors.
 - Pin the profile-owned RTK package to the reviewed FlexNetOS
-  `rtk-tokenkill` feature revision (`99c3751…`). The same source provides native
+  `rtk-tokenkill` feature revision (`d09cf2a…`). The same source provides native
   Codex interception, all-agent initialization and verification, authenticated
   observability surfaces, and the byte-exact `rtk_nu` adapter required by the
   blueprint, with retired Claude shell hooks removed.

@@ -26,17 +26,6 @@
         ]
       }
     ],
-    "PostToolUse": [
-      {
-        "matcher": "^Bash$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/flexnetos/.nix-profile/bin/icm hook post"
-          }
-        ]
-      }
-    ],
     "PreCompact": [
       {
         "hooks": [

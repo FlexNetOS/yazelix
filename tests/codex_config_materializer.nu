@@ -101,18 +101,17 @@ def main [root: path] {
     let hooks_declared = (try { $hooks_raw | from json } catch {
         fail "reviewed hooks input is not valid JSON"
     })
-    let required_events = ["PostToolUse" "PreCompact" "PreToolUse" "SessionStart" "Stop" "UserPromptSubmit"]
+    let required_events = ["PreCompact" "PreToolUse" "SessionStart" "Stop" "UserPromptSubmit"]
     if ($hooks_declared.hooks | columns | sort) != $required_events {
         fail "reviewed hooks input does not declare the exact lifecycle event set"
     }
-    if $hooks_declared.hooks.PreToolUse.0.matcher != "^Bash$" or $hooks_declared.hooks.PostToolUse.0.matcher != "^Bash$" {
-        fail "reviewed tool hooks do not match only Bash"
+    if $hooks_declared.hooks.PreToolUse.0.matcher != "^Bash$" {
+        fail "reviewed PreToolUse hook does not match only Bash"
     }
     let hook_commands = ($hooks_declared.hooks | values | flatten | get hooks | flatten | get command | sort)
     let required_commands = [
         "/home/flexnetos/.nix-profile/bin/icm hook compact"
         "/home/flexnetos/.nix-profile/bin/icm hook end"
-        "/home/flexnetos/.nix-profile/bin/icm hook post"
         "/home/flexnetos/.nix-profile/bin/icm hook pre"
         "/home/flexnetos/.nix-profile/bin/icm hook prompt"
         "/home/flexnetos/.nix-profile/bin/icm hook start"
@@ -291,6 +290,7 @@ def main [root: path] {
                 {type: "command", command: "/home/flexnetos/.nix-profile/bin/rtk hook codex"}
             ]}]
             PermissionRequest: [{matcher: "^Bash$", hooks: [{type: "command", command: "/opt/custom/permission"}]}]
+            PostToolUse: [{matcher: "^Bash$", hooks: [{type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook post"}]}]
             Stop: [{hooks: [
                 {type: "command", command: "/opt/custom/stop"}
                 {type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook end"}
@@ -326,13 +326,16 @@ def main [root: path] {
             fail $"profile-owned hook is missing or duplicated after merge: ($command)"
         }
     }
+    if ($merged_hook_commands | where {|candidate| $candidate == "/home/flexnetos/.nix-profile/bin/icm hook post" } | length) != 1 {
+        fail "explicitly opted-in Codex PostToolUse hook was not preserved"
+    }
     let first_merge_hash = (open --raw $merge_hooks | hash sha256)
     let repeated_merge = (invoke-materializer $materializer $config_src $merge_config $rules_src $merge_rules $hooks_src $merge_hooks)
     if $repeated_merge.exit_code != 0 or (open --raw $merge_hooks | hash sha256) != $first_merge_hash {
         fail "repeated hooks publication was not idempotent"
     }
 
-    for crash_point in ["config" "rules"] {
+    for crash_point in ["config" "rules" "hooks"] {
         let rollback_dir = ($workdir | path join $"rollback-($crash_point)")
         mkdir $rollback_dir
         let rollback_config = ($rollback_dir | path join "config.toml")
@@ -356,12 +359,16 @@ def main [root: path] {
             with-env {YAZELIX_TEST_CRASH_AFTER_CONFIG_REPLACE: "1"} {
                 invoke-materializer $materializer $config_src $rollback_config $rules_src $rollback_rules $hooks_src $rollback_hooks
             }
-        } else {
+        } else if $crash_point == "rules" {
             with-env {YAZELIX_TEST_CRASH_AFTER_RULES_REPLACE: "1"} {
                 invoke-materializer $materializer $config_src $rollback_config $rules_src $rollback_rules $hooks_src $rollback_hooks
             }
+        } else {
+            with-env {YAZELIX_TEST_CRASH_AFTER_HOOKS_REPLACE: "1"} {
+                invoke-materializer $materializer $config_src $rollback_config $rules_src $rollback_rules $hooks_src $rollback_hooks
+            }
         }
-        let expected_status = if $crash_point == "config" { 86 } else { 87 }
+        let expected_status = if $crash_point == "config" { 86 } else if $crash_point == "rules" { 87 } else { 88 }
         if $interrupted_result.exit_code != $expected_status {
             fail $"injected ($crash_point) interruption returned unexpected status: ($interrupted_result.exit_code)"
         }
