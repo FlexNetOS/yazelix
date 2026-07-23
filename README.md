@@ -311,6 +311,6 @@ repository owner and verification surface
 
 ## LOC Scorecard
 
-Nova owns **28,482 lines** of tracked text project files. The
+Nova owns **28,544 lines** of tracked text project files. The
 [reproducible scorecard](docs/development.md#loc-scorecard) excludes Beads,
 lockfiles, and binary assets.

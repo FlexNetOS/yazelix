@@ -33,10 +33,12 @@ const OWNED_HOOK_COMMANDS = [
     "/home/flexnetos/.nix-profile/bin/icm hook start"
     "/home/flexnetos/.nix-profile/bin/rtk hook codex"
     "/home/flexnetos/.nix-profile/bin/icm hook pre"
-    "/home/flexnetos/.nix-profile/bin/icm hook post"
     "/home/flexnetos/.nix-profile/bin/icm hook compact"
     "/home/flexnetos/.nix-profile/bin/icm hook prompt"
     "/home/flexnetos/.nix-profile/bin/icm hook end"
+]
+const PRESERVED_OPTIONAL_HOOK_COMMANDS = [
+    "/home/flexnetos/.nix-profile/bin/icm hook post"
 ]
 const REQUIRED_HOOKS = {
     SessionStart: [{hooks: [{type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook start"}]}]
@@ -44,7 +46,6 @@ const REQUIRED_HOOKS = {
         {type: "command", command: "/home/flexnetos/.nix-profile/bin/rtk hook codex"}
         {type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook pre"}
     ]}]
-    PostToolUse: [{matcher: "^Bash$", hooks: [{type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook post"}]}]
     PreCompact: [{hooks: [{type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook compact"}]}]
     UserPromptSubmit: [{hooks: [{type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook prompt"}]}]
     Stop: [{hooks: [{type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook end"}]}]
@@ -185,7 +186,7 @@ def strip-owned-hook-groups [groups] {
     | each {|group|
         let handlers = ($group.hooks | where {|handler|
             let command = ($handler.command? | default "")
-            not ($command in $OWNED_HOOK_COMMANDS)
+            not (($command in $OWNED_HOOK_COMMANDS) and ($command not-in $PRESERVED_OPTIONAL_HOOK_COMMANDS))
         })
         if ($handlers | is-empty) {
             null
@@ -426,6 +427,12 @@ def main [
             remove-if-present $journal
             fail $"unable to set generated output mode 0644: ($staged)"
         }
+        let staged_sync = (do { ^sync -f $staged } | complete)
+        if $staged_sync.exit_code != 0 {
+            remove-transaction-artifacts $paths
+            remove-if-present $journal
+            fail $"unable to persist staged output: ($staged_sync.stderr | str trim)"
+        }
     }
 
     try {
@@ -436,6 +443,16 @@ def main [
         remove-transaction-artifacts $paths
         remove-if-present $journal
         fail $"unable to stage rollback copies: ($error.msg)"
+    }
+    for backup in [$config_backup $rules_backup $hooks_backup] {
+        if ($backup | path exists) {
+            let backup_sync = (do { ^sync -f $backup } | complete)
+            if $backup_sync.exit_code != 0 {
+                remove-transaction-artifacts $paths
+                remove-if-present $journal
+                fail $"unable to persist rollback copy: ($backup_sync.stderr | str trim)"
+            }
+        }
     }
 
     try {
@@ -466,6 +483,10 @@ def main [
     } catch {|error|
         recover-transaction $journal $config_out $rules_out $hooks_out | ignore
         fail $"unable to replace hooks output; config and rules were rolled back: ($error.msg)"
+    }
+    if (($env.YAZELIX_TEST_CRASH_AFTER_HOOKS_REPLACE? | default "") == "1") {
+        print --stderr "codex config materializer: injected interruption after hooks replacement"
+        exit 88
     }
     let output_sync = (do { ^sync -f $config_dir } | complete)
     if $output_sync.exit_code != 0 {
