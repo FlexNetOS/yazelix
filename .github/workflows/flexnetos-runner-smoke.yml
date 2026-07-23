@@ -23,6 +23,8 @@ jobs:
           nix --version
       - name: Offline gate executes on the runner itself
         run: bun run nix/gha-runner/verify.mjs
+      - name: rUv agent layer doctors on the substrate (hermetic closure)
+        run: nix run ./nix/gha-runner#runner -- agent doctor
       - name: Nushell step (foundation shell law)
         shell: nu {0}
         run: |

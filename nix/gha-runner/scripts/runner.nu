@@ -61,8 +61,10 @@ def require-token [] {
     }
 }
 
-# Resolve the metaharness harness bin from the local scaffold or the nix build output.
+# Resolve the metaharness harness bin: hermetic nix build first, local scaffold fallback.
 def harness-cli [] {
+    let hermetic = ($env.GHA_HARNESS? | default "")
+    if not ($hermetic | is-empty) { return $hermetic }
     let local = ($env.PWD | path join "harness" "bin" "cli.js")
     if ($local | path exists) { $local } else { "flexnetos-runner" }
 }

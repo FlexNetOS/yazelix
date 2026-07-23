@@ -44,8 +44,10 @@
           src = ./harness;
           # dontNpmBuild: the harness bin/cli.js is plain ESM — no tsc build step.
           dontNpmBuild = true;
-          # Filled by the first `nix build` (nix prints the correct hash on mismatch).
-          npmDepsHash = nixpkgs.lib.fakeHash;
+          # Computed with prefetch-npm-deps over harness/package-lock.json.
+          npmDepsHash = "sha256-oOFpGJYI8NSSinLyAhLCghuadNla3v39vgYU5YDucso=";
+          # Hermetic: no postinstall network (sharp/libvips); kernel runs on its wasm backend.
+          npmFlags = [ "--ignore-scripts" ];
           nativeBuildInputs = [ pkgs.nodejs ];
           meta.description = "FlexNetOS metaharness runner harness (github-actions host)";
         };
@@ -62,6 +64,7 @@
           launch = pkgs.writeShellScript "flexnetos-runner" ''
             export GHA_SUBSTRATE=${pkgs.github-runner}
             export GHA_BUN=${pkgs.bun}/bin/bun
+            export GHA_HARNESS=${self.packages.${system}.metaharness}/lib/node_modules/flexnetos-runner/bin/cli.js
             exec ${nu} ${runnerScript} "$@"
           '';
         in
