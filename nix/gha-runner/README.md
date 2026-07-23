@@ -27,7 +27,7 @@ from `RUNNER_ROOT` instead of its install dir, so it runs from the immutable sto
 state under `profile-runtime/gha-runner/` (path law).
 
 ## Hard constraints (enforced by `verify.mjs`, 24 gates)
-- ZERO OS system deps · path law (profile-runtime, never `~/.local`) · `bun`/`bunx` runtime
+- ZERO OS system deps · path law (profile-runtime only; no home dot-local paths) · `bun`/`bunx` runtime
   (never bare `node`/`npx`) · Nushell scripts · substrate wired (`GHA_SUBSTRATE`, org URL,
   labels, register/run) · rUv-native harness deps · nixpkgs pinned by exact rev.
 

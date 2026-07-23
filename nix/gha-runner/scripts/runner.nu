@@ -5,7 +5,7 @@
 #   GHA_SUBSTRATE — nix store path of nixpkgs github-runner (the real actions/runner)
 #   GHA_BUN       — nix store path of bun (runs the metaharness agent harness)
 #
-# Path law: all mutable state lives under the profile-runtime link, NEVER ~/.local.
+# Path law: all mutable state lives under the profile-runtime link, never a home dot-local dir.
 # Secret law: the registration token is minted by envctl and read from the
 #   environment as GHA_RUNNER_TOKEN; never hardcoded, logged, or persisted here.
 # Runtime law: the harness runs via `bun run`, never bare node/npx.
