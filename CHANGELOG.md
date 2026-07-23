@@ -44,10 +44,11 @@
   a read-only ownership report and never copies into user-local data.
 - Package `bv` beside `br` in the FlexNetOS foundation profile and contract-test
   both Beads execution and graph-aware robot triage frontdoors.
-- Pin the profile-owned RTK package to the latest FlexNetOS `rtk-tokenkill`
-  develop revision (`0dd13a4…`). The same source now provides native `rtk` and
-  the byte-exact `rtk_nu` adapter required by the blueprint, with retired Claude
-  shell hooks removed.
+- Pin the profile-owned RTK package to the reviewed FlexNetOS
+  `rtk-tokenkill` feature revision (`99c3751…`). The same source provides native
+  Codex interception, all-agent initialization and verification, authenticated
+  observability surfaces, and the byte-exact `rtk_nu` adapter required by the
+  blueprint, with retired Claude shell hooks removed.
 - Enforce one installed-runtime owner for Yazelix, Codex, and Claude. The
   foundation profile now provides state-owning agent wrappers, exposes one
   profile runtime link into `/run/user/1001/yazelix/profile-runtime`, rejects
@@ -67,19 +68,23 @@
   on failure.
 - Make the pinned Rust 1.89 foundation lane evaluate reliably on clean Nix
   runners by importing its hash-pinned manifest directly, and include the
-  Codex config/rules materializer in branch CI.
+  Codex config/rules/hooks materializer in branch CI.
 
-- Extend Yazelix Codex authorship to the mandatory durable `RULES.md` surface.
-  The foundation profile now ships both review inputs, the materializer source,
-  and `yazelix_codex_materialize`. Reviewed config and rules inputs validate and
-  stage together before either generated file is replaced; both mode-0644
-  outputs carry exact source hashes. Reviewed top-level config tables replace
-  stale live tables while live-only runtime tables such as `hooks.state` survive,
-  and a durable journal restores the exact prior pair after an interruption
-  between the two published paths. The
+- Extend Yazelix Codex authorship to the mandatory durable `RULES.md` and
+  lifecycle-hook surfaces. The foundation profile now ships reviewed config,
+  rules, and `hooks.json` inputs, the materializer source, and
+  `yazelix_codex_materialize`. All three inputs validate and stage before any
+  generated file is replaced; every mode-0644 output carries its exact source
+  hash. Reviewed top-level config tables replace stale live tables while
+  live-only runtime tables such as `hooks.state` survive. Profile-owned RTK/ICM
+  hook handlers are replaced exactly once while unrelated hooks and metadata
+  remain intact. A v2 durable journal restores the exact prior three-file
+  generation after either early publication and still recovers pending v1
+  two-file journals. Codex retains hook trust ownership: changed handlers stay
+  incomplete until reviewed through `/hooks`. The
   runtime provenance gate enforces the
   exact lexical profile selector and deployed/review/generated parity without
-  authoring Codex auth, sessions, databases, hooks, or user preferences.
+  authoring Codex auth, sessions, databases, trust state, or user preferences.
 - Package the canonical Nushell RTK dispatcher with the foundation profile so
   Codex and Cargo routing have one profile-owned source.
 - Package Neovim as the alternate Engine Room editor, and enforce Bun/Bunx as

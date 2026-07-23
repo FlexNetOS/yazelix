@@ -42,9 +42,10 @@ The foundation frontdoors also fix `XDG_DATA_HOME` and `XDG_STATE_HOME` to
 `/home/flexnetos/meta/var/lib`, and `XDG_CACHE_HOME` to the volatile Yazelix
 cache. Inherited XDG values cannot establish a competing tool-state owner.
 
-## Codex configuration and rules
+## Codex configuration, rules, and hooks
 
-FlexNetOS reviews Codex configuration and durable operating rules in
+FlexNetOS reviews Codex configuration, durable operating rules, and lifecycle
+hook registrations in
 `agent_configs/codex/`. The profile installs those immutable inputs under
 `/home/flexnetos/.nix-profile/share/yazelix/agent_configs/codex/`, the
 materializer under `/home/flexnetos/.nix-profile/share/yazelix/nushell/scripts/`,
@@ -52,14 +53,16 @@ and the executable
 `/home/flexnetos/.nix-profile/bin/yazelix_codex_materialize`. Change the repository input and
 rebuild the profile; the installed copy is never an alternate editable owner.
 
-The materializer validates both inputs and completes both mode-`0644` staged
-files before replacing either live path. POSIX has no atomic rename for two
-independent pathnames, so publication uses a durable recovery journal and
-rollback copies rather than claiming a two-path atomic rename. If interrupted
-after one replacement, the next invocation restores the exact prior pair before
+The materializer validates all three inputs and completes all three mode-`0644`
+staged files before replacing any live path. POSIX has no atomic rename for
+three independent pathnames, so publication uses a durable recovery journal and
+rollback copies rather than claiming a three-path atomic rename. If interrupted
+after either early replacement, the next invocation restores the exact prior
+generation before
 continuing. The profile-owned `codex` wrapper fixes `CODEX_HOME` to
-`/run/user/1001/yazelix/profile-runtime/codex` and writes `config.toml` and `RULES.md` there
-with exact source hashes and do-not-edit markers.
+`/run/user/1001/yazelix/profile-runtime/codex` and writes `config.toml`,
+`RULES.md`, and `hooks.json` there with exact source hashes and do-not-edit
+markers.
 
 For `config.toml`, every top-level key or table declared by the reviewed source
 belongs to that source and replaces the corresponding live value. Live-only
@@ -67,10 +70,18 @@ top-level tables, including Codex-managed `hooks.state`, survive materialization
 Edit declarative preferences in the Yazelix input, never in the generated file.
 Auth, sessions, databases, and other non-config runtime state are untouched.
 
+For `hooks.json`, Yazelix removes only its prior profile-owned RTK/ICM handlers,
+preserves unrelated matcher groups, handlers, events, and top-level metadata,
+then publishes the reviewed handlers exactly once. The reviewed set covers
+`SessionStart`, Bash `PreToolUse` and `PostToolUse`, `PreCompact`,
+`UserPromptSubmit`, and `Stop`. Yazelix never writes Codex hook trust state;
+new or changed command hooks remain inactive until the user reviews them with
+`/hooks`.
+
 The lexical selector must be exactly
 `/home/flexnetos/.nix-profile/bin/codex`; resolving to the same store payload
 through another path is not sufficient. An approved cutover archives the prior
-generated pair, runs `yazelix_codex_materialize`, and checks
+generated set, runs `yazelix_codex_materialize`, and checks
 `tests/codex_config_provenance.nu` before the installed runtime starts.
 
 The profile-owned `claude` wrapper applies the same boundary through

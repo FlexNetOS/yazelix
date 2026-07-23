@@ -513,17 +513,17 @@
     "rtk_source": {
       "flake": false,
       "locked": {
-        "lastModified": 1784580034,
-        "narHash": "sha256-YPZ4Ea9f5bQW4yKiXtXBWl2W20yWwcnJEgSoDqAUcVw=",
+        "lastModified": 1784766010,
+        "narHash": "sha256-ymAY2SKIO2jJ9+yHM/Z2+cUvW8iaZ+wt0VXhSRPrCyg=",
         "owner": "FlexNetOS",
         "repo": "rtk-tokenkill",
-        "rev": "0dd13a48b81ac083d8a39351a6a72ca4e7b715c0",
+        "rev": "99c37511900e7e3bcc43a289b076253cb81d06ea",
         "type": "github"
       },
       "original": {
         "owner": "FlexNetOS",
         "repo": "rtk-tokenkill",
-        "rev": "0dd13a48b81ac083d8a39351a6a72ca4e7b715c0",
+        "rev": "99c37511900e7e3bcc43a289b076253cb81d06ea",
         "type": "github"
       }
     },
