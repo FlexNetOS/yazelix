@@ -69,7 +69,10 @@ check('deps agentic-flow', 'agentic-flow' in deps);
 
 // Hermetic flake: pins nixpkgs by exact rev (yazelix lock rev), exposes runner app
 check('flake pins nixpkgs input', flake && /nixpkgs\.url\s*=\s*"github:NixOS\/nixpkgs/.test(flake));
-check('flake pins exact nixpkgs rev (yazelix lock)', flake && /567a49d1913ce81ac6e9582e3553dd90a955875f/.test(flake));
+// Reproducibility: an explicit 40-hex rev, not a bare branch (which drifts build-to-build).
+// The specific value is chosen for a cache.nixos.org hit — verify currency, not a literal.
+check('flake pins nixpkgs to an explicit rev (reproducible)',
+  flake && /nixpkgs\.url\s*=\s*"github:NixOS\/nixpkgs\/[0-9a-f]{40}"/.test(flake));
 check('flake exposes runner app', flake && /runner\s*=\s*{/.test(flake));
 
 let failed = 0;

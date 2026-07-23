@@ -23,8 +23,10 @@
   description = "FlexNetOS self-hosted GitHub runner: github-runner substrate + rUv metaharness agent layer (hermetic Nix, no OS deps)";
 
   inputs = {
-    # Pinned to the exact rev yazelix's flake.lock uses — one nixpkgs across the foundation.
-    nixpkgs.url = "github:NixOS/nixpkgs/567a49d1913ce81ac6e9582e3553dd90a955875f";
+    # Pinned to a recent nixos-unstable rev whose github-runner + dotnet closure is
+    # prebuilt in cache.nixos.org (substitutes in seconds; no dotnet-vmr source build).
+    # Reproducible (explicit rev) without dragging in an aged, uncached toolchain.
+    nixpkgs.url = "github:NixOS/nixpkgs/241313f4e8e508cb9b13278c2b0fa25b9ca27163";
   };
 
   outputs = { self, nixpkgs }:
