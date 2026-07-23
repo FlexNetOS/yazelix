@@ -51,7 +51,7 @@
 - Package `bv` beside `br` in the FlexNetOS foundation profile and contract-test
   both Beads execution and graph-aware robot triage frontdoors.
 - Pin the profile-owned RTK package to the reviewed FlexNetOS
-  `rtk-tokenkill` feature revision (`deab7b4…`). The same source provides native
+  `rtk-tokenkill` feature revision (`d09cf2a…`). The same source provides native
   Codex interception, all-agent initialization and verification, authenticated
   observability surfaces, and the byte-exact `rtk_nu` adapter required by the
   blueprint, with retired Claude shell hooks removed.
