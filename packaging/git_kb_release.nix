@@ -1,6 +1,6 @@
 {
   pkgs,
-  version ? "0.2.12",
+  version ? "0.2.13",
 }:
 
 let
@@ -15,7 +15,7 @@ pkgs.stdenvNoCC.mkDerivation {
   inherit version;
   src = pkgs.fetchurl {
     url = "https://github.com/gitkb/gitkb-releases/releases/download/v${version}/gitkb-${platform}.tar.gz";
-    hash = "sha256-YOJFkRv0wfxB7pH1GAIOgv1nTGmo37BWdpeHHueVUX8=";
+    hash = "sha256-eHOn93oPJr4FVJChoWFhdyvclkgRPh21rQmVxh6k0s8=";
   };
 
   dontConfigure = true;
