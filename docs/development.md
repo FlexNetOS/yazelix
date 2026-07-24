@@ -99,19 +99,18 @@ git ls-files
 | Language | Lines |
 | --- | ---: |
 | Ignore (`.gitignore`) | 18 |
-| License | 222 |
-| Markdown | 3211 |
-| Nix | 3459 |
+| License | 201 |
+| Markdown | 2959 |
+| Nix | 3305 |
 | Shell | 0 |
-| YAML | 403 |
+| YAML | 374 |
 | TOML | 254 |
 | KDL | 272 |
-| Nu | 4317 |
+| Nu | 3944 |
 | Lua | 253 |
 | Rust | 16390 |
 | Reviewed agent inputs (`*.src`) | 356 |
 | Text fixtures | 41 |
 | Host policy (conf/JSON/shells) | 103 |
-| Systemd units | 145 |
-| GitHub runner harness (JavaScript/TypeScript/JSON/SHA-256) | 393 |
-| Total | 29837 |
+| Systemd units | 66 |
+| Total | 28536 |
