@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   sync:
-    runs-on: ["self-hosted", "linux", "x64", "local", "flexnetos"]
+    runs-on: ["self-hosted", "flexnetos", "nix"]
     timeout-minutes: 30
     defaults:
       run:

@@ -1,0 +1,40 @@
+# Proof workflow for Yazelix's pinned canonical FlexNetOS runner consumer.
+# Dispatched manually; runs ONLY on the composed runner via its labels.
+# Green run = the substrate executes real workflows/actions on the yazelix foundation.
+name: flexnetos-runner-smoke
+
+on:
+  workflow_dispatch: {}
+  # push trigger so the runner can be exercised from this PR branch before the
+  # workflow reaches the default branch (workflow_dispatch requires default branch).
+  push:
+    branches: [feat/flexnetos-gha-runner-nix-2026-07-23]
+    paths:
+      - 'flake.nix'
+      - 'flake.lock'
+      - '.github/workflows/flexnetos-runner-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: [self-hosted, flexnetos, nix]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Foundation toolchain reaches workflows
+        run: |
+          echo "runner name: $RUNNER_NAME"
+          echo "runner os:   $RUNNER_OS"
+          nu --version
+          bun --version
+          nix --version
+      - name: Canonical pinned closure doctors on the substrate
+        shell: nu {0}
+        run: |
+          ^nix run ".#gha-runner" -- doctor
+          if $env.LAST_EXIT_CODE != 0 { exit $env.LAST_EXIT_CODE }
+      - name: Nushell step (foundation shell law)
+        shell: nu {0}
+        run: |
+          print $"profile-runtime reachable: (('/run/user/1001/yazelix/profile-runtime' | path exists))"

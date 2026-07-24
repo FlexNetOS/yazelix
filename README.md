@@ -42,17 +42,17 @@ composes their package outputs.
 
 | Measure | Nova | Classic |
 | --- | --- | --- |
-| Code and configuration (Rust, Nix, shell, TOML, etc.) | **25,331 LOC** | **91,545 LOC** |
+| Code and configuration (Rust, Nix, shell, TOML, etc.) | **26,386 LOC** | **91,545 LOC** |
 | Rust | **16,390 LOC** | **80,957 LOC** |
 | Ownership model | One owner per concern | Overlapping responsibilities across layers |
 | Yazelix component boundaries | Independent, versioned packages | Child repos mixed with main-repo ownership |
 | Product experience | More features, stronger defaults, tighter integration, and polished UX | Fewer features and a less cohesive workspace |
 | Status | Recommended | Frozen migration and rollback path |
 
-Nova owns **66,214 fewer lines**, a **72% reduction**. Classic's Rust code
-alone is 3.2 times larger than Nova's entire code and configuration surface.
+Nova owns **65,159 fewer lines**, a **71% reduction**. Classic's Rust code
+alone is 3.1 times larger than Nova's entire code and configuration surface.
 
-Nova delivers more features in 28% of the code. It has a clearer configuration
+Nova delivers more features in 29% of the code. It has a clearer configuration
 model, tighter editor and Yazi integration, stronger diagnostics, and a
 coherent popup-oriented interface. The smaller architecture makes Yazelix
 easier to improve and better to use.
@@ -102,6 +102,22 @@ Do not add `#yazelix` or any `yazelix-no-*` variant beside the foundation elemen
 foundation installations update through the checked migration described in
 [Installation](docs/installation.md#updates), which archives prior selectors
 and verifies the exact replacement closure before declaring success.
+
+### FlexNetOS GitHub runner
+
+Yazelix consumes the immutable Nix runner from
+[`FlexNetOS/flexnetos_runner`](https://github.com/FlexNetOS/flexnetos_runner);
+it does not carry a second implementation. The foundation profile includes the
+foreground start closure, and these apps expose the pinned consumer directly:
+
+```nu
+nix run .#gha-runner -- doctor
+nix run .#gha-runner-start
+```
+
+The Nix store is passive. There are no system or user services, linger
+settings, or reboot activation; start a foreground session explicitly when
+needed.
 
 ### Install with Home Manager
 
@@ -311,6 +327,6 @@ repository owner and verification surface
 
 ## LOC Scorecard
 
-Nova owns **28,544 lines** of tracked text project files. The
+Nova owns **28,536 lines** of tracked text project files. The
 [reproducible scorecard](docs/development.md#loc-scorecard) excludes Beads,
 lockfiles, and binary assets.

@@ -91,6 +91,7 @@ git ls-files
     not ($path | str starts-with ".beads/")
     and not ($path | str starts-with "assets/")
     and not ($path | str ends-with ".lock")
+    and not ($path | str ends-with "package-lock.json")
 }
 | each {|path| {path: $path, lines: (open --raw $path | str stats | get lines)}}
 ```
@@ -99,17 +100,17 @@ git ls-files
 | --- | ---: |
 | Ignore (`.gitignore`) | 18 |
 | License | 201 |
-| Markdown | 2932 |
-| Nix | 3214 |
+| Markdown | 2959 |
+| Nix | 3305 |
 | Shell | 0 |
-| YAML | 330 |
+| YAML | 374 |
 | TOML | 254 |
 | KDL | 272 |
-| Nu | 4002 |
+| Nu | 3944 |
 | Lua | 253 |
 | Rust | 16390 |
-| Reviewed agent inputs (`*.src`) | 367 |
+| Reviewed agent inputs (`*.src`) | 356 |
 | Text fixtures | 41 |
 | Host policy (conf/JSON/shells) | 103 |
-| Systemd units | 105 |
-| Total | 28482 |
+| Systemd units | 66 |
+| Total | 28536 |
