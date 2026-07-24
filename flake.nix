@@ -918,7 +918,7 @@
       };
       flexnetosGitKb = import ./packaging/git_kb_release.nix {
         inherit pkgs;
-        version = "0.2.12";
+        version = "0.2.13";
       };
       flexnetosRtk = import ./packaging/rtk_release.nix {
         inherit pkgs;
