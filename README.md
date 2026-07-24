@@ -103,6 +103,22 @@ foundation installations update through the checked migration described in
 [Installation](docs/installation.md#updates), which archives prior selectors
 and verifies the exact replacement closure before declaring success.
 
+### FlexNetOS GitHub runner
+
+Yazelix consumes the immutable Nix runner from
+[`FlexNetOS/flexnetos_runner`](https://github.com/FlexNetOS/flexnetos_runner);
+it does not carry a second implementation. The foundation profile includes the
+foreground start closure, and these apps expose the pinned consumer directly:
+
+```nu
+nix run .#gha-runner -- doctor
+nix run .#gha-runner-start
+```
+
+The Nix store is passive. There are no system or user services, linger
+settings, or reboot activation; start a foreground session explicitly when
+needed.
+
 ### Install with Home Manager
 
 Use the [Home Manager module](docs/installation.md#home-manager) for a

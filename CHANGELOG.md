@@ -2,14 +2,12 @@
 
 ## Unreleased
 
-- Add the hermetic GitHub runner's brokered App-token → registration-token
-  exchange and install its reboot entrypoint as a closure in the active Nix
-  profile. The optional `systemd --user` unit now re-registers tmpfs-backed
-  runner state and starts the listener without depending on a source worktree
-  surviving reboot; no system unit or `/etc` path is introduced. The single
-  `lifeos_foundation_yzx` element now also builds the pinned envctl CLI,
-  `secretctl`, and USB-capable `secretd`, so the boot path does not need a
-  second profile selector or host-installed broker tools.
+- Consume the hermetic GitHub runner directly from an immutable
+  `FlexNetOS/flexnetos_runner` revision and include its foreground start closure
+  in the active Nix profile. Yazelix no longer carries a duplicate runner
+  flake, `fxrun-actions`, or runner activation units. Registration tokens remain
+  brokered by the profile-owned envctl/secretctl chain; there are no system or
+  user services, linger settings, or reboot activation.
 
 - Keep Codex PostToolUse extraction opt-in: the reviewed default hook set no
   longer installs `icm hook post`, while the materializer preserves an explicit
@@ -21,8 +19,8 @@
   profile-owned `ar` needed by Cargo native builds, so the shipped Codex
   `skill-creator` validator and its Rust verification run from the immutable
   foundation closure without host package installs or alternate tool owners.
-- Run trusted Linux CI on the local self-hosted runner
-  (`self-hosted, linux, x64, local, flexnetos`) as the primary lane, keeping
+- Run trusted Linux CI on the canonical local Nix runner
+  (`self-hosted, flexnetos, nix`) as the primary lane, keeping
   GitHub-hosted `ubuntu-latest` only as the fallback for untrusted fork pull
   requests. The `linux` job in `ci.yml` and the `linux-profile-smoke` job in
   `version_gate.yml` select their runner by comparing
@@ -30,13 +28,10 @@
   (this repository is itself a fork of upstream, so `head.repo.fork` is true for
   every PR and cannot be used as the fork guard); fork PRs never execute on
   self-hosted hardware. macOS jobs are unchanged.
-- Make the profile-owned self-hosted runner service persistent: change
-  `flexnetos_runner@.service` from `Type=oneshot`/`Restart=no` to
-  `Type=exec`/`Restart=always` (RestartSec=3). Each job still runs on a fresh
-  ephemeral JIT runner (fork-PR isolation preserved), but after a job the
-  service restarts, re-materializes the runner tree via `ExecStartPre`, and
-  registers the next JIT runner, so the local runner stays available to serve
-  CI instead of stopping after a single job.
+- Retire the prior profile-owned JIT runner supervisor and its system-depth
+  activation path. The supported runner lifecycle is now an explicit
+  `nix run .#gha-runner-start` foreground session; unattended reboot activation
+  is deliberately unsupported.
 - Disable Nix XDG base directories (`use-xdg-base-directories = false` in the
   profile-owned `host-policy/nix.conf`) so Nix keeps its per-user profile at
   `~/.nix-profile` and never re-materializes the retired user XDG profile

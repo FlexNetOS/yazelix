@@ -13,7 +13,7 @@ pkgs.rustPlatform.buildRustPackage {
   doCheck = false;
 
   meta = {
-    description = "Profile-owned FlexNetOS runner, Actions supervisor, and dispatcher";
+    description = "Profile-owned FlexNetOS runner control plane and dispatcher";
     homepage = "https://github.com/FlexNetOS/flexnetos_runner";
     license = pkgs.lib.licenses.mit;
     mainProgram = "fxrun";
