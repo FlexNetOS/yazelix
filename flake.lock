@@ -110,6 +110,23 @@
         "type": "github"
       }
     },
+    "envctl_source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784615028,
+        "narHash": "sha256-n4rusTn/OYALy/y2JhOy+h87uF1LUpokfw7RSndijyo=",
+        "owner": "FlexNetOS",
+        "repo": "envctl",
+        "rev": "38f8abaf5a8dd5638196d34afcf7762bbb1fb7d4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "FlexNetOS",
+        "repo": "envctl",
+        "rev": "38f8abaf5a8dd5638196d34afcf7762bbb1fb7d4",
+        "type": "github"
+      }
+    },
     "fenix": {
       "inputs": {
         "nixpkgs": [
@@ -200,7 +217,7 @@
     },
     "fenix_5": {
       "inputs": {
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs_3",
         "rust-analyzer-src": "rust-analyzer-src_5"
       },
       "locked": {
@@ -324,6 +341,20 @@
         "type": "github"
       }
     },
+    "ghaRunner": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "path": "./nix/gha-runner",
+        "type": "path"
+      },
+      "original": {
+        "path": "./nix/gha-runner",
+        "type": "path"
+      },
+      "parent": []
+    },
     "grit_source": {
       "flake": false,
       "locked": {
@@ -378,6 +409,23 @@
         "type": "github"
       }
     },
+    "loop_lib_source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783971972,
+        "narHash": "sha256-V6L+ooFy5dJPaoXPC19M+KPIhZw3uzaaOb79+/Q2wlA=",
+        "owner": "FlexNetOS",
+        "repo": "loop_lib",
+        "rev": "f7991d1732ba54bfb3813622c720cc76056ac02e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "FlexNetOS",
+        "repo": "loop_lib",
+        "rev": "f7991d1732ba54bfb3813622c720cc76056ac02e",
+        "type": "github"
+      }
+    },
     "mars": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -401,19 +449,36 @@
         "type": "github"
       }
     },
+    "meta_plugin_protocol_source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783424729,
+        "narHash": "sha256-ZkHcqvZ6JxFY5286YDhnU+qbzAHn7Y1rOVZZAXtD2rQ=",
+        "owner": "FlexNetOS",
+        "repo": "meta_plugin_protocol",
+        "rev": "7d65eeac3bba8e9702eb0590ba9476e4e420bfb3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "FlexNetOS",
+        "repo": "meta_plugin_protocol",
+        "rev": "7d65eeac3bba8e9702eb0590ba9476e4e420bfb3",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1781577229,
-        "narHash": "sha256-lrp67w8AulE9Ks53n27I45ADSzbOCn4H+CNW1Ck8B+8=",
+        "lastModified": 1784497964,
+        "narHash": "sha256-vlHUuqAcbcH2RKmHbPiuQzbv1pnzzavXnI62RD0bqCU=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "567a49d1913ce81ac6e9582e3553dd90a955875f",
+        "rev": "241313f4e8e508cb9b13278c2b0fa25b9ca27163",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixos-unstable",
         "repo": "nixpkgs",
+        "rev": "241313f4e8e508cb9b13278c2b0fa25b9ca27163",
         "type": "github"
       }
     },
@@ -433,6 +498,22 @@
       }
     },
     "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1781577229,
+        "narHash": "sha256-lrp67w8AulE9Ks53n27I45ADSzbOCn4H+CNW1Ck8B+8=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "567a49d1913ce81ac6e9582e3553dd90a955875f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_3": {
       "locked": {
         "lastModified": 1777578337,
         "narHash": "sha256-Ad49moKWeXtKBJNy2ebiTQUEgdLyvGmTeykAQ9xM+Z4=",
@@ -486,13 +567,17 @@
         "autoLayoutYazi": "autoLayoutYazi",
         "beads_rust_source": "beads_rust_source",
         "beads_viewer": "beads_viewer",
+        "envctl_source": "envctl_source",
         "fenix": "fenix",
         "flexnetos_runner_source": "flexnetos_runner_source",
+        "ghaRunner": "ghaRunner",
         "grit_source": "grit_source",
         "home-manager": "home-manager",
         "icm_source": "icm_source",
+        "loop_lib_source": "loop_lib_source",
         "mars": "mars",
-        "nixpkgs": "nixpkgs",
+        "meta_plugin_protocol_source": "meta_plugin_protocol_source",
+        "nixpkgs": "nixpkgs_2",
         "obscura_source": "obscura_source",
         "ratconfig": "ratconfig",
         "rtk_source": "rtk_source",

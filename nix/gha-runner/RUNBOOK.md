@@ -14,7 +14,7 @@ launcher `scripts/runner.nu`; mint `scripts/mint-runner-token.nu`; boot wrapper
 
 | # | Fence | Why | Exact owner action |
 |---|---|---|---|
-| F1 | **envctl in the profile** | `envctl secret …` resolves `secretctl` only from `~/.nix-profile/{bin,toolbin}`; absent → fails closed. | Install the staged binaries (`meta/release/staging/…/bin/{envctl,secretctl,secretd}`, verified `envctl 0.1.0` / `secretd 0.1.0`) into the profile, or `cargo install` from `~/meta/src/envctl`. |
+| F1 | **envctl in the profile** | The parent Yazelix flake builds pinned `envctl`, `secretctl`, and USB-capable `secretd` sources into the single `lifeos_foundation_yzx` element; the boot closure resolves `secretctl` only from that profile. | Update the foundation element and verify `envctl --version`, `secretctl --help`, and `secretd --version`; never add a second profile element. |
 | F2 | **Vault unlocked** | The GitHub-App private key is sealed **broker-only** and USB-gated; mint fails closed when locked. | Start `secretd`, unlock the vault (USB key present), confirm `secretctl … status` shows unlocked. |
 | F3 | **App permission** | Creating a runner registration token needs the App installation to hold `organization_self_hosted_runners: write`. | On the FlexNetOS App (id 4044997, installation 140063898), grant that permission; re-accept the install. |
 | F4 | **linger** | User units start at boot only with linger enabled. | `loginctl enable-linger "$USER"`. |
@@ -51,11 +51,16 @@ nix run .#runner -- run             # executes ALL workflows/actions on this hos
 ## 4. Reboot persistence (user-level, NO system depths)
 
 `profile-runtime` is tmpfs-backed (`/run`), so a reboot wipes `.runner`/`.credentials`. The unit
-therefore **re-mints → re-registers → runs** each boot; `config.sh --replace` makes that
-idempotent. This is a `systemd --user` unit — never a system unit, never `/etc`.
+reuses valid state on an in-boot listener restart, and **re-mints → re-registers → runs** when
+state is absent (including after reboot); `config.sh --replace` makes that idempotent. The boot
+executable is installed in the active Nix profile and embeds exact store
+paths for the runner scripts and closure, so the source worktree may disappear without breaking
+the next boot. This is a `systemd --user` unit — never a system unit, never `/etc`.
 
 ```bash
-cp scripts/gha-runner.service ~/.config/systemd/user/gha-runner.service
+test -x ~/.nix-profile/bin/flexnetos-runner-boot
+mkdir -p ~/.config/systemd/user
+cp ~/.nix-profile/lib/systemd/user/gha-runner.service ~/.config/systemd/user/gha-runner.service
 loginctl enable-linger "$USER"                      # F4
 systemctl --user daemon-reload
 systemctl --user enable --now gha-runner.service
@@ -65,14 +70,13 @@ systemctl --user status gha-runner                  # STATE gate: want active/ru
 ## 5. Recover (after reboot / crash)
 
 Nothing to do if the unit is installed — it re-mints and re-registers on boot (needs F2: vault
-unlocked at boot). Manual path if the unit is not installed:
+unlocked at boot). Manual profile-closure path if the unit is not installed:
 
 ```bash
-cd ~/meta/src/yazelix/nix/gha-runner
-nu scripts/runner-boot.nu           # mint → register(--replace) → run
+flexnetos-runner-boot                # mint → register(--replace) → run
 ```
 
-If the vault is locked at boot the unit fails closed and retries per `Restart=on-failure`;
+If the vault is locked at boot the unit fails closed and retries per `Restart=always`;
 `systemctl --user status gha-runner` shows the wall. That is correct — it must never fall back
 to a stored token.
 

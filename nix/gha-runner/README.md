@@ -1,7 +1,9 @@
-# FlexNetOS self-hosted GitHub runner — composed Nix flake, zero OS deps
+# FlexNetOS self-hosted GitHub runner — composed Nix flake, no system-depth installs
 
 A self-hosted GitHub runner for the FlexNetOS org, built as a **hermetic Nix flake** with
-**zero OS system dependencies** — no systemd, no host services, no `apt`. Two layers, one closure:
+**no system packages or system-level units** — no `/etc` writes and no `apt`. The optional
+reboot-persistent path is a `systemd --user` unit whose executable lives in the one active Nix
+profile. Two layers, one closure:
 
 | Layer | What | Source |
 |---|---|---|
@@ -26,16 +28,20 @@ nixpkgs patches `actions/runner` to resolve mutable state (`.runner`, `.credenti
 from `RUNNER_ROOT` instead of its install dir, so it runs from the immutable store with all
 state under `profile-runtime/gha-runner/` (path law).
 
-## Hard constraints (enforced by `verify.mjs`, 24 gates)
-- ZERO OS system deps · path law (profile-runtime only; no home dot-local paths) · `bun`/`bunx` runtime
-  (never bare `node`/`npx`) · Nushell scripts · substrate wired (`GHA_SUBSTRATE`, org URL,
-  labels, register/run) · rUv-native harness deps · nixpkgs pinned by exact rev.
+## Hard constraints (enforced by `verify.mjs`, 33 gates)
+- ZERO system-depth installs · path law (profile-runtime only; no home dot-local paths) ·
+  `bun`/`bunx` runtime (never bare `node`/`npx`) · Nushell scripts · substrate wired
+  (`GHA_SUBSTRATE`, org URL, labels, register/run) · rUv-native harness deps · nixpkgs pinned
+  by exact rev.
 
 ## Layout
 | Path | Role |
 |---|---|
 | `flake.nix` | hermetic flake: `packages.substrate` (github-runner) + `packages.metaharness`, apps `runner`/`scaffold`/`verify`, devShell |
-| `scripts/runner.nu` | Nushell launcher: `doctor` / `register` / `run` / `agent` — closure paths via `GHA_SUBSTRATE`/`GHA_BUN` env |
+| `scripts/runner.nu` | Nushell launcher: `doctor` / `is-registered` / `register` / `run` / `agent` — closure paths via `GHA_SUBSTRATE`/`GHA_BUN` env |
+| `scripts/mint-runner-token.nu` | envctl App-token mint followed by GitHub runner-token exchange; emits only the runner token |
+| `scripts/runner-boot.nu` | closure-wired mint → register (`--replace`) → listener sequence |
+| `scripts/gha-runner.service` | optional reboot-persistent `systemd --user` unit; executes the profile package |
 | `harness/package.json` | scaffold target — deps on kernel + host-github-actions + agentic-flow |
 | `verify.mjs` | offline gate (run: `bun run verify.mjs`) |
 
@@ -47,21 +53,29 @@ bun run nix/gha-runner/verify.mjs
 # 2. Doctor — proves both layers resolve from the closure (no token needed):
 nix run .#runner -- doctor
 
-# 3. Register to the FlexNetOS org (token from envctl or gh, env-only):
-$env.GHA_RUNNER_TOKEN = (gh api -X POST orgs/FlexNetOS/actions/runners/registration-token --jq .token)
+# 3. Register to the FlexNetOS org (envctl is the sole mint owner; token stays env-only):
+$env.GHA_RUNNER_TOKEN = (nu scripts/mint-runner-token.nu)
 nix run .#runner -- register
 
 # 4. Start the runner — it now executes ALL workflows targeting the labels:
 nix run .#runner -- run
+
+# 5. Optional reboot-persistent path — after updating the one
+#    lifeos_foundation_yzx profile element, install its packaged user unit:
+test -x ~/.nix-profile/bin/flexnetos-runner-boot
+mkdir -p ~/.config/systemd/user
+cp ~/.nix-profile/lib/systemd/user/gha-runner.service ~/.config/systemd/user/gha-runner.service
+systemctl --user daemon-reload
+systemctl --user enable --now gha-runner.service
 ```
 
 ## The two boundaries a session cannot cross (owner actions)
 1. **`npmDepsHash`** (agent layer only) — after `nix run .#scaffold` generates
    `harness/bin/cli.js` + lockfile, the first `nix build .#metaharness` prints the real hash;
    paste it over `lib.fakeHash`. The substrate has no such step — it builds from the binary cache.
-2. **Org registration authority** — minting a registration token requires org-admin scope.
-   The launcher reads `GHA_RUNNER_TOKEN` from the environment only — it never stores, logs,
-   or hardcodes it.
+2. **Org registration authority** — envctl mints a short-lived App installation token from the
+   broker-only key, then the helper exchanges it for a runner registration token. The launcher
+   reads `GHA_RUNNER_TOKEN` from the environment only — it never stores, logs, or hardcodes it.
 
 ## Integration
 Once the runner is online, a lifeos CI job selects it:

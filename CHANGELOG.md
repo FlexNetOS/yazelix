@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Add the hermetic GitHub runner's brokered App-token → registration-token
+  exchange and install its reboot entrypoint as a closure in the active Nix
+  profile. The optional `systemd --user` unit now re-registers tmpfs-backed
+  runner state and starts the listener without depending on a source worktree
+  surviving reboot; no system unit or `/etc` path is introduced. The single
+  `lifeos_foundation_yzx` element now also builds the pinned envctl CLI,
+  `secretctl`, and USB-capable `secretd`, so the boot path does not need a
+  second profile selector or host-installed broker tools.
+
 - Keep Codex PostToolUse extraction opt-in: the reviewed default hook set no
   longer installs `icm hook post`, while the materializer preserves an explicit
   opt-in made through the existing `icm init --mode hook --with-codex-post-hook`

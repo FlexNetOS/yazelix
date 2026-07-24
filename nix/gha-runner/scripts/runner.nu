@@ -1,5 +1,5 @@
 #!/usr/bin/env nu
-# FlexNetOS composed GitHub runner launcher — Nushell, zero OS deps.
+# FlexNetOS composed GitHub runner launcher — Nushell, no system-depth installs.
 #
 # Layers (env injected by the flake app, closure-only — no host PATH):
 #   GHA_SUBSTRATE — nix store path of nixpkgs github-runner (the real actions/runner)
@@ -12,6 +12,7 @@
 #
 # Commands:
 #   doctor            — verify both layers resolve; no token needed
+#   is-registered      — exit 0 when reusable runner state exists, else 1
 #   register [...]    — configure the runner against the FlexNetOS org (needs GHA_RUNNER_TOKEN)
 #   run               — start the registered runner (executes ALL workflows/actions)
 #   agent <doctor|init> — drive the metaharness harness layer directly
@@ -55,7 +56,7 @@ def substrate-bin [name: string] {
 def require-token [] {
     if ($env.GHA_RUNNER_TOKEN? | default "" | is-empty) {
         print "[flexnetos-runner] GHA_RUNNER_TOKEN is unset."
-        print "  Mint it via envctl or `gh api -X POST orgs/FlexNetOS/actions/runners/registration-token`."
+        print "  Mint it with `nu scripts/mint-runner-token.nu`; envctl is the sole mint owner."
         print "  This launcher reads it from the environment only and never stores it."
         exit 2
     }
@@ -107,6 +108,11 @@ def cmd-register [extra: list<string>] {
     ] ...$extra
 }
 
+def cmd-is-registered [] {
+    let registered = ((state-dir) | path join ".runner" | path exists)
+    if not $registered { exit 1 }
+}
+
 def cmd-run [] {
     let sd = (state-dir)
     if not (($sd | path join ".runner") | path exists) {
@@ -134,7 +140,7 @@ def cmd-agent [sub: string] {
 }
 
 def main [
-    command: string = "doctor"   # doctor | register | run | agent
+    command: string = "doctor"   # doctor | is-registered | register | run | agent
     ...args: string
 ] {
     # Pin RUNNER_ROOT for every substrate call (incl. doctor's --version), so the
@@ -142,11 +148,12 @@ def main [
     $env.RUNNER_ROOT = (state-dir)
     match $command {
         "doctor"   => { cmd-doctor }
+        "is-registered" => { cmd-is-registered }
         "register" => { cmd-register $args }
         "run"      => { cmd-run }
         "agent"    => { cmd-agent ($args | get 0? | default "doctor") }
         _ => {
-            print $"[flexnetos-runner] unknown command: ($command) — expected doctor|register|run|agent"
+            print $"[flexnetos-runner] unknown command: ($command) — expected doctor|is-registered|register|run|agent"
             exit 2
         }
     }

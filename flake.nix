@@ -96,6 +96,19 @@
       url = "github:FlexNetOS/flexnetos_runner/be0960c138d9f293aa6272e6ef154c728b37f73a";
       flake = false;
     };
+    envctl_source = {
+      url = "github:FlexNetOS/envctl/38f8abaf5a8dd5638196d34afcf7762bbb1fb7d4";
+      flake = false;
+    };
+    loop_lib_source = {
+      url = "github:FlexNetOS/loop_lib/f7991d1732ba54bfb3813622c720cc76056ac02e";
+      flake = false;
+    };
+    meta_plugin_protocol_source = {
+      url = "github:FlexNetOS/meta_plugin_protocol/7d65eeac3bba8e9702eb0590ba9476e4e420bfb3";
+      flake = false;
+    };
+    ghaRunner.url = "path:./nix/gha-runner";
     zjstatus = {
       url = "github:luccahuguet/zjstatus/yazelix-tab-activity-pipe";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -126,6 +139,10 @@
     weave_source,
     obscura_source,
     flexnetos_runner_source,
+    envctl_source,
+    loop_lib_source,
+    meta_plugin_protocol_source,
+    ghaRunner,
     autoLayoutYazi,
     starshipYazi,
     zjstatus,
@@ -928,6 +945,14 @@
         inherit pkgs;
         runnerSource = flexnetos_runner_source;
       };
+      flexnetosEnvctl = import ./packaging/envctl_release.nix {
+        inherit pkgs;
+        envctlSource = envctl_source;
+        loopLibSource = loop_lib_source;
+        metaPluginProtocolSource = meta_plugin_protocol_source;
+        rustPlatform = flexnetosRustPlatform;
+      };
+      flexnetosGhaRunnerService = ghaRunner.packages.${system}.runner-service;
       flexnetosNotebooklm = import ./packaging/notebooklm_release.nix {
         inherit pkgs;
         version = "0.8.0a3";
@@ -1085,6 +1110,7 @@
         date = "${pkgs.coreutils}/bin/date";
         dirname = "${pkgs.coreutils}/bin/dirname";
         env = "${pkgs.coreutils}/bin/env";
+        envctl = "${flexnetosEnvctl}/bin/envctl";
         file = "${pkgs.file}/bin/file";
         find = "${pkgs.findutils}/bin/find";
         fxrun = "${flexnetosRunner}/bin/fxrun";
@@ -1140,6 +1166,8 @@
         rtk = "${flexnetosRtkFrontdoor}/bin/rtk";
         scp = "${pkgs.openssh}/bin/scp";
         sed = "${pkgs.gnused}/bin/sed";
+        secretctl = "${flexnetosEnvctl}/bin/secretctl";
+        secretd = "${flexnetosEnvctl}/bin/secretd";
         sh = "${pkgs.bash}/bin/sh";
         sha256sum = "${pkgs.coreutils}/bin/sha256sum";
         sort = "${pkgs.coreutils}/bin/sort";
@@ -1389,7 +1417,7 @@
       };
       lifeosFoundationYzx = assert flexnetosTerminalSupportContract; pkgs.symlinkJoin {
         name = "lifeos-foundation-yzx";
-        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosCodexConfigOwner flexnetosClaudeConfigOwner flexnetosDesktopSource flexnetosClaudeDesktopSource flexnetosTerminalSupport flexnetosRunnerSystemd flexnetosHostPolicyBundle flexnetosVolatileRuntimeBundle];
+        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosCodexConfigOwner flexnetosClaudeConfigOwner flexnetosDesktopSource flexnetosClaudeDesktopSource flexnetosTerminalSupport flexnetosRunnerSystemd flexnetosGhaRunnerService flexnetosHostPolicyBundle flexnetosVolatileRuntimeBundle];
         nativeBuildInputs = [pkgs.desktop-file-utils];
         postBuild = ''
           install -D -m 644 ${flexnetosZellijLayout}/layout.kdl \
@@ -2040,6 +2068,13 @@
         test -x ${foundation}/bin/fxrun-dispatch
         test -x ${foundation}/bin/flexnetos_runner_policy
         test -x ${foundation}/bin/flexnetos_runner_service
+        test -x ${foundation}/bin/flexnetos-runner-boot
+        test -x ${foundation}/bin/envctl
+        test -x ${foundation}/bin/secretctl
+        test -x ${foundation}/bin/secretd
+        ${foundation}/bin/envctl --version | grep -Fx 'envctl 0.1.0'
+        ${foundation}/bin/secretd --version | grep -Fx 'secretd 0.1.0'
+        ${foundation}/bin/secretctl --help | grep -F 'mint-github'
         test -x ${foundation}/bin/yazelix_host_policy
         test -x ${foundation}/bin/yazelix_volatile_runtime
         test -x ${foundation}/bin/kache
@@ -2207,6 +2242,10 @@
         grep -Fx 'Environment=XDG_DATA_HOME=/home/flexnetos/meta/var/lib' "$runner_unit"
         grep -Fx 'Environment=XDG_STATE_HOME=/home/flexnetos/meta/var/lib' "$runner_unit"
         grep -Fx 'Environment=YAZELIX_STATE_DIR=/run/user/1001/yazelix/runners/%i/yazelix' "$runner_unit"
+        gha_runner_unit=${foundation}/lib/systemd/user/gha-runner.service
+        test -f "$gha_runner_unit"
+        grep -Fx 'ExecStart=%h/.nix-profile/bin/flexnetos-runner-boot' "$gha_runner_unit"
+        grep -Fx 'Restart=always' "$gha_runner_unit"
         YAZELIX_HOST_POLICY_ROOT=${foundation}/share/yazelix/host-policy \
           ${foundation}/bin/yazelix_host_policy check-bundle
         host_policy_test_root="$TMPDIR/host-policy-root"

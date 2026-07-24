@@ -1,7 +1,8 @@
 // Offline gate for the FlexNetOS composed Nix runner. Every gate is an exit code.
-// Enforces the hard constraints: ZERO OS system deps, path law, bun-not-node runtime,
-// Nushell scripts, the github-runner SUBSTRATE (executes all workflows), and the
-// rUv-native metaharness agent layer. Run with: bun run verify.mjs
+// Enforces the hard constraints: no system-depth installs, path law, bun-not-node
+// runtime, Nushell scripts, the github-runner SUBSTRATE (executes all workflows),
+// the profile-owned reboot entrypoint, and the rUv-native metaharness agent layer.
+// Run with: bun run verify.mjs
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -11,6 +12,9 @@ const read = (p) => (existsSync(p) ? readFileSync(p, 'utf8') : null);
 
 const flake = read(join(HERE, 'flake.nix'));
 const runner = read(join(HERE, 'scripts', 'runner.nu'));
+const mint = read(join(HERE, 'scripts', 'mint-runner-token.nu'));
+const boot = read(join(HERE, 'scripts', 'runner-boot.nu'));
+const unit = read(join(HERE, 'scripts', 'gha-runner.service'));
 const pkg = read(join(HERE, 'harness', 'package.json'));
 
 // Strip comments so gates test actual CODE, not prose that names the forbidden thing.
@@ -20,6 +24,9 @@ const stripComments = (s) =>
        .split('\n').map((l) => l.replace(/(^|\s)(#|\/\/).*$/, '$1')).join('\n');
 const flakeCode = stripComments(flake);
 const runnerCode = stripComments(runner);
+const mintCode = stripComments(mint);
+const bootCode = stripComments(boot);
+const unitCode = stripComments(unit);
 
 const results = [];
 const check = (name, cond, detail = '') => results.push({ name, ok: !!cond, detail });
@@ -27,13 +34,17 @@ const check = (name, cond, detail = '') => results.push({ name, ok: !!cond, deta
 // Files present
 check('flake.nix present', flake !== null);
 check('runner.nu present', runner !== null);
+check('mint-runner-token.nu present', mint !== null);
+check('runner-boot.nu present', boot !== null);
+check('gha-runner.service present', unit !== null);
 check('harness/package.json present', pkg !== null);
 
-// HARD: zero OS system dependencies — no systemd/service/host-package escape hatches.
-// (`--startuptype service` is a Runner.Listener CLI flag, not an OS service — excluded by the regex shape.)
-const OS_DEP = /\b(systemctl|systemd|System\/Library|apt-get|apt install|yum |dnf |\/etc\/systemd|service\s+\w+\s+start|launchctl)\b/;
-check('flake has NO OS system deps', flakeCode && !OS_DEP.test(flakeCode), 'systemd/service/apt/etc');
-check('runner has NO OS system deps', runnerCode && !OS_DEP.test(runnerCode));
+// HARD: no system-depth install or service control. A packaged systemd USER
+// unit is intentional; `/etc`, systemctl mutation, and host package managers
+// remain forbidden.
+const SYSTEM_DEPTH_DEP = /\b(systemctl|System\/Library|apt-get|apt install|yum |dnf |\/etc\/systemd|service\s+\w+\s+start|launchctl)\b/;
+check('flake has NO system-depth deps', flakeCode && !SYSTEM_DEPTH_DEP.test(flakeCode), 'systemctl/package-manager/etc');
+check('runner has NO system-depth deps', runnerCode && !SYSTEM_DEPTH_DEP.test(runnerCode));
 
 // Path law: profile-runtime, never ~/.local
 check('runner uses profile-runtime', runner && runner.includes('profile-runtime'));
@@ -60,6 +71,18 @@ check('runner is Nushell', runner && runner.startsWith('#!/usr/bin/env nu'));
 // Secret law: token from env, never hardcoded
 check('token read from env, not hardcoded', runner && runner.includes('GHA_RUNNER_TOKEN')
   && !/ghp_|github_pat_/.test(runner));
+check('mint exchanges App token for runner registration token',
+  mintCode && /mint-github/.test(mintCode)
+    && /actions\/runners\/registration-token/.test(mintCode)
+    && /Authorization/.test(mintCode));
+check('boot runs mint then register then listener from closure paths',
+  bootCode && /GHA_MINT_SCRIPT/.test(bootCode)
+    && /GHA_RUNNER_LAUNCH/.test(bootCode)
+    && /\^?\$runner_launch is-registered/.test(bootCode)
+    && /\^?\$runner_launch register/.test(bootCode)
+    && /\^?\$runner_launch run/.test(bootCode));
+check('boot never depends on a mutable source checkout',
+  bootCode && !/GHA_FLAKE_DIR|nix run|cd \$dir/.test(bootCode));
 
 // rUv-native harness deps (grounded: ADR-033, host-github-actions v0.1.2)
 const deps = pkg ? (JSON.parse(pkg).dependencies || {}) : {};
@@ -74,6 +97,17 @@ check('flake pins nixpkgs input', flake && /nixpkgs\.url\s*=\s*"github:NixOS\/ni
 check('flake pins nixpkgs to an explicit rev (reproducible)',
   flake && /nixpkgs\.url\s*=\s*"github:NixOS\/nixpkgs\/[0-9a-f]{40}"/.test(flake));
 check('flake exposes runner app', flake && /runner\s*=\s*{/.test(flake));
+check('flake exposes profile-owned runner-service package',
+  flakeCode && /runner-service\s*=\s*mkRunnerBoot/.test(flakeCode)
+    && /writeShellScriptBin "flexnetos-runner-boot"/.test(flakeCode));
+
+// Reboot persistence is user-level only. The unit consumes the profile package,
+// not a source checkout, and restarts after both failure and clean listener exit.
+check('user unit executes profile-owned boot closure',
+  unitCode && /ExecStart=%h\/\.nix-profile\/bin\/flexnetos-runner-boot/.test(unitCode));
+check('user unit is restart-persistent and has no system-depth path',
+  unitCode && /Restart=always/.test(unitCode)
+    && !/\/etc\/systemd|WorkingDirectory=|GHA_FLAKE_DIR/.test(unitCode));
 
 let failed = 0;
 for (const r of results) {

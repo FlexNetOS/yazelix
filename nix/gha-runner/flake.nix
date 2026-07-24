@@ -33,6 +33,36 @@
     let
       systems = [ "x86_64-linux" "aarch64-linux" ];
       forAll = f: nixpkgs.lib.genAttrs systems (system: f system nixpkgs.legacyPackages.${system});
+      runnerScript = ./scripts/runner.nu;
+      mkRunnerLaunch = system: pkgs:
+        let
+          nu = "${pkgs.nushell}/bin/nu";
+        in
+        pkgs.writeShellScript "flexnetos-runner" ''
+          export GHA_SUBSTRATE=${pkgs.github-runner}
+          export GHA_BUN=${pkgs.bun}/bin/bun
+          export GHA_HARNESS=${self.packages.${system}.metaharness}/lib/node_modules/flexnetos-runner/bin/cli.js
+          exec ${nu} ${runnerScript} "$@"
+        '';
+      mkRunnerBoot = system: pkgs:
+        let
+          nu = "${pkgs.nushell}/bin/nu";
+          launch = mkRunnerLaunch system pkgs;
+          boot = pkgs.writeShellScriptBin "flexnetos-runner-boot" ''
+            export PATH="$HOME/.nix-profile/toolbin:$HOME/.nix-profile/bin:${pkgs.coreutils}/bin"
+            export GHA_NU=${nu}
+            export GHA_MINT_SCRIPT=${./scripts/mint-runner-token.nu}
+            export GHA_RUNNER_LAUNCH=${launch}
+            exec ${nu} ${./scripts/runner-boot.nu} "$@"
+          '';
+          unit = pkgs.writeTextDir
+            "lib/systemd/user/gha-runner.service"
+            (builtins.readFile ./scripts/gha-runner.service);
+        in
+        pkgs.symlinkJoin {
+          name = "flexnetos-runner-service";
+          paths = [boot unit];
+        };
     in
     {
       packages = forAll (system: pkgs: {
@@ -54,27 +84,30 @@
           meta.description = "FlexNetOS metaharness runner harness (github-actions host)";
         };
 
+        # Reboot-stable profile entrypoint. The user unit executes this binary
+        # from the active profile, so it does not depend on a source checkout
+        # (or the session worktree under /run) surviving a reboot.
+        runner-service = mkRunnerBoot system pkgs;
+
         default = self.packages.${system}.substrate;
       });
 
       # Apps — all launched via nix, PATH/env from the closure only, Nushell entry.
       apps = forAll (system: pkgs:
         let
-          nu = "${pkgs.nushell}/bin/nu";
-          runnerScript = ./scripts/runner.nu;
-          # The launcher finds both layers through env — no host PATH involved.
-          launch = pkgs.writeShellScript "flexnetos-runner" ''
-            export GHA_SUBSTRATE=${pkgs.github-runner}
-            export GHA_BUN=${pkgs.bun}/bin/bun
-            export GHA_HARNESS=${self.packages.${system}.metaharness}/lib/node_modules/flexnetos-runner/bin/cli.js
-            exec ${nu} ${runnerScript} "$@"
-          '';
+          launch = mkRunnerLaunch system pkgs;
         in
         {
           # doctor | register | run | agent — see scripts/runner.nu
           runner = {
             type = "app";
             program = toString launch;
+          };
+          # Same boot entrypoint installed into the active profile for the
+          # reboot-persistent systemd --user service.
+          service = {
+            type = "app";
+            program = "${self.packages.${system}.runner-service}/bin/flexnetos-runner-boot";
           };
           # One-time (network) scaffold of the harness targeting the github-actions host.
           # Runtime uses bun (bunx) per FlexNetOS convention — never bare npx/node.
