@@ -1,0 +1,41 @@
+# FlexNetOS self-hosted GitHub runner — systemd --user unit (NO system depths).
+#
+# This is a USER unit, not a system unit: it installs to the per-user systemd
+# instance, never /etc/systemd/system, never a services.github-runners NixOS module.
+# Reboot durability comes from `loginctl enable-linger` (user manager starts at boot
+# without an interactive login) — not from a system-level service. Path law holds:
+# all mutable state stays under profile-runtime; the closure runs from the nix store.
+#
+# Install (owner, one-time — see RUNBOOK.md "Reboot persistence"):
+#   1. Edit GHA_FLAKE_DIR below to the absolute flake path on this host.
+#   2. cp gha-runner.service ~/.config/systemd/user/gha-runner.service
+#   3. loginctl enable-linger "$USER"          # start user units at boot
+#   4. systemctl --user daemon-reload
+#   5. systemctl --user enable --now gha-runner.service
+#   6. systemctl --user status gha-runner       # STATE gate (want: active/running)
+#
+# The unit re-mints + re-registers each start because profile-runtime is tmpfs-backed
+# (wiped on reboot); runner-boot.nu makes that idempotent via config.sh --replace.
+
+[Unit]
+Description=FlexNetOS self-hosted GitHub runner (hermetic nix flake, rUv agent layer)
+Documentation=file:%h/meta/src/yazelix/nix/gha-runner/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Owner fence: point this at the absolute flake path on this host.
+Environment=GHA_FLAKE_DIR=%h/meta/src/yazelix/nix/gha-runner
+WorkingDirectory=%h/meta/src/yazelix/nix/gha-runner
+# nix must resolve from the profile; the closure supplies everything else.
+ExecStart=/home/flexnetos/.nix-profile/bin/nu scripts/runner-boot.nu
+# Re-mint/register/run on failure (e.g. a locked vault at boot that unlocks later).
+Restart=on-failure
+RestartSec=30
+# Never leak the minted token into the journal beyond what runner-boot.nu prints
+# (it prints status lines only, never the token).
+SyslogIdentifier=gha-runner
+
+[Install]
+WantedBy=default.target
