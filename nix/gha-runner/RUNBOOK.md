@@ -6,7 +6,7 @@ cannot perform. Every step names its verification (an exit code, not an opinion)
 
 Grounded: metaharness ADR-033 (`metaharness/docs/adrs/ADR-033-host-github-actions.md`);
 launcher `scripts/runner.nu`; mint `scripts/mint-runner-token.nu`; boot wrapper
-`scripts/runner-boot.nu`; unit `scripts/gha-runner.service`.
+`scripts/runner-boot.nu`; boot closure app `nix run .#service` (NO systemd unit).
 
 ---
 
@@ -17,7 +17,6 @@ launcher `scripts/runner.nu`; mint `scripts/mint-runner-token.nu`; boot wrapper
 | F1 | **envctl in the profile** | The parent Yazelix flake builds pinned `envctl`, `secretctl`, and USB-capable `secretd` sources into the single `lifeos_foundation_yzx` element; the boot closure resolves `secretctl` only from that profile. | Update the foundation element and verify `envctl --version`, `secretctl --help`, and `secretd --version`; never add a second profile element. |
 | F2 | **Vault unlocked** | The GitHub-App private key is sealed **broker-only** and USB-gated; mint fails closed when locked. | Start `secretd`, unlock the vault (USB key present), confirm `secretctl … status` shows unlocked. |
 | F3 | **App permission** | Creating a runner registration token needs the App installation to hold `organization_self_hosted_runners: write`. | On the FlexNetOS App (id 4044997, installation 140063898), grant that permission; re-accept the install. |
-| F4 | **linger** | User units start at boot only with linger enabled. | `loginctl enable-linger "$USER"`. |
 | F5 | **Live org registration + push** | Registering a real runner and dispatching a workflow are irreversible org-side actions. | Run §2–§3, then push to trigger, then §Verify. |
 | F6 | **docker group** (Omada MCP only) | `docker.sock` is `660 root:docker`; the session user is not in `docker`. | `sudo usermod -aG docker "$USER"` + re-login — only needed for the network-control Omada stack, **not** for the runner. |
 
@@ -48,37 +47,34 @@ Verify: `test -f "$XDG_RUNTIME_DIR/yazelix/profile-runtime/gha-runner/state/.run
 nix run .#runner -- run             # executes ALL workflows/actions on this host
 ```
 
-## 4. Reboot persistence (user-level, NO system depths)
+## 4. Reboot persistence (nix-native — NO systemd, NO system depths)
 
-`profile-runtime` is tmpfs-backed (`/run`), so a reboot wipes `.runner`/`.credentials`. The unit
-reuses valid state on an in-boot listener restart, and **re-mints → re-registers → runs** when
-state is absent (including after reboot); `config.sh --replace` makes that idempotent. The boot
-executable is installed in the active Nix profile and embeds exact store
-paths for the runner scripts and closure, so the source worktree may disappear without breaking
-the next boot. This is a `systemd --user` unit — never a system unit, never `/etc`.
+> **HARD RULE: NO_SYSTEM_DEPTHS** (exception: the Nix store). `systemd --user` +
+> `loginctl enable-linger` is forbidden — linger writes `/var/lib/systemd/linger/$USER` and arms a
+> system-managed user manager at boot. The prior systemd unit was **removed**. The nix-native
+> persistence design (session-hook autostart, pidfile-guarded, ruflo `daemon-autostart` pattern) or
+> the deliberate "not at all" decision is tracked in **[[tasks/gha-runner-nix-native-persistence]]**.
+
+`profile-runtime` is tmpfs-backed (`/run`), so a reboot wipes `.runner`/`.credentials`; a durable
+runner must **re-mint → re-register (`config.sh --replace`) → run**. Until the nix-native design
+lands, bring the runner up per session (foreground §3, or the boot closure below), NOT via systemd:
 
 ```bash
-test -x ~/.nix-profile/bin/flexnetos-runner-boot
-mkdir -p ~/.config/systemd/user
-cp ~/.nix-profile/lib/systemd/user/gha-runner.service ~/.config/systemd/user/gha-runner.service
-loginctl enable-linger "$USER"                      # F4
-systemctl --user daemon-reload
-systemctl --user enable --now gha-runner.service
-systemctl --user status gha-runner                  # STATE gate: want active/running
+nix run .#service            # mint → register(--replace) → run, one nix-store closure
 ```
 
 ## 5. Recover (after reboot / crash)
 
-Nothing to do if the unit is installed — it re-mints and re-registers on boot (needs F2: vault
-unlocked at boot). Manual profile-closure path if the unit is not installed:
+Re-run the boot closure — it re-mints and re-registers idempotently (needs F2: vault unlocked, or
+the `gh` org-admin token path):
 
 ```bash
-flexnetos-runner-boot                # mint → register(--replace) → run
+nix run .#service
 ```
 
-If the vault is locked at boot the unit fails closed and retries per `Restart=always`;
-`systemctl --user status gha-runner` shows the wall. That is correct — it must never fall back
-to a stored token.
+If the vault is locked it fails closed (no fallback to a stored token) — that is correct. Durable
+auto-start across reboots without systemd is the open design in
+[[tasks/gha-runner-nix-native-persistence]].
 
 ## 6. CUDA agent inference (verified)
 
@@ -120,5 +116,6 @@ network-fabric management) via docker-compose `restart: unless-stopped` — it i
 runner and to any agent MCP. Its own gaps (missing `.env` — now templated as
 `infrastructure/mcp/.env.example`; nothing performs the initial `docker compose up` at boot;
 controller-IP/user/path drift across README/CLAUDE/compose; needs F6) are a **separate** owner
-item. The runner's and agent layer's reboot durability is delivered here by §4 (systemd --user +
-linger), not by network-control.
+item. The runner's and agent layer's per-session start is delivered here by §4 (the nix-store boot
+closure `nix run .#service`, NO systemd), not by network-control; durable no-systemd auto-start is
+the open design in `tasks/gha-runner-nix-native-persistence`.

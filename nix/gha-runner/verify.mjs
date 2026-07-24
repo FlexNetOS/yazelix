@@ -14,7 +14,6 @@ const flake = read(join(HERE, 'flake.nix'));
 const runner = read(join(HERE, 'scripts', 'runner.nu'));
 const mint = read(join(HERE, 'scripts', 'mint-runner-token.nu'));
 const boot = read(join(HERE, 'scripts', 'runner-boot.nu'));
-const unit = read(join(HERE, 'scripts', 'gha-runner.service'));
 const pkg = read(join(HERE, 'harness', 'package.json'));
 
 // Strip comments so gates test actual CODE, not prose that names the forbidden thing.
@@ -26,7 +25,6 @@ const flakeCode = stripComments(flake);
 const runnerCode = stripComments(runner);
 const mintCode = stripComments(mint);
 const bootCode = stripComments(boot);
-const unitCode = stripComments(unit);
 
 const results = [];
 const check = (name, cond, detail = '') => results.push({ name, ok: !!cond, detail });
@@ -36,15 +34,15 @@ check('flake.nix present', flake !== null);
 check('runner.nu present', runner !== null);
 check('mint-runner-token.nu present', mint !== null);
 check('runner-boot.nu present', boot !== null);
-check('gha-runner.service present', unit !== null);
 check('harness/package.json present', pkg !== null);
 
-// HARD: no system-depth install or service control. A packaged systemd USER
-// unit is intentional; `/etc`, systemctl mutation, and host package managers
-// remain forbidden.
-const SYSTEM_DEPTH_DEP = /\b(systemctl|System\/Library|apt-get|apt install|yum |dnf |\/etc\/systemd|service\s+\w+\s+start|launchctl)\b/;
-check('flake has NO system-depth deps', flakeCode && !SYSTEM_DEPTH_DEP.test(flakeCode), 'systemctl/package-manager/etc');
+// HARD: NO_SYSTEM_DEPTHS (exception: the Nix store). No systemd at all —
+// no packaged unit, no systemctl/linger, no /etc, no host package managers.
+const SYSTEM_DEPTH_DEP = /\b(systemd|systemctl|enable-linger|loginctl|System\/Library|apt-get|apt install|yum |dnf |\/etc\/systemd|service\s+\w+\s+start|launchctl)\b/;
+check('NO systemd unit file (NO_SYSTEM_DEPTHS)', read(join(HERE, 'scripts', 'gha-runner.service')) === null);
+check('flake has NO system-depth deps', flakeCode && !SYSTEM_DEPTH_DEP.test(flakeCode), 'systemd/systemctl/linger/etc');
 check('runner has NO system-depth deps', runnerCode && !SYSTEM_DEPTH_DEP.test(runnerCode));
+check('runner-boot has NO system-depth deps', bootCode && !SYSTEM_DEPTH_DEP.test(bootCode));
 
 // Path law: profile-runtime, never ~/.local
 check('runner uses profile-runtime', runner && runner.includes('profile-runtime'));
@@ -101,13 +99,11 @@ check('flake exposes profile-owned runner-service package',
   flakeCode && /runner-service\s*=\s*mkRunnerBoot/.test(flakeCode)
     && /writeShellScriptBin "flexnetos-runner-boot"/.test(flakeCode));
 
-// Reboot persistence is user-level only. The unit consumes the profile package,
-// not a source checkout, and restarts after both failure and clean listener exit.
-check('user unit executes profile-owned boot closure',
-  unitCode && /ExecStart=%h\/\.nix-profile\/bin\/flexnetos-runner-boot/.test(unitCode));
-check('user unit is restart-persistent and has no system-depth path',
-  unitCode && /Restart=always/.test(unitCode)
-    && !/\/etc\/systemd|WorkingDirectory=|GHA_FLAKE_DIR/.test(unitCode));
+// Reboot persistence is nix-native (no systemd): the boot closure is a profile
+// binary that re-mints/registers/runs. Durable auto-start design is tracked in
+// tasks/gha-runner-nix-native-persistence.
+check('boot closure mints + registers (--replace) via closure launch',
+  bootCode && /register/.test(bootCode) && /GHA_RUNNER_LAUNCH/.test(bootCode) && /GHA_MINT_SCRIPT/.test(bootCode));
 
 let failed = 0;
 for (const r of results) {

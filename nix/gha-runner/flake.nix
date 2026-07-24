@@ -55,14 +55,12 @@
             export GHA_RUNNER_LAUNCH=${launch}
             exec ${nu} ${./scripts/runner-boot.nu} "$@"
           '';
-          unit = pkgs.writeTextDir
-            "lib/systemd/user/gha-runner.service"
-            (builtins.readFile ./scripts/gha-runner.service);
         in
-        pkgs.symlinkJoin {
-          name = "flexnetos-runner-service";
-          paths = [boot unit];
-        };
+        # NO_SYSTEM_DEPTHS: the closure ships ONLY the nix-store boot binary. No
+        # systemd unit is packaged (systemd --user + linger touch system depths).
+        # Reboot-durable auto-start without systemd is tracked in
+        # tasks/gha-runner-nix-native-persistence.
+        boot;
     in
     {
       packages = forAll (system: pkgs: {
@@ -103,8 +101,10 @@
             type = "app";
             program = toString launch;
           };
-          # Same boot entrypoint installed into the active profile for the
-          # reboot-persistent systemd --user service.
+          # Nix-native boot closure (mint → register --replace → run), from the
+          # active profile — no source checkout needed, no systemd. Invoke as
+          # `nix run .#service` per session; durable no-systemd auto-start is the
+          # open design in tasks/gha-runner-nix-native-persistence.
           service = {
             type = "app";
             program = "${self.packages.${system}.runner-service}/bin/flexnetos-runner-boot";

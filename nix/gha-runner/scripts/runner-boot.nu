@@ -6,15 +6,16 @@
 # unit cannot merely restart a listener — it must re-register from a fresh token each boot.
 # `config.sh --replace` makes re-registration idempotent against GitHub's view of the runner.
 #
-# This is the ExecStart target of the `gha-runner.service` systemd --user unit.
-# The flake packages it as `flexnetos-runner-boot` in the active profile. Its
+# The flake packages this as `flexnetos-runner-boot` in the active profile
+# (`nix run .#service`) — NO systemd. Reboot-durable auto-start without systemd is
+# tracked in tasks/gha-runner-nix-native-persistence. Its
 # runner launcher and mint script are exact store paths injected by the wrapper,
 # so boot never depends on a mutable or tmpfs-backed source checkout.
 #
-# Owner fence: minting requires the envctl vault UNLOCKED at boot (USB-gated). If the vault
-# is locked, mint fails closed and this wrapper exits non-zero — the unit will retry per its
-# Restart= policy, and `systemctl --user status gha-runner` shows the wall. That is the correct
-# fail-closed behavior; it must never fall back to a hardcoded or logged token.
+# Owner fence: minting requires the envctl vault UNLOCKED at boot (USB-gated), OR the gh
+# org-admin token path. If the vault is locked, mint fails closed and this wrapper exits
+# non-zero — re-run `nix run .#service` once unlocked. That is the correct fail-closed
+# behavior; it must never fall back to a hardcoded or logged token.
 
 def main [] {
     let nu_bin = ($env.GHA_NU? | default "")

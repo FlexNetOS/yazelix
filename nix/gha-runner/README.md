@@ -1,9 +1,10 @@
 # FlexNetOS self-hosted GitHub runner — composed Nix flake, no system-depth installs
 
 A self-hosted GitHub runner for the FlexNetOS org, built as a **hermetic Nix flake** with
-**no system packages or system-level units** — no `/etc` writes and no `apt`. The optional
-reboot-persistent path is a `systemd --user` unit whose executable lives in the one active Nix
-profile. Two layers, one closure:
+**NO_SYSTEM_DEPTHS** (exception: the Nix store) — no `/etc`, no `apt`, and **no systemd** (no
+unit, no `systemctl`, no `loginctl enable-linger`). Per-session start is `nix run .#service` (the
+nix-store boot closure); reboot-durable auto-start without systemd is the open design in
+`tasks/gha-runner-nix-native-persistence`. Two layers, one closure:
 
 | Layer | What | Source |
 |---|---|---|
@@ -40,8 +41,7 @@ state under `profile-runtime/gha-runner/` (path law).
 | `flake.nix` | hermetic flake: `packages.substrate` (github-runner) + `packages.metaharness`, apps `runner`/`scaffold`/`verify`, devShell |
 | `scripts/runner.nu` | Nushell launcher: `doctor` / `is-registered` / `register` / `run` / `agent` — closure paths via `GHA_SUBSTRATE`/`GHA_BUN` env |
 | `scripts/mint-runner-token.nu` | envctl App-token mint followed by GitHub runner-token exchange; emits only the runner token |
-| `scripts/runner-boot.nu` | closure-wired mint → register (`--replace`) → listener sequence |
-| `scripts/gha-runner.service` | optional reboot-persistent `systemd --user` unit; executes the profile package |
+| `scripts/runner-boot.nu` | closure-wired mint → register (`--replace`) → listener sequence (`nix run .#service`) |
 | `harness/package.json` | scaffold target — deps on kernel + host-github-actions + agentic-flow |
 | `verify.mjs` | offline gate (run: `bun run verify.mjs`) |
 
@@ -60,13 +60,10 @@ nix run .#runner -- register
 # 4. Start the runner — it now executes ALL workflows targeting the labels:
 nix run .#runner -- run
 
-# 5. Optional reboot-persistent path — after updating the one
-#    lifeos_foundation_yzx profile element, install its packaged user unit:
-test -x ~/.nix-profile/bin/flexnetos-runner-boot
-mkdir -p ~/.config/systemd/user
-cp ~/.nix-profile/lib/systemd/user/gha-runner.service ~/.config/systemd/user/gha-runner.service
-systemctl --user daemon-reload
-systemctl --user enable --now gha-runner.service
+# 5. Boot closure (mint → register --replace → run), nix-store only, NO systemd:
+nix run .#service
+# Reboot-durable auto-start WITHOUT systemd is the open design in
+# tasks/gha-runner-nix-native-persistence (systemd --user + linger is forbidden).
 ```
 
 ## The two boundaries a session cannot cross (owner actions)
