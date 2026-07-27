@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Update the profile-owned Claude Code binary from 2.1.207 to 2.1.220 (latest
+  release channel). `packaging/claude_code_release.nix` gains the 2.1.220
+  per-platform checksum row and its default version bumps; the `flexnetosClaude`
+  consumption site in `flake.nix` pins the new version. The base binary is still
+  fetched as a fixed-output derivation from the official release channel.
+
 - Consume the hermetic GitHub runner directly from an immutable
   `FlexNetOS/flexnetos_runner` revision and include its foreground start closure
   in the active Nix profile. Yazelix no longer carries a duplicate runner
