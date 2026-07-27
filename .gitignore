@@ -13,6 +13,10 @@ crates/*/target/
 /rust_core/
 /rust_plugins/
 
+# transient single-profile migration receipts (yazelix_profile_migrate output;
+# not repository source — excluded so they are never versioned)
+/single-profile-migration.receipt.*.json
+
 # br local state
 /.beads/interactions.jsonl
 /.beads/push-state.json
