@@ -1412,9 +1412,31 @@
         extraPathPrefix = [flexnetosTools];
         defaultStateDir = "/run/user/1001/yazelix/profile-runtime/yazelix";
       };
+      # PostgreSQL/RuVector is the Swarm Primary Runtime (blueprint hard rule 1), yet
+      # the profile shipped no postgres, psql or pg_ctl at all -- `git log -S postgresql`
+      # over this flake returns nothing, so it was never here. On 2026-07-27 that cost
+      # the whole RuVector layer: the running cluster had been started on 2026-07-23 via
+      # /home/flexnetos/.nix-profile/bin/postgres, a path that no longer exists, and
+      # every one of the extension's 188 catalog-registered functions failed with
+      # `could not access file "$libdir/ruvector"`.
+      #
+      # PostgreSQL resolves pkglibdir from the INVOKED path (argv[0], via find_my_exec),
+      # not the resolved realpath. Because this foundation is a symlinkJoin, adding the
+      # bundle here puts bin/postgres AND lib/ruvector.so in the same output, so
+      # `<foundation>/bin/postgres` computes pkglibdir as `<foundation>/lib` and finds
+      # the extension. That makes the fix structural instead of dependent on whoever
+      # happens to launch the server.
+      #
+      # builtins.storePath is deliberate: the bundle is already built but no flake in
+      # this workspace defines it, and storePath makes nix treat it as a real dependency
+      # -- which also makes it a GC root, so the library cannot be collected out from
+      # under the database again. Verified to satisfy all 188 catalog symbols.
+      flexnetosPostgresRuvector =
+        builtins.storePath /nix/store/5fsfh7z2v4s52rhngsc2gkc5x581p35a-postgresql-and-plugins-17.10;
+
       lifeosFoundationYzx = assert flexnetosTerminalSupportContract; pkgs.symlinkJoin {
         name = "lifeos-foundation-yzx";
-        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosCodexConfigOwner flexnetosClaudeConfigOwner flexnetosDesktopSource flexnetosClaudeDesktopSource flexnetosTerminalSupport flexnetosGhaRunnerStart flexnetosHostPolicyBundle flexnetosVolatileRuntimeBundle];
+        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosCodexConfigOwner flexnetosClaudeConfigOwner flexnetosDesktopSource flexnetosClaudeDesktopSource flexnetosTerminalSupport flexnetosGhaRunnerStart flexnetosHostPolicyBundle flexnetosVolatileRuntimeBundle flexnetosPostgresRuvector];
         nativeBuildInputs = [pkgs.desktop-file-utils];
         postBuild = ''
           install -D -m 644 ${flexnetosZellijLayout}/layout.kdl \
@@ -2307,6 +2329,25 @@
           exit 1
         fi
         grep -Fx 'ICM_DB=/home/flexnetos/meta/var/lib/icm/memories.db' "$session_env"
+
+        # PostgreSQL/RuVector is the Swarm Primary Runtime (hard rule 1). The profile
+        # must expose the server AND client tools, and must carry ruvector.so in the
+        # SAME output, because postgres derives pkglibdir from the invoked path. A
+        # profile with postgres but without the library reproduces the 2026-07-27
+        # outage: 188 catalog-registered functions, every one failing on $libdir.
+        for pgbin in postgres psql pg_ctl; do
+          test -x ${foundation}/bin/$pgbin || {
+            echo "ERROR: profile must expose $pgbin (Swarm Primary Runtime toolchain)" >&2
+            exit 1; }
+        done
+        test -f ${foundation}/lib/ruvector.so || {
+          echo 'ERROR: ruvector.so must sit beside postgres in the profile output' >&2
+          exit 1; }
+        # Catalog binding is not proof; the library must actually export the symbols the
+        # installed extension resolves against.
+        grep -qa 'ruvector_version_wrapper' ${foundation}/lib/ruvector.so || {
+          echo 'ERROR: ruvector.so does not export the catalog-bound symbols' >&2
+          exit 1; }
         grep -F 'legacy Kache root must not exist' ${./nushell/system/volatile_runtime.nu}
         grep -F 'legacy Kache delivery artifact must not exist' ${./nushell/system/volatile_runtime.nu}
         grep -F 'const PROFILE_RUNTIME_ROOT = "/run/user/1001/yazelix/profile-runtime"' ${./nushell/system/volatile_runtime.nu}
