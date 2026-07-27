@@ -2244,8 +2244,8 @@
         YAZELIX_HOST_POLICY_ROOT=${foundation}/share/yazelix/host-policy \
           YAZELIX_HOST_POLICY_TARGET_ROOT="$host_policy_test_root" \
           ${foundation}/bin/yazelix_host_policy check-log-files
-        grep -Fx 'substitute = false' ${foundation}/share/yazelix/host-policy/nix.conf
-        grep -Fx 'substituters =' ${foundation}/share/yazelix/host-policy/nix.conf
+        grep -Fx 'substitute = true' ${foundation}/share/yazelix/host-policy/nix.conf
+        grep -Fx 'substituters = https://cache.nixos.org https://nix-community.cachix.org' ${foundation}/share/yazelix/host-policy/nix.conf
         grep -Fx 'trusted-substituters =' ${foundation}/share/yazelix/host-policy/nix.conf
         grep -Fx 'keep-build-log = false' ${foundation}/share/yazelix/host-policy/nix.conf
         grep -Fx 'compress-build-log = false' ${foundation}/share/yazelix/host-policy/nix.conf
