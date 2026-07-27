@@ -999,6 +999,9 @@
         name = "yazelix-volatile-runtime";
         paths = [
           (pkgs.writeTextDir "share/yazelix/environment.d/10-yazelix-volatile.conf" (builtins.readFile ./host-policy/10-yazelix-volatile.conf))
+          # Sorts after /usr/lib/environment.d/{99-environment,990-snapd}.conf, both of
+          # which assign PATH; a lower prefix is silently overridden. See the file header.
+          (pkgs.writeTextDir "share/yazelix/environment.d/99z-session-restore.conf" (builtins.readFile ./host-policy/99z-session-restore.conf))
           (pkgs.writeTextDir "lib/systemd/user/yazelix_volatile_runtime.service" (builtins.readFile ./systemd/user/yazelix_volatile_runtime.service))
         ];
       };
@@ -2261,13 +2264,49 @@
         test -f ${foundation}/lib/systemd/user/yazelix_volatile_runtime.service
         grep -Fx 'ExecStart=/home/flexnetos/.nix-profile/bin/yazelix_volatile_runtime ensure' ${foundation}/lib/systemd/user/yazelix_volatile_runtime.service
         volatile_env=${foundation}/share/yazelix/environment.d/10-yazelix-volatile.conf
-        grep -Fx 'XDG_CACHE_HOME=/run/user/1001/yazelix/volatile/cache' "$volatile_env"
-        grep -Fx 'XDG_DATA_HOME=/home/flexnetos/meta/var/lib' "$volatile_env"
-        grep -Fx 'XDG_STATE_HOME=/home/flexnetos/meta/var/lib' "$volatile_env"
+        # Session-scope guard. environment.d is applied by the systemd user manager to
+        # the entire graphical session, so the generic XDG roots must NOT appear here:
+        # XDG_DATA_HOME re-homes the GNOME keyring/icons/launchers/Trash, and
+        # XDG_CACHE_HOME puts the mesa shader cache on the XDG_RUNTIME_DIR tmpfs.
+        # Dev-shell scoping for these lives in nushell profile-path.nu instead.
+        if grep -qE '^XDG_(DATA|STATE|CACHE)_HOME=' "$volatile_env"; then
+          echo 'ERROR: 10-yazelix-volatile.conf must not set generic XDG roots (session scope)' >&2
+          exit 1
+        fi
+        # Build artifacts are durable; /run/user/1001 is XDG_RUNTIME_DIR, not scratch.
+        grep -Fx 'CARGO_HOME=/home/flexnetos/meta/var/cache/cargo-home' "$volatile_env"
+        grep -Fx 'CARGO_TARGET_DIR=/home/flexnetos/meta/var/cargo-target' "$volatile_env"
         grep -Fx 'YAZELIX_STATE_DIR=/run/user/1001/yazelix/profile-runtime/yazelix' "$volatile_env"
         grep -Fx 'TMPDIR=/run/user/1001/yazelix/volatile/tmp' "$volatile_env"
         grep -Fx 'KACHE_CACHE_DIR=/home/flexnetos/.cache/kache' "$volatile_env"
         grep -Fx 'RUSTC_WRAPPER=/home/flexnetos/.nix-profile/bin/kache-rustc-wrapper' "$volatile_env"
+
+        # Session-restore drop-in. Its filename is load-bearing: systemd merges all
+        # environment.d dirs into one lexically-sorted namespace, and Ubuntu ships
+        # /usr/lib/environment.d/99-environment.conf plus 990-snapd.conf, both of which
+        # assign PATH. A prefix below "990" is silently overridden for PATH.
+        session_env=${foundation}/share/yazelix/environment.d/99z-session-restore.conf
+        test -f "$session_env"
+        case "$(basename "$session_env")" in
+          99z-*) : ;;
+          *) echo 'ERROR: session-restore drop-in must sort after 990-snapd.conf' >&2; exit 1 ;;
+        esac
+        # The profile must remain the frontdoor (first), without amputating the system.
+        grep -qE '^PATH=/home/flexnetos/\.nix-profile/toolbin:/home/flexnetos/\.nix-profile/bin:' "$session_env"
+        for required in /usr/bin /snap/bin; do
+          grep -qE "^PATH=.*(:|=)$required(:|$)" "$session_env" || {
+            echo "ERROR: session-restore PATH is missing $required" >&2; exit 1; }
+        done
+        # Session XDG roots must match the envctl canonical table exactly.
+        grep -Fx 'XDG_DATA_HOME=/home/flexnetos/.local/share' "$session_env"
+        grep -Fx 'XDG_STATE_HOME=/home/flexnetos/.local/state' "$session_env"
+        grep -Fx 'XDG_CACHE_HOME=/home/flexnetos/.cache' "$session_env"
+        # Cargo must never resolve under XDG_RUNTIME_DIR.
+        if grep -qE '^CARGO_(HOME|TARGET_DIR)=/run/user/' "$session_env" "$volatile_env"; then
+          echo 'ERROR: cargo must not point at the XDG_RUNTIME_DIR tmpfs' >&2
+          exit 1
+        fi
+        grep -Fx 'ICM_DB=/home/flexnetos/meta/var/lib/icm/memories.db' "$session_env"
         grep -F 'legacy Kache root must not exist' ${./nushell/system/volatile_runtime.nu}
         grep -F 'legacy Kache delivery artifact must not exist' ${./nushell/system/volatile_runtime.nu}
         grep -F 'const PROFILE_RUNTIME_ROOT = "/run/user/1001/yazelix/profile-runtime"' ${./nushell/system/volatile_runtime.nu}
