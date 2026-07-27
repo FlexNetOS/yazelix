@@ -87,8 +87,9 @@ def assert_bundle [] {
     }
     let nix_policy = (open --raw $"(policy_root)/nix.conf")
     for required in [
-        "substitute = false"
-        "substituters ="
+        "substitute = true"
+        "substituters = https://cache.nixos.org https://nix-community.cachix.org"
+        "trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
         "trusted-substituters ="
         "keep-build-log = false"
         "compress-build-log = false"
@@ -165,13 +166,16 @@ def check_targets [] {
 def check_effective [] {
     let nix = $"($PROFILE_ROOT)/bin/nix"
     let config = (^$nix config show --json | from json)
+    let expected_substituters = ["https://cache.nixos.org" "https://nix-community.cachix.org"]
+    let expected_keys = ["cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="]
     let violations = [
-        {name: "substitute", actual: $config.substitute.value, expected: false}
-        {name: "substituters", actual: $config.substituters.value, expected: []}
+        {name: "substitute", actual: $config.substitute.value, expected: true}
+        {name: "substituters", actual: $config.substituters.value, expected: $expected_substituters}
+        {name: "trusted-public-keys", actual: $config.trusted-public-keys.value, expected: $expected_keys}
         {name: "trusted-substituters", actual: $config.trusted-substituters.value, expected: []}
         {name: "keep-build-log", actual: $config.keep-build-log.value, expected: false}
         {name: "compress-build-log", actual: $config.compress-build-log.value, expected: false}
-        {name: "always-allow-substitutes", actual: $config.always-allow-substitutes.value, expected: false}
+        {name: "always-allow-substitutes", actual: $config.always-allow-substitutes.value, expected: true}
     ] | where {|row| $row.actual != $row.expected}
     if not ($violations | is-empty) {
         error make {msg: $"effective Nix cache policy violations: ($violations | to nuon)"}

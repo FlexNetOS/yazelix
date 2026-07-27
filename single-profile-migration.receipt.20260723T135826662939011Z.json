@@ -1,0 +1,58 @@
+{
+  "schema": "yazelix.single-profile-migration.receipt.v3",
+  "task": "YZXCONV-003",
+  "observed_at": "2026-07-23T13:58:26Z",
+  "mode": "execute",
+  "profile_link": "/home/flexnetos/.nix-profile",
+  "legacy_xdg_profile": "/home/flexnetos/.local/state/nix/profile",
+  "prior_profile_target": ".nix-profile-1-link",
+  "prior_profile_resolved": "/nix/store/pd05pfys67qzgrjkw5d4jhsxi6fbyrnf-profile",
+  "prior_manifest_sha256": "4db573fbea602ef7ec63a348988996c783f952b1baad55ed3dfb158849993be1",
+  "new_closure_path": "/nix/store/l87dcnrkf60v51nmh307zvbn5g8zlbsd-lifeos-foundation-yzx",
+  "flake_ref": "path:/home/flexnetos/meta/src/yazelix",
+  "archive_path": "/home/flexnetos/.cache/flexnetos/archives/yazelix-nix-profile/20260723T135826662939011Z",
+  "archive_entries": [
+    {
+      "source": "/home/flexnetos/.nix-profile-1-link",
+      "archived": "/home/flexnetos/.cache/flexnetos/archives/yazelix-nix-profile/20260723T135826662939011Z/prior/.nix-profile-1-link",
+      "target": "/nix/store/pd05pfys67qzgrjkw5d4jhsxi6fbyrnf-profile",
+      "resolved": "/nix/store/pd05pfys67qzgrjkw5d4jhsxi6fbyrnf-profile"
+    },
+    {
+      "source": "/home/flexnetos/.nix-profile",
+      "archived": "/home/flexnetos/.cache/flexnetos/archives/yazelix-nix-profile/20260723T135826662939011Z/prior/.nix-profile",
+      "target": ".nix-profile-1-link",
+      "resolved": "/nix/store/pd05pfys67qzgrjkw5d4jhsxi6fbyrnf-profile"
+    }
+  ],
+  "install_command": "/nix/store/hqwkw2nala59avjximpdmn1yi474n4h7-nix-2.34.7/bin/nix profile add --profile '/home/flexnetos/.nix-profile' 'path:/home/flexnetos/meta/src/yazelix#lifeos_foundation_yzx'",
+  "pinned_commands": {
+    "readlink": "/nix/store/9ypz3flqsrl5xl495mm8h645gadjsxi1-coreutils-9.11/bin/readlink",
+    "mv": "/nix/store/9ypz3flqsrl5xl495mm8h645gadjsxi1-coreutils-9.11/bin/mv",
+    "date": "/nix/store/9ypz3flqsrl5xl495mm8h645gadjsxi1-coreutils-9.11/bin/date",
+    "nix": "/nix/store/hqwkw2nala59avjximpdmn1yi474n4h7-nix-2.34.7/bin/nix",
+    "nu": "/nix/store/6rf5daj415jnir6218pjk6b78phhx6pf-nushell-0.113.1/bin/nu"
+  },
+  "install_exit_code": 0,
+  "install_created_shadow_entries": [],
+  "failed_install_created_shadow_entries": [],
+  "rollback_actions": [
+    {
+      "from": "/home/flexnetos/.cache/flexnetos/archives/yazelix-nix-profile/20260723T135826662939011Z/prior/.nix-profile",
+      "to": "/home/flexnetos/.nix-profile"
+    },
+    {
+      "from": "/home/flexnetos/.cache/flexnetos/archives/yazelix-nix-profile/20260723T135826662939011Z/prior/.nix-profile-1-link",
+      "to": "/home/flexnetos/.nix-profile-1-link"
+    }
+  ],
+  "new_profile_resolved": "/nix/store/hy0g7av2bmp8r34s7sv8a1jh3p3hyw0p-profile",
+  "new_manifest_sha256": "87e4d7111ab754f0e88d9181847aecd1e54948ba29cc8f2c8e993b897ea3326f",
+  "verification_exit_code": 0,
+  "verification_stdout_sha256": "885c41417a6e82456a34942f8e1971634c21bbe4cfdcb131aecc20337bb00aed",
+  "verified": true,
+  "rollback_performed": false,
+  "failed_candidate_archive": null,
+  "failure_stage": null,
+  "errors": []
+}

@@ -59,6 +59,10 @@ links, graph relations, code indexing, impact, integrity, context, and
 completion evidence. Use ICM for persistent continuity and decisions, while
 attributing static/code-graph results to their actual index rather than ICM.
 
+For GitKB work, the installed `gitkb` plugin is the primary surface: use its
+skills and commands first. Use the GitKB MCP server only as a fallback when the
+plugin has no applicable capability or cannot complete the required operation.
+
 Read applicable first-party contracts completely. Preserve immutable source
 bytes and record absolute paths, hashes, sizes, ranges, and provenance. Maintain
 requirement-to-implementation-to-test-to-proof links. Generated projections
