@@ -1427,12 +1427,17 @@
       # the extension. That makes the fix structural instead of dependent on whoever
       # happens to launch the server.
       #
-      # builtins.storePath is deliberate: the bundle is already built but no flake in
-      # this workspace defines it, and storePath makes nix treat it as a real dependency
-      # -- which also makes it a GC root, so the library cannot be collected out from
-      # under the database again. Verified to satisfy all 188 catalog symbols.
+      # The extension is built from fetched source (see packaging/ruvector_postgres.nix,
+      # whose recipe was recovered from the lost build's .drv). It previously entered
+      # the profile as builtins.storePath, which is disallowed in pure eval and forced
+      # --impure on every rebuild; building it here removes that.
+      flexnetosRuvectorPostgres = import ./packaging/ruvector_postgres.nix {
+        inherit pkgs;
+      };
+      # Same buildEnv the original bundle used -- postgresql-and-plugins-17.10 -- so
+      # bin/ and lib/ stay co-located for the argv[0] pkglibdir resolution above.
       flexnetosPostgresRuvector =
-        builtins.storePath /nix/store/5fsfh7z2v4s52rhngsc2gkc5x581p35a-postgresql-and-plugins-17.10;
+        pkgs.postgresql_17.withPackages (_: [flexnetosRuvectorPostgres]);
 
       lifeosFoundationYzx = assert flexnetosTerminalSupportContract; pkgs.symlinkJoin {
         name = "lifeos-foundation-yzx";

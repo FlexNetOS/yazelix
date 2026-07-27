@@ -20,3 +20,6 @@ crates/*/target/
 # br local state
 /.beads/interactions.jsonl
 /.beads/push-state.json
+
+# local agent worktrees -- never part of the tree
+.claude/worktrees/
