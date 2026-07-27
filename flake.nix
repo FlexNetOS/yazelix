@@ -910,7 +910,7 @@
       flexnetosBeadsViewer = beads_viewer.packages.${system}.bv;
       flexnetosClaude = import ./packaging/claude_code_release.nix {
         inherit pkgs;
-        version = "2.1.207";
+        version = "2.1.220";
       };
       flexnetosCodex = import ./packaging/codex_cli_release.nix {
         inherit pkgs system;
