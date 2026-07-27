@@ -56,7 +56,7 @@ jobs:
           if ($"($runtime_profile)/share/applications/yzx.desktop" | path exists) { error make {msg: "runtime profile contains a desktop entry"} }
 
       - name: Build release contract checks
-        run: ^nix build --no-link --print-build-logs .#checks.x86_64-linux.cache_shell_policy .#checks.x86_64-linux.contracts .#checks.x86_64-linux.helix_contracts .#checks.x86_64-linux.host_yazi_contracts .#checks.x86_64-linux.key_reference_parity .#checks.x86_64-linux.no_mars_contracts .#checks.x86_64-linux.no_helix_contracts
+        run: ^nix build --no-link --print-build-logs .#checks.x86_64-linux.cache_shell_policy .#checks.x86_64-linux.contracts .#checks.x86_64-linux.flexnetos_foundation_contracts .#checks.x86_64-linux.helix_contracts .#checks.x86_64-linux.host_yazi_contracts .#checks.x86_64-linux.key_reference_parity .#checks.x86_64-linux.no_mars_contracts .#checks.x86_64-linux.no_helix_contracts
 
       - name: Smoke installed yzx commands
         run: |
