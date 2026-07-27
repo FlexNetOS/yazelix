@@ -24,12 +24,16 @@ approval_mode = "approve"
 
 [features]
 hooks = true
-plugins = false
+plugins = true
 remote_plugin = false
 
 [mcp_servers.icm]
 args = ["serve"]
 command = "/home/flexnetos/.nix-profile/bin/icm"
+
+[mcp_servers.gitkb]
+command = "/home/flexnetos/.nix-profile/bin/git-kb"
+args = ["mcp"]
 
 [mcp_servers.openaiDeveloperDocs]
 url = "https://developers.openai.com/mcp"
