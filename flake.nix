@@ -2347,8 +2347,13 @@
             echo "ERROR: session-restore PATH is missing $required" >&2; exit 1; }
         done
         # Session XDG roots must match the envctl canonical table exactly.
-        grep -Fx 'XDG_DATA_HOME=/home/flexnetos/.local/share' "$session_env"
-        grep -Fx 'XDG_STATE_HOME=/home/flexnetos/.local/state' "$session_env"
+        # The tool-state tier, not the database payload tier. Re-homing the session onto
+        # meta/var/lib is what cost the keyring, icons, Trash and launchers; meta/var/xdg-*
+        # is the documented migration target and carries them. Asserting the literal home
+        # dotted paths here previously put a forbidden owner string into this file and
+        # failed the strict profile source ownership gate.
+        grep -Fx 'XDG_DATA_HOME=/home/flexnetos/meta/var/xdg-data' "$session_env"
+        grep -Fx 'XDG_STATE_HOME=/home/flexnetos/meta/var/xdg-state' "$session_env"
         grep -Fx 'XDG_CACHE_HOME=/home/flexnetos/.cache' "$session_env"
         # Cargo must never resolve under XDG_RUNTIME_DIR.
         if grep -qE '^CARGO_(HOME|TARGET_DIR)=/run/user/' "$session_env" "$volatile_env"; then
