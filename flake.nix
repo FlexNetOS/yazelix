@@ -1003,6 +1003,15 @@
           # which assign PATH; a lower prefix is silently overridden. See the file header.
           (pkgs.writeTextDir "share/yazelix/environment.d/99z-session-restore.conf" (builtins.readFile ./host-policy/99z-session-restore.conf))
           (pkgs.writeTextDir "lib/systemd/user/yazelix_volatile_runtime.service" (builtins.readFile ./systemd/user/yazelix_volatile_runtime.service))
+          # GitKB sync servers. Upstream gitkb/meta ignores .kb/store/ because the store
+          # is meant to travel over GitKB's own sync protocol rather than as git-tracked
+          # files; the sync remote itself lives in the tracked .kb/config.toml, so every
+          # worktree and clone inherits it. That only works if a server is actually
+          # listening, so the three KB-owning repos get profile-owned units instead of
+          # the transient `systemd-run` ones used to prove the design.
+          (pkgs.writeTextDir "lib/systemd/user/gitkb-serve-meta.service" (builtins.readFile ./systemd/user/gitkb-serve-meta.service))
+          (pkgs.writeTextDir "lib/systemd/user/gitkb-serve-lifeos.service" (builtins.readFile ./systemd/user/gitkb-serve-lifeos.service))
+          (pkgs.writeTextDir "lib/systemd/user/gitkb-serve-envctl.service" (builtins.readFile ./systemd/user/gitkb-serve-envctl.service))
         ];
       };
       flexnetosRustToolchain = fenixPkgs.combine (
@@ -2290,6 +2299,19 @@
         test -f ${foundation}/lib/systemd/system/yazelix_host_policy.path
         test -f ${foundation}/lib/systemd/user/yazelix_volatile_runtime.service
         grep -Fx 'ExecStart=/home/flexnetos/.nix-profile/bin/yazelix_volatile_runtime ensure' ${foundation}/lib/systemd/user/yazelix_volatile_runtime.service
+        # GitKB sync servers must ship for all three KB-owning repos, on distinct
+        # ports, each rooted at its own repo -- a shared port or a wrong WorkingDirectory
+        # would silently serve the wrong knowledge base.
+        for kb in meta lifeos envctl; do
+          test -f ${foundation}/lib/systemd/user/gitkb-serve-$kb.service
+          grep -q 'ExecStart=/home/flexnetos/.nix-profile/bin/git-kb serve --host 127.0.0.1 --port' \
+            ${foundation}/lib/systemd/user/gitkb-serve-$kb.service
+        done
+        grep -Fx 'WorkingDirectory=/home/flexnetos/meta' ${foundation}/lib/systemd/user/gitkb-serve-meta.service
+        grep -Fx 'WorkingDirectory=/home/flexnetos/meta/src/lifeos' ${foundation}/lib/systemd/user/gitkb-serve-lifeos.service
+        grep -Fx 'WorkingDirectory=/home/flexnetos/meta/src/envctl' ${foundation}/lib/systemd/user/gitkb-serve-envctl.service
+        test "$(cat ${foundation}/lib/systemd/user/gitkb-serve-*.service | grep -c '^ExecStart=')" = 3
+        test "$(cat ${foundation}/lib/systemd/user/gitkb-serve-*.service | grep -oE '\-\-port [0-9]+' | sort -u | wc -l)" = 3
         volatile_env=${foundation}/share/yazelix/environment.d/10-yazelix-volatile.conf
         # Session-scope guard. environment.d is applied by the systemd user manager to
         # the entire graphical session, so the generic XDG roots must NOT appear here:
