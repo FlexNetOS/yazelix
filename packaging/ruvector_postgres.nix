@@ -62,21 +62,55 @@ in
     cargo-pgrx = cargo-pgrx_0_12_9;
     postgresql = pkgs.postgresql_17;
 
+    nativeBuildInputs = [pkgs.pkg-config];
+    buildInputs = [pkgs.openssl pkgs.onnxruntime];
+
+    # The `embeddings` feature pulls fastembed -> ort -> ort-sys, whose build
+    # script defaults to downloading a prebuilt ONNX Runtime from cdn.pyke.io.
+    # The Nix sandbox has no network, so that build fails with
+    #   "failed to lookup address information: Temporary failure in name resolution".
+    # Point ort-sys at the nixpkgs ONNX Runtime instead of letting it fetch one:
+    # this keeps the build hermetic and pins the runtime in the closure rather
+    # than trusting a CDN artifact.
+    # ort-sys probes ORT_LIB_LOCATION for the library directory itself, not the
+    # package root: nixpkgs places libonnxruntime.so under $out/lib.
+    #
+    # ORT_PREFER_DYNAMIC_LINK is required, not optional. With only
+    # ORT_LIB_LOCATION set, ort-sys 2.0.0-rc.11's build script
+    # (build/main.rs:45-57) falls through to static_link(), which looks for .a
+    # archives; nixpkgs ships shared objects only, so it reports "could not link
+    # to the ONNX Runtime build in <dir>". build/dynamic_link.rs:6 gates the
+    # dynamic path on this variable being exactly "1" or "true".
+    ORT_STRATEGY = "system";
+    ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
+    ORT_PREFER_DYNAMIC_LINK = "1";
+    ORT_SKIP_DOWNLOAD = "1";
+
     # ruvector-postgres is one member of the RuVector cargo workspace.
     cargoPgrxFlags = ["-p" "ruvector-postgres"];
 
-    # This exact feature set is what makes the build satisfy all 188 symbols the
-    # live catalog binds; a narrower build resolves only 146 of them.
+    # Blueprint §17 step 4 (line 5576) requires pg17, index-all, quant-all,
+    # graph-complete, ai-complete-v3, analytics-complete and all-features-v3, and
+    # requires verifying "graph, BM25, GNN, FastGRNN, SONA, MinCut, workers, and
+    # all function families".
+    #
+    # The previous list omitted ai-complete-v3/all-features-v3, and with them the
+    # `embeddings`, `learning`, `gnn` and `routing` gates. Measured against the
+    # live catalog that build bound only 192 functions with embeddings=1
+    # (ruvector_embed absent), integrity/MinCut=0 and BM25=0 — so no semantic
+    # layer could be built on it at all.
+    #
+    # all-features-v3 transitively covers all-features (ai-complete +
+    # graph-complete + embeddings), analytics-complete, ai-complete-v3 and
+    # domain-expansion; graph-complete carries `sparse`, which is what exposes
+    # pg_sparse_bm25. simd-auto matches line 1059's "full installation uses
+    # pg17, SIMD, ... real embeddings ... solver, math, and TDA paths".
     buildFeatures = [
       "pg17"
+      "simd-auto"
       "index-all"
       "quant-all"
-      "graph-complete"
-      "gated-transformer"
-      "analytics-complete"
-      "attention-extended"
-      "sona-learning"
-      "domain-expansion"
+      "all-features-v3"
     ];
 
     doCheck = false;
@@ -85,6 +119,16 @@ in
     # install scripts and both upgrade edges remain available for existing
     # databases.
     postInstall = ''
+      # Preserve pgrx's generated install script before anything overwrites it.
+      # It is the only artifact that reflects buildFeatures: the substitution
+      # below pins the binding surface to the checked-in 0.3.0 script (190
+      # functions), which is why the live catalog bound 192 functions regardless
+      # of which features were compiled into the shared object.
+      if [ -f "$out/share/postgresql/extension/ruvector--0.3.1.sql" ]; then
+        install -m 0444 "$out/share/postgresql/extension/ruvector--0.3.1.sql" \
+          "$out/share/postgresql/extension/ruvector--0.3.1-pgrx-generated.sql"
+      fi
+
       for sql in crates/ruvector-postgres/sql/ruvector--0.1.0.sql \
         crates/ruvector-postgres/sql/ruvector--0.3.0.sql \
         crates/ruvector-postgres/sql/ruvector--0.3.0--0.3.1.sql \
@@ -94,20 +138,38 @@ in
       done
 
       # pgrx 0.12 serializes Rust JsonB default expressions literally, which
-      # makes its generated fresh-install script invalid SQL. Build the 0.3.1
-      # base from the maintained 0.3.0 script and append only the new binding;
-      # the generated schema remains a compile-time entity-graph check.
+      # makes exactly ONE line of its generated script invalid SQL:
+      #   "config_json" jsonb DEFAULT JsonB(serde_json::json!({}))
+      # The previous recipe responded by discarding the generated script and
+      # substituting the maintained 0.3.0 script. That capped the extension's
+      # bound surface at 190 functions no matter which features were compiled,
+      # which is why the live catalog exposed no ruvector_embed, no MinCut and
+      # no BM25 while the shared object contained their symbols.
+      #
+      # Repair that one default instead of discarding 3,821 lines of correct
+      # schema. The generated script declares 314 functions — including
+      # ruvector_shake256_256, so the manual append is no longer needed; only
+      # its grants are still applied.
       current_sql="$out/share/postgresql/extension/ruvector--0.3.1.sql"
-      install -m 0644 \
-        crates/ruvector-postgres/sql/ruvector--0.3.0.sql \
+      sed -i \
+        's|DEFAULT JsonB(serde_json::json!({}))|DEFAULT '"'"'{}'"'"'::jsonb|g' \
         "$current_sql"
+
+      if grep -q 'serde_json::json!' "$current_sql"; then
+        echo "ERROR: unrepaired Rust default expression remains in $current_sql" >&2
+        grep -n 'serde_json::json!' "$current_sql" >&2
+        exit 1
+      fi
+      if ! grep -q 'ruvector_embed' "$current_sql"; then
+        echo "ERROR: generated script lacks ruvector_embed; feature set regressed" >&2
+        exit 1
+      fi
+
       printf '%s\n' \
         "" \
-        "-- Cryptographic SHAKE256-256 binding added in RuVector 0.3.1." \
-        "CREATE FUNCTION ruvector_shake256_256(input bytea)" \
-        "RETURNS bytea" \
-        "AS 'MODULE_PATHNAME', 'ruvector_shake256_256_wrapper'" \
-        "LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;" \
+        "REVOKE EXECUTE ON FUNCTION ruvector_shake256_256(bytea) FROM PUBLIC;" \
+        "GRANT EXECUTE ON FUNCTION ruvector_shake256_256(bytea)" \
+        "  TO lifeos_migrator, lifeos_envctl, lifeos_runtime;" \
         >> "$current_sql"
       chmod 0444 "$current_sql"
 
