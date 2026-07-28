@@ -914,7 +914,7 @@
       };
       flexnetosCodex = import ./packaging/codex_cli_release.nix {
         inherit pkgs system;
-        version = "0.144.0";
+        version = "0.145.0";
       };
       flexnetosGitKb = import ./packaging/git_kb_release.nix {
         inherit pkgs;
