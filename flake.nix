@@ -231,6 +231,7 @@
         stackPromptGuard = "${./nushell/config/stack_prompt_guard.nu}";
         flexnetosInit = "${./nushell/scripts/flexnetos_init.nu}";
         profileNu = "/home/flexnetos/.nix-profile/toolbin/nu";
+        rtkWrappers = "${./nushell/config/rtk_wrappers.nu}";
       };
       yzxNuConfig = pkgs.runCommand "yzx-nu-config" {} ''
         install -D -m 644 ${yzxNuConfigNu} "$out/config.nu"
@@ -1455,7 +1456,7 @@
         postBuild = ''
           install -D -m 644 ${flexnetosZellijLayout}/layout.kdl \
             "$out/configs/zellij/layouts/flexnetos_agent_workspace.kdl"
-          install -D -m 644 ${./nushell/config/config.nu} "$out/nushell/config/config.nu"
+          install -D -m 644 ${flexnetosNuConfig} "$out/nushell/config/config.nu"
           install -D -m 644 ${./nushell/config/stack_prompt_guard.nu} "$out/nushell/config/stack_prompt_guard.nu"
           install -D -m 644 ${./nushell/config/rtk_wrappers.nu} "$out/nushell/config/rtk_wrappers.nu"
           install -D -m 644 ${./nushell/scripts/flexnetos_init.nu} "$out/nushell/scripts/flexnetos_init.nu"
