@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Package RuVector PostgreSQL 0.3.1 through a fixed Nix source patch that adds
+  the native `rvf_crypto::shake256_256` SQL binding and the 0.3.0-to-0.3.1
+  extension upgrade. Fresh installs use the maintained valid base SQL plus the
+  new binding, avoiding pgrx 0.12's invalid serialization of Rust `JsonB`
+  default expressions; existing databases keep their historical install and
+  upgrade scripts.
+
 - Update the profile-owned Claude Code binary from 2.1.207 to 2.1.220 (latest
   release channel). `packaging/claude_code_release.nix` gains the 2.1.220
   per-platform checksum row and its default version bumps; the `flexnetosClaude`
