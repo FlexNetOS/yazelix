@@ -45,7 +45,7 @@ new file mode 100644
 index 0000000..c8112c5
 --- /dev/null
 +++ b/crates/ruvector-postgres/sql/ruvector--0.3.0--0.3.1.sql
-@@ -0,0 +1,9 @@
+@@ -0,0 +1,13 @@
 +-- RuVector PostgreSQL Extension v0.3.1 Upgrade Script
 +-- Adds the canonical RVF SHAKE256-256 digest primitive.
 +
@@ -55,6 +55,10 @@ index 0000000..c8112c5
 +RETURNS bytea
 +AS 'MODULE_PATHNAME', 'ruvector_shake256_256_wrapper'
 +LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
++
++REVOKE EXECUTE ON FUNCTION ruvector_shake256_256(bytea) FROM PUBLIC;
++GRANT EXECUTE ON FUNCTION ruvector_shake256_256(bytea)
++  TO lifeos_migrator, lifeos_envctl, lifeos_runtime;
 diff --git a/crates/ruvector-postgres/src/bin/pgrx_embed.rs b/crates/ruvector-postgres/src/bin/pgrx_embed.rs
 index c8d4433..1fb4c43 100644
 --- a/crates/ruvector-postgres/src/bin/pgrx_embed.rs
