@@ -517,6 +517,7 @@
       flexnetosCcboard = "${flexnetosLinuxYaziRuntimeTools}/share/yazelix_yazi_assets/runtime_tools/ccboard/bin/ccboard";
       flexnetosCodedb = "${flexnetosLinuxYaziRuntimeTools}/share/yazelix_yazi_assets/runtime_tools/codedb/bin/codedb";
       flexnetosNuPluginCodedb = "${flexnetosLinuxYaziRuntimeTools}/share/yazelix_yazi_assets/runtime_tools/codedb/bin/nu_plugin_codedb";
+      flexnetosRedbOwner = "${flexnetosLinuxYaziRuntimeTools}/share/yazelix_yazi_assets/runtime_tools/codedb/bin/flexnetos-redb-owner";
       flexnetosLayoutTemplate = pkgs.runCommand "flexnetos-agent-workspace-template.kdl" {} ''
         substitute ${./defaults/zellij/flexnetos_agent_workspace.kdl} "$out" \
           --replace-fail '@yazi@' '${yzxYazi}/bin/yzx-yazi' \
@@ -1117,6 +1118,7 @@
         envctl = "${flexnetosEnvctl}/bin/envctl";
         file = "${pkgs.file}/bin/file";
         find = "${pkgs.findutils}/bin/find";
+        flexnetos-redb-owner = flexnetosRedbOwner;
         fxrun = "${flexnetosRunner}/bin/fxrun";
         "fxrun-dispatch" = "${flexnetosRunner}/bin/fxrun-dispatch";
         yazelix_host_policy = "${flexnetosHostPolicy}/bin/yazelix_host_policy";
@@ -2141,6 +2143,7 @@
         test -x ${foundation}/bin/ccboard
         test -x ${foundation}/bin/codedb
         test -x ${foundation}/bin/nu_plugin_codedb
+        test -x ${foundation}/bin/flexnetos-redb-owner
         test -x ${foundation}/bin/fxrun
         test ! -e ${foundation}/bin/fxrun-actions
         test -x ${foundation}/bin/fxrun-dispatch
