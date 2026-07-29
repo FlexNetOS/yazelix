@@ -1066,8 +1066,8 @@
         tool = name;
         inherit payload;
         realHome = "/home/flexnetos";
-        dataHome = "/home/flexnetos/meta/var/lib";
-        stateHome = "/home/flexnetos/meta/var/lib";
+        dataHome = "/home/flexnetos/meta/var/xdg-data";
+        stateHome = "/home/flexnetos/meta/var/xdg-state";
         cacheHome = "/run/user/1001/yazelix/volatile/cache";
         runtimeDir = "/run/user/1001";
         yazelixStateDir = "/run/user/1001/yazelix/profile-runtime/yazelix";

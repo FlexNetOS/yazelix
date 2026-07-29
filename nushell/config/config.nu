@@ -27,8 +27,8 @@ if (($env.HOME? | default "") == "/home/flexnetos") {
     # and for starship's log dir, which must survive a reboot and always be
     # writable regardless of XDG_CACHE_HOME export order.
     let durable_cache = "/home/flexnetos/.cache"
-    let profile_data = "/home/flexnetos/meta/var/lib"
-    let profile_state = "/home/flexnetos/meta/var/lib"
+    let profile_data = "/home/flexnetos/meta/var/xdg-data"
+    let profile_state = "/home/flexnetos/meta/var/xdg-state"
     let yazelix_state = "/run/user/1001/yazelix/profile-runtime/yazelix"
     for path in [$volatile_cache $volatile_tmp $cargo_home $cargo_target $rustup_home $durable_cache $profile_data $profile_state $yazelix_state] {
         mkdir $path
