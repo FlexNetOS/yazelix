@@ -1,12 +1,16 @@
 use std::{collections::BTreeSet, fs, path::Path};
 
 use ratconfig::{
-    ConfigUiApplyStatus, ConfigUiField, ConfigUiTomlDocumentSpec, build_toml_document_fields,
+    ConfigUiApplyStatus, ConfigUiCapability, ConfigUiChoice, ConfigUiField, ConfigUiOverride,
+    ConfigUiResolvedValue, ConfigUiTomlDocumentSpec, build_toml_document_fields,
     toml_adapter::{set_toml_value_text, unset_toml_value_text},
 };
 use serde_json::Value as JsonValue;
+use toml::Value as TomlValue;
 
 use crate::{catalog::*, common::*, paths::ConfigPaths};
+
+const YAZI_NATIVE_DARK_LABEL: &str = "default";
 
 pub(crate) fn build_yazi_fields(paths: &ConfigPaths) -> Result<Vec<ConfigUiField>> {
     let packaged = fs::read_to_string(paths.packaged_yazi.join("yazi.toml"))?;
@@ -17,30 +21,98 @@ pub(crate) fn build_yazi_fields(paths: &ConfigPaths) -> Result<Vec<ConfigUiField
         &current,
         &packaged,
     ))
-    .map_err(error)?;
+    .map_err(|source| error(source.to_string()))?;
     let theme = read_optional_text(&paths.yazi_theme)?;
     let mut appearance = build_toml_document_fields(document(
         SOURCE_YAZI_THEME,
         "Appearance",
         &theme,
-        YAZI_THEME_STARTER,
+        YAZI_THEME_BASELINE,
     ))
-    .map_err(error)?;
+    .map_err(|source| error(source.to_string()))?;
     let flavors = discovered_flavors(paths)?;
     for field in &mut appearance.fields {
-        let label = match field.path.as_str() {
-            "flavor.dark" => "Dark flavor",
-            "flavor.light" => "Light flavor",
+        let (label, choices, native_default) = match field.path.as_str() {
+            "flavor.dark" => ("Dark flavor", &flavors.dark, true),
+            "flavor.light" => ("Light flavor", &flavors.light, false),
             _ => continue,
         };
+        let mut available = Vec::with_capacity(choices.len() + usize::from(native_default));
+        if native_default {
+            available.push(ConfigUiChoice {
+                value: JsonValue::Null,
+                label: Some(YAZI_NATIVE_DARK_LABEL.to_string()),
+            });
+        }
+        available.extend(choices.iter().cloned().map(|value| {
+            ConfigUiChoice {
+                label: (native_default && value == YAZI_NATIVE_DARK_LABEL)
+                    .then(|| "default (installed flavor)".to_string()),
+                value: JsonValue::String(value),
+            }
+        }));
         field.display_label = label.to_string();
-        field.kind = "string".to_string();
-        field.allowed_values.clone_from(&flavors);
-        field.validation = "installed packaged or user flavor".to_string();
-        field.description =
-            format!("{label} from native yazi/theme.toml. Reset uses Yazi's default theme.");
+        field.type_label = Some("string".to_string());
+        field.capability = if available.is_empty() {
+            ConfigUiCapability::ReadOnly {
+                reason: format!("No installed {label} choices were discovered."),
+                file_action_id: Some(ACTION_YAZI_THEME.to_string()),
+            }
+        } else {
+            ConfigUiCapability::Choice { choices: available }
+        };
+        field.can_unset = matches!(field.snapshot.intent, ConfigUiOverride::Explicit(_));
+        if let ConfigUiOverride::Explicit(value) = &field.snapshot.intent {
+            if value
+                .as_str()
+                .is_some_and(|value| choices.iter().any(|flavor| flavor == value))
+            {
+                field.snapshot.effective = Some(ConfigUiResolvedValue {
+                    value: value.clone(),
+                    origin: Some("User yazi/theme.toml".to_string()),
+                });
+            } else {
+                field.snapshot.intent = ConfigUiOverride::Invalid {
+                    input: value.to_string(),
+                };
+                field.snapshot.effective = None;
+            }
+        }
+        field.snapshot.baseline = match field.path.as_str() {
+            "flavor.dark" => Some(ConfigUiResolvedValue {
+                value: JsonValue::Null,
+                origin: Some("Yazi native preset".to_string()),
+            }),
+            "flavor.light" => flavors
+                .default_light
+                .as_ref()
+                .map(|flavor| ConfigUiResolvedValue {
+                    value: JsonValue::String(flavor.clone()),
+                    origin: Some("Yazelix appearance default".to_string()),
+                }),
+            _ => None,
+        };
+        if matches!(field.snapshot.intent, ConfigUiOverride::Absent) {
+            field
+                .snapshot
+                .effective
+                .clone_from(&field.snapshot.baseline);
+        }
+        field.validation = if native_default {
+            "default (Yazi native preset) or an installed dark flavor"
+        } else {
+            "installed light flavor"
+        }
+        .to_string();
+        field.description = if native_default {
+            "Dark flavor from native yazi/theme.toml. Packaged choices follow Yazi Bistro's classification; user-installed flavors appear in both pools. Selecting default removes flavor.dark and uses Yazi's native preset."
+        } else {
+            "Light flavor from native yazi/theme.toml. Packaged choices follow Yazi Bistro's classification; user-installed flavors appear in both pools. Reset inherits Yazelix's packaged light default."
+        }
+        .to_string();
     }
     appearance.fields.extend(settings.fields);
+    remove_toml_parent_fields(&mut appearance.fields);
     Ok(appearance.fields)
 }
 
@@ -52,15 +124,23 @@ pub(crate) fn write_yazi_field(
 ) -> Result<()> {
     let path = yazi_source_path(paths, source_id)?;
     paths.reject_mutation(path, source_id)?;
+    if source_id == SOURCE_YAZI_THEME && field_path == "flavor.dark" && value.is_null() {
+        return unset_yazi_path(path, field_path);
+    }
     if matches!(field_path, "flavor.dark" | "flavor.light") {
         let flavors = discovered_flavors(paths)?;
+        let choices = if field_path == "flavor.dark" {
+            &flavors.dark
+        } else {
+            &flavors.light
+        };
         if !value
             .as_str()
-            .is_some_and(|value| flavors.iter().any(|flavor| flavor == value))
+            .is_some_and(|value| choices.iter().any(|flavor| flavor == value))
         {
             return Err(error(format!(
                 "{field_path} must name an installed flavor: {}",
-                flavors.join(", ")
+                choices.join(", ")
             )));
         }
     }
@@ -77,6 +157,10 @@ pub(crate) fn unset_yazi_field(
 ) -> Result<()> {
     let path = yazi_source_path(paths, source_id)?;
     paths.reject_mutation(path, source_id)?;
+    unset_yazi_path(path, field_path)
+}
+
+fn unset_yazi_path(path: &Path, field_path: &str) -> Result<()> {
     if !path_entry_exists(path)? {
         return Ok(());
     }
@@ -102,7 +186,7 @@ fn document<'a>(
         tab: TAB_YAZI,
         section_label,
         current_toml,
-        default_toml: Some(default_toml),
+        baseline_toml: Some(default_toml),
         validation: "native TOML value of the existing type",
         rebuild_required: false,
         apply_status: ConfigUiApplyStatus {
@@ -123,28 +207,82 @@ fn yazi_source_path<'a>(paths: &'a ConfigPaths, source_id: &str) -> Result<&'a P
     }
 }
 
-fn discovered_flavors(paths: &ConfigPaths) -> Result<Vec<String>> {
-    let mut names = BTreeSet::new();
-    for directory in [
-        paths.packaged_yazi.join("flavors"),
-        paths.yazi_config.with_file_name("flavors"),
-    ] {
-        if !directory.is_dir() {
-            continue;
-        }
-        for entry in fs::read_dir(directory)? {
-            let path = entry?.path();
-            let Some(name) = path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .and_then(|name| name.strip_suffix(".yazi").filter(|name| !name.is_empty()))
-            else {
-                continue;
-            };
-            if path.join("flavor.toml").is_file() {
-                names.insert(name.to_string());
+struct FlavorPools {
+    dark: Vec<String>,
+    light: Vec<String>,
+    default_light: Option<String>,
+}
+
+fn discovered_flavors(paths: &ConfigPaths) -> Result<FlavorPools> {
+    let packaged = flavor_names(&paths.packaged_yazi.join("flavors"))?;
+    let user = flavor_names(&paths.yazi_config.with_file_name("flavors"))?;
+    let mut dark = user.clone();
+    let mut light = user;
+    let mut default_light = None;
+    if !packaged.is_empty() {
+        let catalog_path = paths.packaged_yazi.join("catalog.toml");
+        let catalog: TomlValue = toml::from_str(&fs::read_to_string(&catalog_path)?)
+            .map_err(|source| error(format!("invalid Yazi Bistro catalog: {source}")))?;
+        let light_default = catalog
+            .get("default_light")
+            .and_then(TomlValue::as_str)
+            .ok_or_else(|| error("Yazi Bistro catalog is missing its light default"))?
+            .to_string();
+        let flavors = catalog
+            .get("flavors")
+            .and_then(TomlValue::as_table)
+            .ok_or_else(|| error("Yazi Bistro catalog is missing its flavors table"))?;
+        for name in packaged {
+            let mode = flavors
+                .get(&name)
+                .and_then(|flavor| flavor.get("mode"))
+                .and_then(TomlValue::as_str)
+                .ok_or_else(|| error(format!("Yazi Bistro catalog does not classify {name}")))?;
+            match mode {
+                "dark" => {
+                    dark.insert(name);
+                }
+                "light" => {
+                    light.insert(name);
+                }
+                _ => {
+                    return Err(error(format!(
+                        "Yazi Bistro catalog has invalid mode for {name}"
+                    )));
+                }
             }
         }
+        if !light.contains(&light_default) {
+            return Err(error(
+                "Yazi Bistro light default is not an installed light flavor",
+            ));
+        }
+        default_light = Some(light_default);
     }
-    Ok(names.into_iter().collect())
+    Ok(FlavorPools {
+        dark: dark.into_iter().collect(),
+        light: light.into_iter().collect(),
+        default_light,
+    })
+}
+
+fn flavor_names(directory: &Path) -> Result<BTreeSet<String>> {
+    let mut names = BTreeSet::new();
+    if !directory.is_dir() {
+        return Ok(names);
+    }
+    for entry in fs::read_dir(directory)? {
+        let path = entry?.path();
+        let Some(name) = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .and_then(|name| name.strip_suffix(".yazi").filter(|name| !name.is_empty()))
+        else {
+            continue;
+        };
+        if path.join("flavor.toml").is_file() {
+            names.insert(name.to_string());
+        }
+    }
+    Ok(names)
 }

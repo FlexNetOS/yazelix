@@ -1,5 +1,7 @@
 use std::{
-    env, fs, io,
+    env,
+    ffi::OsStr,
+    fs, io,
     path::{Path, PathBuf},
     process::{self, Command},
     time::{SystemTime, UNIX_EPOCH},
@@ -12,11 +14,11 @@ use crate::{
     catalog::*,
     common::*,
     native_config::{
-        restore_cursor_config_field, unset_mars_config_field, unset_starship_config_field,
+        unset_cursor_config_field, unset_mars_config_field, unset_starship_config_field,
         write_cursor_config_field, write_mars_config_field, write_starship_config_field,
     },
     paths::ConfigPaths,
-    root_config::{unset_config_field, write_config_field},
+    root_config::{config_field, read_config_field, unset_config_field, write_config_field},
     yazi_config::{unset_yazi_field, write_yazi_field},
     zellij_sidecar::{unset_zellij_config_field, write_zellij_config_field},
 };
@@ -56,6 +58,15 @@ pub(crate) fn build_file_actions(paths: &ConfigPaths) -> Vec<ConfigUiFileAction>
 }
 fn file_action_specs(paths: &ConfigPaths) -> impl IntoIterator<Item = FileActionSpec> {
     [
+        FileActionSpec {
+            source_id: SOURCE_CONFIG,
+            action_id: ACTION_ROOT_CONFIG,
+            tab: TAB_ADVANCED,
+            label: "config.toml",
+            description: "Open the complete Yazelix config file.",
+            path: paths.root.clone(),
+            starter: "",
+        },
         FileActionSpec {
             source_id: SOURCE_CURSORS,
             action_id: ACTION_CURSORS_CONFIG,
@@ -165,6 +176,15 @@ fn file_action_specs(paths: &ConfigPaths) -> impl IntoIterator<Item = FileAction
             starter: YAZI_THEME_STARTER,
         },
         FileActionSpec {
+            source_id: SOURCE_ZELLIJ,
+            action_id: ACTION_ZELLIJ_CONFIG,
+            tab: TAB_ZELLIJ,
+            label: "zellij/config.kdl",
+            description: "Open the native Zellij sidecar for settings outside the curated editor.",
+            path: paths.zellij.clone(),
+            starter: ZELLIJ_CONFIG_STARTER,
+        },
+        FileActionSpec {
             source_id: SOURCE_ADVANCED,
             action_id: ACTION_ZELLIJ_PLUGINS,
             tab: TAB_ADVANCED,
@@ -224,7 +244,7 @@ pub(crate) fn write_source_default(
         }
         SOURCE_CURSORS => {
             paths.reject_mutation(&paths.cursors, source_id)?;
-            restore_cursor_config_field(&paths.cursors, field_path)
+            unset_cursor_config_field(&paths.cursors, field_path)
         }
         SOURCE_STARSHIP => {
             paths.reject_mutation(&paths.starship, source_id)?;
@@ -238,6 +258,134 @@ pub(crate) fn write_source_default(
         _ => Err(error(format!("unknown config source: {source_id}"))),
     }
 }
+
+#[derive(Debug, PartialEq)]
+pub(crate) enum MarsAppearanceProjection {
+    Config,
+    Environment(String),
+}
+
+#[derive(Debug, PartialEq)]
+pub(crate) enum ZellijAppearanceProjection {
+    Live,
+    NextLaunch,
+}
+
+#[derive(Debug, PartialEq)]
+pub(crate) struct AppearanceProjection {
+    pub(crate) mars: Option<MarsAppearanceProjection>,
+    pub(crate) zellij: ZellijAppearanceProjection,
+}
+
+pub(crate) fn project_mars_appearance(paths: &ConfigPaths) -> Result<MarsAppearanceProjection> {
+    let mode = read_config_field(&paths.root, config_field(APPEARANCE_MODE_PATH)?)?;
+    let value = JsonValue::String(mode.clone());
+
+    if paths.is_home_manager_owned(&paths.mars)
+        || fs::symlink_metadata(&paths.mars).is_ok_and(|metadata| metadata.is_symlink())
+        || path_read_only(&paths.mars)
+    {
+        return Ok(MarsAppearanceProjection::Environment(mode));
+    }
+
+    paths.reject_mutation(&paths.mars, SOURCE_MARS)?;
+    write_mars_config_field(&paths.mars, MARS_APPEARANCE_PRESET_PATH, &value)?;
+    Ok(MarsAppearanceProjection::Config)
+}
+
+pub(crate) fn write_config_ui(
+    paths: &ConfigPaths,
+    source_id: &str,
+    field_path: &str,
+    value: Option<&JsonValue>,
+    mars_included: bool,
+    apply_zellij_live: bool,
+) -> Result<Option<AppearanceProjection>> {
+    match value {
+        Some(value) => write_source_field(paths, source_id, field_path, value),
+        None => write_source_default(paths, source_id, field_path),
+    }?;
+    if source_id != SOURCE_CONFIG || field_path != APPEARANCE_MODE_PATH {
+        return Ok(None);
+    }
+    let mode = read_config_field(&paths.root, config_field(APPEARANCE_MODE_PATH)?)?;
+    let mut failures = Vec::new();
+    let mars = if mars_included {
+        match project_mars_appearance(paths) {
+            Ok(projection) => Some(projection),
+            Err(source) => {
+                failures.push(format!("could not update Mars: {source}"));
+                None
+            }
+        }
+    } else {
+        None
+    };
+    let zellij_result = if apply_zellij_live {
+        apply_zellij_appearance(&mode)
+    } else {
+        Ok(ZellijAppearanceProjection::NextLaunch)
+    };
+    let zellij = match zellij_result {
+        Ok(projection) => projection,
+        Err(source) => {
+            failures.push(format!("could not update Zellij and the bar: {source}"));
+            ZellijAppearanceProjection::NextLaunch
+        }
+    };
+    if failures.is_empty() {
+        Ok(Some(AppearanceProjection { mars, zellij }))
+    } else {
+        Err(error(format!(
+            "Updated {APPEARANCE_MODE_PATH}, but {}. The saved mode remains authoritative; the next managed launch will retry.",
+            failures.join("; ")
+        )))
+    }
+}
+
+fn apply_zellij_appearance(mode: &str) -> Result<ZellijAppearanceProjection> {
+    let session = managed_zellij_session();
+    let managed_state = nonempty_env("YAZELIX_STATE_DIR");
+    let (Some(session), Some(_)) = (session, managed_state) else {
+        return Ok(ZellijAppearanceProjection::NextLaunch);
+    };
+    let command = nonempty_env("YZX_ZELLIJ")
+        .ok_or_else(|| error("YZX_ZELLIJ is unavailable in the managed session"))?;
+    apply_zellij_appearance_to(mode, &command, &session)
+}
+
+pub(crate) fn apply_zellij_appearance_to(
+    mode: &str,
+    command: &OsStr,
+    session: &OsStr,
+) -> Result<ZellijAppearanceProjection> {
+    let action = match mode {
+        "dark" => "set-dark-theme",
+        "light" => "set-light-theme",
+        _ => return Err(error(format!("unsupported appearance mode: {mode}"))),
+    };
+    let output = Command::new(command)
+        .arg("--session")
+        .arg(session)
+        .args(["action", action])
+        .output()
+        .map_err(|source| error(format!("failed to run `{action}`: {source}")))?;
+    if output.status.success() {
+        Ok(ZellijAppearanceProjection::Live)
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(error(format!(
+            "`{action}` failed with status {}{}",
+            output.status,
+            if stderr.trim().is_empty() {
+                String::new()
+            } else {
+                format!(": {}", stderr.trim())
+            }
+        )))
+    }
+}
+
 pub(crate) fn open_file_action(
     paths: &ConfigPaths,
     source_id: &str,
@@ -321,7 +469,7 @@ fn ensure_helix_steel_pair(paths: &ConfigPaths) -> Result<()> {
 fn configured_editor() -> Result<PathBuf> {
     ["YAZELIX_EDITOR", "VISUAL", "EDITOR"]
         .into_iter()
-        .find_map(|key| env::var_os(key).filter(|value| !value.is_empty()))
+        .find_map(nonempty_env)
         .map(PathBuf::from)
         .ok_or_else(|| error("no editor configured; set YAZELIX_EDITOR, VISUAL, or EDITOR"))
 }

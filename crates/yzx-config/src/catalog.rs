@@ -2,6 +2,7 @@ use ratconfig::DEFAULT_CONFIG_SOURCE_ID;
 
 pub(crate) const DEFAULT_CONFIG_TOML: &str = include_str!("../../../defaults/config.toml");
 
+pub(crate) const APPEARANCE_MODE_PATH: &str = "appearance.mode";
 pub(crate) const OPEN_LOG_LEVEL_PATH: &str = "open.log_level";
 pub(crate) const SHELL_PROGRAM_PATH: &str = "shell.program";
 pub(crate) const EDITOR_COMMAND_PATH: &str = "editor.command";
@@ -15,6 +16,7 @@ pub(crate) const WELCOME_DURATION_SECONDS_PATH: &str = "welcome.duration_seconds
 pub(crate) const WELCOME_STYLE_VALUES: &[&str] = &[
     "static",
     "logo",
+    "asciiquarium",
     "boids",
     "boids_predator",
     "boids_schools",
@@ -32,6 +34,7 @@ pub(crate) const KEYBINDINGS_CONFIG_PATH: &str = "keybindings.config";
 pub(crate) const KEYBINDINGS_AGENT_PATH: &str = "keybindings.agent";
 pub(crate) const KEYBINDINGS_GIT_PATH: &str = "keybindings.git";
 pub(crate) const KEYBINDINGS_MENU_PATH: &str = "keybindings.menu";
+pub(crate) const KEYBINDINGS_SCREEN_PATH: &str = "keybindings.screen";
 pub(crate) const KEYBINDINGS_SIDEBAR_PATH: &str = "keybindings.sidebar";
 pub(crate) const KEYBINDINGS_SIDEBAR_FOCUS_PATH: &str = "keybindings.sidebar_focus";
 pub(crate) const BAR_WIDGETS_PATH: &str = "bar.widgets";
@@ -46,7 +49,8 @@ pub(crate) const BAR_WIDGET_VALUES: &[&str] = &[
     "cpu",
     "ram",
 ];
-pub(crate) const ROOT_CONFIG_CORE_PATHS: &[&str] = &[
+pub(crate) const ROOT_CONFIG_RECOMMENDED_PATHS: &[&str] = &[
+    APPEARANCE_MODE_PATH,
     SHELL_PROGRAM_PATH,
     EDITOR_COMMAND_PATH,
     AGENT_COMMAND_PATH,
@@ -56,15 +60,48 @@ pub(crate) const ROOT_CONFIG_CORE_PATHS: &[&str] = &[
     KEYBINDINGS_AGENT_PATH,
     KEYBINDINGS_GIT_PATH,
     KEYBINDINGS_MENU_PATH,
+    KEYBINDINGS_SCREEN_PATH,
     KEYBINDINGS_SIDEBAR_PATH,
     KEYBINDINGS_SIDEBAR_FOCUS_PATH,
     BAR_WIDGETS_PATH,
 ];
+pub(crate) const ZELLIJ_RECOMMENDED_PATHS: &[&str] = &[
+    "theme_dark",
+    "theme_light",
+    "pane_frames",
+    "mouse_mode",
+    "copy_on_select",
+    "ui.pane_frames.rounded_corners",
+];
 pub(crate) const DEFAULT_MARS_CONFIG_TOML: &str =
     include_str!("../../../defaults/mars/config.toml");
 pub(crate) const MARS_APPEARANCE_PRESET_PATH: &str = "mars.appearance.preset";
+pub(crate) const MARS_RECOMMENDED_PATHS: &[&str] = &[
+    "window.width",
+    "window.height",
+    "window.mode",
+    "window.decorations",
+    "window.opacity",
+    "window.opacity-cells",
+    "window.blur",
+    "fonts.family",
+    "fonts.size",
+    "line-height",
+    "confirm-before-quit",
+    "copy-on-select",
+    "hide-mouse-cursor-when-typing",
+    "bell.audio",
+    "bell.visual",
+];
 pub(crate) const CURSOR_ENABLED_PATH: &str = "enabled_cursors";
 pub(crate) const CURSOR_TRAIL_PATH: &str = "settings.trail";
+pub(crate) const CURSOR_RECOMMENDED_PATHS: &[&str] = &[
+    CURSOR_ENABLED_PATH,
+    CURSOR_TRAIL_PATH,
+    "settings.trail_effect",
+    "settings.mode_effect",
+    "settings.glow",
+];
 pub(crate) const DEFAULT_STARSHIP_CONFIG_TOML: &str = "\
 [character]
 format = \":: \"
@@ -93,6 +130,7 @@ pub(crate) const TAB_KEYS: &str = " keys";
 pub(crate) const TAB_ADVANCED: &str = "advanced";
 
 pub(crate) const ACTION_HELIX_CONFIG: &str = "helix.config";
+pub(crate) const ACTION_ROOT_CONFIG: &str = "config.root";
 pub(crate) const ACTION_CURSORS_CONFIG: &str = "cursors.config";
 pub(crate) const ACTION_HELIX_LANGUAGES: &str = "helix.languages";
 pub(crate) const ACTION_HELIX_MODULE: &str = "helix.module";
@@ -104,6 +142,7 @@ pub(crate) const ACTION_YAZI_INIT: &str = "yazi.init";
 pub(crate) const ACTION_YAZI_KEYMAP: &str = "yazi.keymap";
 pub(crate) const ACTION_YAZI_PACKAGE: &str = "yazi.package";
 pub(crate) const ACTION_YAZI_THEME: &str = "yazi.theme";
+pub(crate) const ACTION_ZELLIJ_CONFIG: &str = "zellij.config";
 pub(crate) const ACTION_ZELLIJ_PLUGINS: &str = "zellij.plugins";
 pub(crate) const HELIX_CONFIG_STARTER: &str =
     "# User overrides layered over Yazelix Nova packaged Helix config.\n";
@@ -117,54 +156,21 @@ pub(crate) const YAZI_INIT_STARTER: &str = "-- Loaded after Yazelix Nova package
 pub(crate) const YAZI_KEYMAP_STARTER: &str =
     "# Loaded after Yazelix Nova packaged yazi/keymap.toml.\n";
 pub(crate) const YAZI_PACKAGE_STARTER: &str = "# Managed Yazi package metadata. Yazelix does not run ya pkg.\n[plugin]\ndeps = []\n\n[flavor]\ndeps = []\n";
-pub(crate) const YAZI_THEME_STARTER: &str =
+pub(crate) const YAZI_THEME_BASELINE: &str =
     "# Managed native Yazi theme config.\n[flavor]\ndark = \"\"\nlight = \"\"\n";
+pub(crate) const YAZI_THEME_STARTER: &str = "# Managed native Yazi theme config.\n";
+pub(crate) const ZELLIJ_CONFIG_STARTER: &str =
+    "// Sparse native Zellij overrides layered over Yazelix packaged configuration.\n";
 pub(crate) const ZELLIJ_PLUGINS_STARTER: &str = "// Extra managed Zellij plugins. Do not declare yzpp or yazelix_pane_orchestrator here.\nplugins {\n}\n\nload_plugins {\n}\n";
 pub(crate) const KEY_READ_ONLY_REASON: &str =
     "Read-only key binding; yzx config does not rewrite native keymaps.";
-
-pub(crate) const CURSOR_FIELDS: &[FieldSpec] = &[
-    FieldSpec::string_list(
-        CURSOR_ENABLED_PATH,
-        "Cursor definitions available to fixed and random selection.",
-        "names from this cursors.toml",
-    ),
-    FieldSpec::string_choice(
-        CURSOR_TRAIL_PATH,
-        "Cursor palette selection.",
-        &[],
-        "enabled cursor name, random, or none",
-    ),
-    FieldSpec::string_choice(
-        "settings.trail_effect",
-        "Cursor movement effect for compatible consumers.",
-        &[],
-        "supported trail effect, random, or none",
-    ),
-    FieldSpec::string_choice(
-        "settings.mode_effect",
-        "Cursor mode-change effect for compatible consumers.",
-        &[],
-        "supported mode effect, random, or none",
-    ),
-    FieldSpec::string_choice(
-        "settings.glow",
-        "Cursor effect glow for compatible consumers.",
-        &[],
-        "supported glow level",
-    ),
-    FieldSpec::float(
-        "settings.duration",
-        "Cursor movement duration multiplier for compatible consumers.",
-        "number from 0.25 to 4.0",
-    ),
-];
 
 pub(crate) const MANAGED_KEYBINDINGS: &[(&str, &str)] = &[
     (KEYBINDINGS_CONFIG_PATH, "Alt Shift K"),
     (KEYBINDINGS_AGENT_PATH, "Alt Shift L"),
     (KEYBINDINGS_GIT_PATH, "Alt Shift J"),
     (KEYBINDINGS_MENU_PATH, "Alt Shift M"),
+    (KEYBINDINGS_SCREEN_PATH, "Alt Shift S"),
     (KEYBINDINGS_SIDEBAR_PATH, "Alt Shift H"),
     (KEYBINDINGS_SIDEBAR_FOCUS_PATH, "Ctrl y"),
 ];
@@ -198,6 +204,7 @@ pub(crate) const KEY_BINDINGS: &[[&str; 5]] = &[
     key!("Popups"; "Alt Shift K"; "Toggle config popup"; "Yazelix"; "config.kdl"),
     key!("Popups"; "Alt Shift L"; "Hide or show agent popup"; "Yazelix"; "config.kdl"),
     key!("Popups"; "Alt Shift M"; "Toggle menu popup"; "Yazelix"; "config.kdl"),
+    key!("Popups"; "Alt Shift S"; "Show a random full-screen visual"; "Yazelix"; "config.kdl"),
     key!("Popups"; "Alt Shift Y"; "Hide or show Yazi popup"; "Yazelix"; "config.kdl"),
     key!("Sidebar"; "Alt Shift H"; "Toggle Yazi sidebar"; "Yazelix"; "config.kdl"),
     key!("File manager"; "Alt z"; "Retarget tab workspace with zoxide"; "Yazi"; "yazi/keymap.toml"),
@@ -207,6 +214,16 @@ pub(crate) const KEY_COLUMNS: &[(&str, usize)] =
     &[("group", 14), ("key", 20), ("action", 40), ("owner", 10)];
 
 pub(crate) const CONFIG_FIELDS: &[ConfigFieldSpec] = &[
+    ConfigFieldSpec {
+        field: FieldSpec::string_choice(
+            APPEARANCE_MODE_PATH,
+            "Appearance shared by managed Yazelix components.",
+            &["dark", "light"],
+            "dark or light",
+        ),
+        apply_summary: "live",
+        apply_detail: "Saved values update writable regular-file component config and apply on the next launch when a component config is externally managed or read-only.",
+    },
     ConfigFieldSpec {
         field: FieldSpec::string_choice(
             OPEN_LOG_LEVEL_PATH,
@@ -343,6 +360,16 @@ pub(crate) const CONFIG_FIELDS: &[ConfigFieldSpec] = &[
     },
     ConfigFieldSpec {
         field: FieldSpec::string_choice(
+            KEYBINDINGS_SCREEN_PATH,
+            "Key chord that opens a random full-screen visual.",
+            &[],
+            "key chord like Alt Shift A that does not conflict with a packaged binding",
+        ),
+        apply_summary: "next launch",
+        apply_detail: "Saved keybindings apply to newly launched Yazelix sessions.",
+    },
+    ConfigFieldSpec {
+        field: FieldSpec::string_choice(
             KEYBINDINGS_SIDEBAR_PATH,
             "Key chord that hides or shows the managed Yazi sidebar.",
             &[],
@@ -361,23 +388,6 @@ pub(crate) const CONFIG_FIELDS: &[ConfigFieldSpec] = &[
         apply_summary: "next launch",
         apply_detail: "Saved keybindings apply to newly launched Yazelix sessions.",
     },
-];
-
-pub(crate) const MARS_FIELDS: &[FieldSpec] = &[
-    FieldSpec::string_choice(
-        MARS_APPEARANCE_PRESET_PATH,
-        "Mars terminal appearance preset.",
-        &["dark", "light"],
-        "dark or light",
-    ),
-    FieldSpec::integer("window.width", "Initial Mars window width.", "pixels"),
-    FieldSpec::integer("window.height", "Initial Mars window height.", "pixels"),
-    FieldSpec::float("window.opacity", "Mars window opacity.", "0.0 to 1.0"),
-    FieldSpec::float("fonts.size", "Mars font size.", "points"),
-    FieldSpec::float("line-height", "Mars line height multiplier.", "multiplier"),
-    FieldSpec::boolean("enable-scroll-bar", "Show the Mars scrollbar."),
-    FieldSpec::boolean("bell.audio", "Play the Mars terminal bell."),
-    FieldSpec::boolean("bell.visual", "Flash the Mars visual bell."),
 ];
 
 pub(crate) const STARSHIP_FIELDS: &[FieldSpec] = &[FieldSpec::string_choice(
@@ -402,8 +412,14 @@ pub(crate) const ZELLIJ_FORBIDDEN_TOP_LEVEL: &[&str] = &[
 
 pub(crate) const ZELLIJ_FIELDS: &[FieldSpec] = &[
     FieldSpec::string_choice(
-        "theme",
-        "Zellij color theme. Custom names remain valid in the native sidecar.",
+        "theme_dark",
+        "Zellij theme used for dark Yazelix appearance. Custom names remain valid in the native sidecar.",
+        &[],
+        "packaged theme choice; custom sidecar names remain accepted",
+    ),
+    FieldSpec::string_choice(
+        "theme_light",
+        "Zellij theme used for light Yazelix appearance. Custom names remain valid in the native sidecar.",
         &[],
         "packaged theme choice; custom sidecar names remain accepted",
     ),
@@ -459,14 +475,6 @@ impl FieldSpec {
         validation: &'static str,
     ) -> Self {
         Self::new(path, "integer", description, &[], validation)
-    }
-
-    const fn float(
-        path: &'static str,
-        description: &'static str,
-        validation: &'static str,
-    ) -> Self {
-        Self::new(path, "float", description, &[], validation)
     }
 
     const fn string_choice(

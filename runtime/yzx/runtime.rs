@@ -16,7 +16,7 @@ use crate::{
     command::{
         create_dir_all_checked, run_checked, seed_permission_checked, touch_checked, trim_output,
     },
-    error::{path_error, startup, AppError},
+    error::{AppError, path_error, startup},
     paths::{config_home, home_dir, nonempty_env, parent, runtime_path, state_dir},
     yazi::YaziRuntime,
     zellij::{active_layout, active_zellij_config},
@@ -40,6 +40,7 @@ pub(crate) struct Runtime {
     mars_config_source: &'static str,
     pub(crate) zellij_sidecar: PathBuf,
     pub(crate) zellij_config: PathBuf,
+    pub(crate) appearance_mode: String,
     zellij_config_source: &'static str,
     pub(crate) layout: PathBuf,
     layout_source: &'static str,
@@ -113,6 +114,8 @@ impl Runtime {
         let welcome_style = config_value(&config_home, &config_toml, "welcome.style")?;
         let welcome_duration_seconds =
             config_value(&config_home, &config_toml, "welcome.duration_seconds")?;
+        let appearance_mode =
+            trim_output(config_value(&config_home, &config_toml, "appearance.mode")?);
         let bar_widgets = trim_output(config_value(&config_home, &config_toml, "bar.widgets")?);
         let popup_side_margin = trim_output(config_value(
             &config_home,
@@ -134,7 +137,8 @@ impl Runtime {
         )?;
         let agent_popup_kdl =
             config_value(&config_home, &config_toml, AGENT_POPUP_KDL_CONFIG_PATH)?;
-        let (layout_source, layout) = active_layout(&state_dir, &bar_widgets, &shell_program)?;
+        let (layout_source, layout) =
+            active_layout(&state_dir, &appearance_mode, &bar_widgets, &shell_program)?;
         let mars_config_source = if config_home.join("mars/config.toml").is_file() {
             "user"
         } else {
@@ -226,6 +230,7 @@ impl Runtime {
             mars_config_source,
             zellij_sidecar,
             zellij_config,
+            appearance_mode,
             zellij_config_source,
             layout,
             layout_source,
@@ -283,6 +288,18 @@ impl Runtime {
                 .env("YAZELIX_HELIX_BRIDGE_ROOT", &self.bridge_root);
         }
         Ok(())
+    }
+
+    pub(crate) fn project_mars_appearance(&self) -> Result<Option<String>, AppError> {
+        let mars_config = self.config_home.join("mars/config.toml");
+        let output = run_checked(
+            &mars_config,
+            Command::new(YZX_CONFIG)
+                .arg("--project-mars-appearance")
+                .env("YAZELIX_CONFIG_HOME", &self.config_home),
+        )?;
+        parse_mars_appearance_projection(&output)
+            .map_err(|reason| startup(reason, mars_config.display(), 1))
     }
 
     pub(crate) fn yazi(&self) -> &YaziRuntime {
@@ -343,6 +360,18 @@ fn effective_editor_command(command: &str) -> String {
         YZX_HELIX.to_string()
     } else {
         command.to_string()
+    }
+}
+
+fn parse_mars_appearance_projection(output: &str) -> Result<Option<String>, String> {
+    match output.trim() {
+        "config" => Ok(None),
+        "environment dark" => Ok(Some("dark".to_string())),
+        "environment light" => Ok(Some("light".to_string())),
+        _ => Err(format!(
+            "yzx-config returned an invalid Mars appearance projection: {}",
+            output.trim()
+        )),
     }
 }
 
@@ -411,5 +440,17 @@ mod tests {
             select_helix_bridge_root(None, None, state_dir),
             state_dir.join("helix_bridge")
         );
+    }
+
+    #[test]
+    fn mars_appearance_projection_is_strict() {
+        assert_eq!(parse_mars_appearance_projection("config\n"), Ok(None));
+        assert_eq!(
+            parse_mars_appearance_projection("environment light\n"),
+            Ok(Some("light".to_string()))
+        );
+        assert!(parse_mars_appearance_projection("environment auto").is_err());
+        assert!(parse_mars_appearance_projection("environment  light").is_err());
+        assert!(parse_mars_appearance_projection("config extra").is_err());
     }
 }

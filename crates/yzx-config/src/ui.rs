@@ -1,4 +1,4 @@
-use std::io;
+use std::{env, io};
 
 use crossterm::{
     cursor,
@@ -11,24 +11,26 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
-use ratconfig::{ConfigUiApp, ConfigUiIntent, ConfigUiKey, draw_config_ui};
+use ratconfig::{ConfigUiApp, ConfigUiFieldId, ConfigUiIntent, ConfigUiKey, draw_config_ui};
 
 use crate::{
     common::*,
     file_actions::{
-        edit_text_externally, open_file_action, write_source_default, write_source_field,
+        AppearanceProjection, MarsAppearanceProjection, ZellijAppearanceProjection,
+        edit_text_externally, open_file_action, write_config_ui,
     },
     model::build_model,
-    paths::ensure_config_sources,
+    paths::{ConfigPaths, ensure_config_sources},
 };
 
 const RESET_TERMINAL_BACKGROUND: &str = "\x1b]111\x07";
 
 pub(crate) fn run_ui() -> Result<()> {
     let paths = ensure_config_sources()?;
-    let mut app = ConfigUiApp::new(build_model(&paths)?);
+    let mut app = ConfigUiApp::try_new(build_model(&paths)?).map_err(error)?;
     let mut session = TerminalSession::enter()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
+    let mars_included = env::var("YAZELIX_MARS_INCLUDED").as_deref() == Ok("1");
 
     loop {
         terminal.draw(|frame| draw_config_ui(frame, &mut app))?;
@@ -38,18 +40,12 @@ pub(crate) fn run_ui() -> Result<()> {
         match app.handle_key(key) {
             ConfigUiIntent::Exit => break,
             ConfigUiIntent::None => {}
-            ConfigUiIntent::BeginEdit { field_index, .. } => app.begin_edit_field(field_index),
-            ConfigUiIntent::EditTextExternally {
-                field_index,
-                path,
-                input,
-                ..
-            } => {
-                let result = session.suspend(|| edit_text_externally(&path, &input))?;
+            ConfigUiIntent::EditTextExternally { field, input } => {
+                let result = session.suspend(|| edit_text_externally(&field.path, &input))?;
                 terminal.clear()?;
                 match result {
                     Ok(edited) => {
-                        if let Err(message) = app.apply_external_text_edit(field_index, edited) {
+                        if let Err(message) = app.apply_external_text_edit(&field, edited) {
                             app.notice_error(message);
                         }
                     }
@@ -71,44 +67,94 @@ pub(crate) fn run_ui() -> Result<()> {
                     open_file_action(&paths, &source_id, &action_id, &path, create_if_missing)
                 })?;
                 terminal.clear()?;
-                app.model = build_model(&paths)?;
+                app.replace_model(build_model(&paths)?).map_err(error)?;
                 match result {
                     Ok(()) => app.notice_info(format!("Opened {}.", path.display())),
                     Err(error) => app.notice_error(error.to_string()),
                 }
             }
-            ConfigUiIntent::SetField {
-                field_index,
-                source_id,
-                path: field_path,
-                value,
-            } => {
-                if let Err(error) = write_source_field(&paths, &source_id, &field_path, &value) {
-                    app.notice_error(error.to_string());
-                    app.model = build_model(&paths)?;
-                    continue;
-                }
-                app.model = build_model(&paths)?;
-                app.notice_info(format!("Saved {field_path}."));
-                app.finish_successful_set_field(field_index, &value);
+            ConfigUiIntent::SetField { field, value } => {
+                apply_field_write(&mut app, &paths, field, Some(&value), mars_included)?;
             }
-            ConfigUiIntent::UnsetField {
-                field_index,
-                source_id,
-                path: field_path,
-            } => {
-                if let Err(error) = write_source_default(&paths, &source_id, &field_path) {
-                    app.notice_error(error.to_string());
-                    app.model = build_model(&paths)?;
-                    continue;
-                }
-                app.model = build_model(&paths)?;
-                app.notice_info(format!("Restored default for {field_path}."));
-                app.finish_successful_unset_field(field_index);
+            ConfigUiIntent::UnsetField { field } => {
+                apply_field_write(&mut app, &paths, field, None, mars_included)?;
             }
         }
     }
 
+    Ok(())
+}
+
+fn apply_field_write(
+    app: &mut ConfigUiApp,
+    paths: &ConfigPaths,
+    field: ConfigUiFieldId,
+    value: Option<&serde_json::Value>,
+    mars_included: bool,
+) -> Result<()> {
+    let reset = value.is_none();
+    match write_config_ui(
+        paths,
+        &field.source_id,
+        &field.path,
+        value,
+        mars_included,
+        true,
+    ) {
+        Ok(projection) => reload_after_successful_write(
+            app,
+            build_model(paths)?,
+            &field,
+            write_notice(&field.path, projection, reset),
+        ),
+        Err(write_error) => {
+            reload_after_failed_write(app, build_model(paths)?, write_error.to_string())
+        }
+    }
+}
+
+fn write_notice(field_path: &str, projection: Option<AppearanceProjection>, reset: bool) -> String {
+    let action = if reset { "Now inheriting" } else { "Saved" };
+    let Some(projection) = projection else {
+        return format!("{action} {field_path}.");
+    };
+    let mut updates = Vec::new();
+    match projection.mars {
+        Some(MarsAppearanceProjection::Config) => {
+            updates.push("Mars config is synchronized");
+        }
+        Some(MarsAppearanceProjection::Environment(_)) => {
+            updates.push("Mars will apply it on the next launch");
+        }
+        None => {}
+    }
+    updates.push(match projection.zellij {
+        ZellijAppearanceProjection::Live => "Zellij and the bar switched",
+        ZellijAppearanceProjection::NextLaunch => {
+            "Zellij and the bar will apply it on the next managed launch"
+        }
+    });
+    format!("{action} {field_path}; {}.", updates.join("; "))
+}
+
+pub(crate) fn reload_after_failed_write(
+    app: &mut ConfigUiApp,
+    model: ratconfig::ConfigUiModel,
+    message: String,
+) -> Result<()> {
+    app.notice_error(message);
+    app.replace_model(model).map_err(error)
+}
+
+pub(crate) fn reload_after_successful_write(
+    app: &mut ConfigUiApp,
+    model: ratconfig::ConfigUiModel,
+    field: &ratconfig::ConfigUiFieldId,
+    message: String,
+) -> Result<()> {
+    app.replace_model_after_success(model, field)
+        .map_err(error)?;
+    app.notice_info(message);
     Ok(())
 }
 

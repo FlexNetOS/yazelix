@@ -1,7 +1,7 @@
 use std::{
     env, fs,
     io::Write,
-    os::unix::fs::PermissionsExt,
+    os::unix::fs::{PermissionsExt, symlink},
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
@@ -9,9 +9,8 @@ use std::{
 mod support;
 
 use support::{
-    binary_text, embedded_store_path, excerpt, expect_contains, expect_order, set_test_nu,
-    successful_output, successful_stdout, write_config_home, write_nu_executable,
-    RuntimeCase, TempDir,
+    RuntimeCase, TempDir, binary_text, embedded_store_path, excerpt, expect_contains, expect_order,
+    set_test_nu, successful_output, successful_stdout, write_config_home, write_nu_executable,
 };
 
 macro_rules! expect_contains_all {
@@ -221,6 +220,7 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         "Usage:",
         "yzx --version",
         "yzx config",
+        "yzx yazi-config materialize --user-config-dir <path> --state-dir <path>",
         "yzx doctor",
         "yzx inspect [--json]",
         "yzx env",
@@ -271,6 +271,7 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         "yzx screen [STYLE]",
         "static",
         "logo",
+        "asciiquarium",
         "boids_schools",
         "game_of_life_gliders",
         "mandelbrot",
@@ -361,6 +362,7 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         "YZX_MENU_YZX",
         "YZX_YA",
         "YZX_ZELLIJ",
+        "appearance.mode",
         "welcome.enabled",
         "welcome.style",
         "welcome.duration_seconds",
@@ -380,6 +382,7 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         "keybindings.agent",
         "keybindings.git",
         "keybindings.menu",
+        "keybindings.screen",
         "keybindings.sidebar",
         "keybindings.sidebar_focus",
         "lazygit",
@@ -395,6 +398,7 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         "/bin/zellij",
         "/bin/mars",
         "tokenusage",
+        "--theme-mode",
         "--new-session-with-layout",
     }
     let env_supervisor = embedded_store_path(&yzx_launcher, "/bin/yzx-env-supervisor");
@@ -445,6 +449,7 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         "agent keybinding: Alt Shift L",
         "git keybinding: Alt Shift J",
         "menu keybinding: Alt Shift M",
+        "screen keybinding: Alt Shift S",
         "sidebar keybinding: Alt Shift H",
         "sidebar focus keybinding: Ctrl y",
         "layout: packaged (/nix/store/",
@@ -632,8 +637,8 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
     }
     let custom_popup_config = custom_popup.zellij_file("config.kdl");
     expect_popup_defaults(&custom_popup_config, "2", "1", "custom popup status config");
-    assert_eq!(custom_popup_config.matches("width_percent 100").count(), 5);
-    assert_eq!(custom_popup_config.matches("height_percent 100").count(), 5);
+    assert_eq!(custom_popup_config.matches("width_percent 100").count(), 6);
+    assert_eq!(custom_popup_config.matches("height_percent 100").count(), 6);
     assert_eq!(custom_popup_config.matches("side_margin 2").count(), 1);
     assert_eq!(custom_popup_config.matches("vertical_margin 1").count(), 1);
 
@@ -680,8 +685,8 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         "btm",
         "custom popup spec config",
     );
-    assert_eq!(custom_popup_spec.matches("width_percent 100").count(), 6);
-    assert_eq!(custom_popup_spec.matches("height_percent 100").count(), 6);
+    assert_eq!(custom_popup_spec.matches("width_percent 100").count(), 7);
+    assert_eq!(custom_popup_spec.matches("height_percent 100").count(), 7);
     assert_eq!(custom_popup_spec.matches("side_margin 2").count(), 1);
     assert_eq!(custom_popup_spec.matches("vertical_margin 1").count(), 1);
 
@@ -704,7 +709,7 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
     }
 
     let custom_keys = RuntimeCase::new(&temp.path, "custom-keys");
-    custom_keys.write_default_config("\n[keybindings]\nconfig = \"Alt Shift C\"\nagent = \"Alt Shift A\"\ngit = \"Alt Shift G\"\nmenu = \"Alt Shift U\"\nsidebar = \"Ctrl Shift B\"\nsidebar_focus = \"Ctrl Shift E\"\n");
+    custom_keys.write_default_config("\n[keybindings]\nconfig = \"Alt Shift C\"\nagent = \"Alt Shift A\"\ngit = \"Alt Shift G\"\nmenu = \"Alt Shift U\"\nscreen = \"Ctrl Shift S\"\nsidebar = \"Ctrl Shift B\"\nsidebar_focus = \"Ctrl Shift E\"\n");
     let status = custom_keys.run_yzx(&yzx_bin, "status", "custom key status");
     expect_contains_all! {
         &status, "custom key status";
@@ -712,6 +717,7 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         "agent keybinding: Alt Shift A",
         "git keybinding: Alt Shift G",
         "menu keybinding: Alt Shift U",
+        "screen keybinding: Ctrl Shift S",
         "sidebar keybinding: Ctrl Shift B",
         "sidebar focus keybinding: Ctrl Shift E",
         "zellij config: runtime (",
@@ -722,6 +728,7 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         ("Alt Shift A", "agent", "Alt Shift L"),
         ("Alt Shift G", "git", "Alt Shift J"),
         ("Alt Shift U", "menu", "Alt Shift M"),
+        ("Ctrl Shift S", "screen", "Alt Shift S"),
     ] {
         expect_popup_binding(&custom_key_config, key, payload, "custom key config");
         assert!(
@@ -817,6 +824,41 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         format!("cwd {home};"),
     }
 
+    let light_bar = RuntimeCase::new(&temp.path, "light-bar");
+    light_bar.write_default_config("\n[appearance]\nmode = \"light\"\n");
+    let status = light_bar.run_yzx(&yzx_bin, "status", "light appearance status");
+    expect_contains_all! {
+        &status, "light appearance status";
+        "layout: runtime (",
+    }
+    let light_layout = light_bar.zellij_file("layout.kdl");
+    expect_contains_all! {
+        &light_layout, "light appearance layout";
+        r#"host_theme_mode "light""#,
+        r##"host_theme_dark_tab_normal "#[fg=#ffff00] [{index}] {name} ""##,
+        r##"host_theme_light_tab_normal "#[fg=#5c5f77] [{index}] {name} ""##,
+        r##"#[fg=#2f7d32,bold] hx"##,
+    }
+
+    // Upstream's custom-shell-bar case drives shell.program = "fish". This fork
+    // enforces a Nushell-only runtime (yzx-config rejects anything but "nu"), so
+    // the equivalent contract here is that the non-default shell is refused.
+    let rejected_shell = RuntimeCase::new(&temp.path, "rejected-shell-bar");
+    rejected_shell.write_config("[open]\nlog_level = \"info\"\n\n[shell]\nprogram = \"fish\"\n");
+    let rejected = rejected_shell
+        .yzx_command(&yzx_bin, "status")
+        .output()
+        .expect("rejected shell bar status");
+    assert!(
+        !rejected.status.success(),
+        "a non-Nushell shell.program must be refused"
+    );
+    expect_contains(
+        &String::from_utf8_lossy(&rejected.stderr),
+        "shell.program must be one of: nu",
+        "rejected shell bar status",
+    );
+
     let doctor = doctor_case.run_yzx(&yzx_bin, "doctor", "yzx doctor");
     expect_contains_all! {
         &doctor, "yzx doctor";
@@ -837,6 +879,7 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         "ok keybindings.agent: Alt Shift L",
         "ok keybindings.git: Alt Shift J",
         "ok keybindings.menu: Alt Shift M",
+        "ok keybindings.screen: Alt Shift S",
         "ok keybindings.sidebar: Alt Shift H",
         "ok keybindings.sidebar_focus: Ctrl y",
         "ok tutor helper: /nix/store/",
@@ -851,8 +894,67 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         "ok yazi version: ",
         "ok yazi tested version: ",
         "ok pane orchestrator plugin: /nix/store/",
+        "ok classic residue: none recognized in active roots",
         "warn session: not inside zellij",
     }
+
+    for current in ["yazi", "zellij", "helix", "helix-steel", "logs"] {
+        fs::create_dir_all(doctor_case.state_dir.join(current)).unwrap();
+    }
+    let configs = doctor_case.state_dir.join("configs");
+    let sessions = doctor_case.state_dir.join("sessions");
+    fs::create_dir(&configs).unwrap();
+    let outside_sessions = temp.path.join("doctor-outside-sessions");
+    fs::create_dir(&outside_sessions).unwrap();
+    let snapshot = outside_sessions.join("config_snapshot.json");
+    fs::write(&snapshot, "untouched").unwrap();
+    symlink(&outside_sessions, &sessions).unwrap();
+    let nushell = doctor_case.state_dir.join("initializers/nushell");
+    fs::create_dir_all(&nushell).unwrap();
+    let extern_file = nushell.join("yazelix_extern.nu");
+    let fingerprint = nushell.join("yazelix_extern.fingerprint.json");
+    fs::write(&extern_file, "classic").unwrap();
+    symlink(temp.path.join("missing-fingerprint"), &fingerprint).unwrap();
+    fs::create_dir_all(&doctor_case.config_home).unwrap();
+    let config_backup = doctor_case.config_home.join("config.toml.backup-20260712");
+    let settings_backup = doctor_case
+        .config_home
+        .join("settings.jsonc.backup-20260711");
+    fs::write(&config_backup, "classic").unwrap();
+    symlink(temp.path.join("missing-backup"), &settings_backup).unwrap();
+    let residue_doctor = doctor_case.run_yzx(&yzx_bin, "doctor", "yzx doctor residue");
+    expect_contains_all! {
+        &residue_doctor, "yzx doctor residue";
+        classic_residue_warning(&configs, "ambiguous"),
+        classic_residue_warning(&sessions, "ambiguous"),
+        classic_residue_warning(&extern_file, "certain"),
+        classic_residue_warning(&fingerprint, "ambiguous"),
+        classic_residue_warning(&config_backup, "ambiguous"),
+        classic_residue_warning(&settings_backup, "ambiguous"),
+        "warn classic residue: external scripts may still reference these paths; Nova did not load or modify them",
+    }
+    assert_eq!(fs::read_to_string(snapshot).unwrap(), "untouched");
+    for current in ["yazi", "zellij", "helix", "helix-steel", "logs"] {
+        let path = doctor_case.state_dir.join(current);
+        assert!(
+            !residue_doctor.contains(&format!("path={}", path.display())),
+            "yzx doctor reported current Nova {current} state as Classic residue"
+        );
+    }
+
+    let linked_parent = RuntimeCase::new(&temp.path, "doctor-linked-parent");
+    let linked_target = temp.path.join("doctor-linked-target");
+    fs::create_dir_all(&linked_parent.state_dir).unwrap();
+    fs::create_dir_all(linked_target.join("nushell")).unwrap();
+    fs::write(linked_target.join("nushell/yazelix_extern.nu"), "classic").unwrap();
+    symlink(linked_target, linked_parent.state_dir.join("initializers")).unwrap();
+    let linked_parent_doctor =
+        linked_parent.run_yzx(&yzx_bin, "doctor", "yzx doctor symlinked parent");
+    expect_contains(
+        &linked_parent_doctor,
+        "ok classic residue: none recognized in active roots",
+        "yzx doctor symlinked parent",
+    );
 
     for (args, expected, context) in [
         (
@@ -924,6 +1026,13 @@ fn expect_front_door(yzx: &Path, jq: &Path) {
         yzx.join("libexec/yazelix/yzx-tutor").is_file(),
         "yzx package is missing the tutor helper"
     );
+}
+
+fn classic_residue_warning(path: &Path, ownership: &str) -> String {
+    format!(
+        "warn classic residue: ownership={ownership} nova=unused path={}",
+        path.display()
+    )
 }
 
 fn expect_headless_enter(yzx: &Path) {
@@ -1095,6 +1204,7 @@ fn expect_config_ui(yzx: &Path) {
         "agent = \"Alt Shift L\"",
         "git = \"Alt Shift J\"",
         "menu = \"Alt Shift M\"",
+        "screen = \"Alt Shift S\"",
         "sidebar = \"Alt Shift H\"",
         "sidebar_focus = \"Ctrl y\"",
         "widgets = [\"editor\", \"shell\", \"term\", \"codex_usage\", \"cpu\", \"ram\"]",
@@ -1118,6 +1228,7 @@ fn expect_config_ui(yzx: &Path) {
         ("keybindings.agent", "Alt Shift L"),
         ("keybindings.git", "Alt Shift J"),
         ("keybindings.menu", "Alt Shift M"),
+        ("keybindings.screen", "Alt Shift S"),
         ("keybindings.sidebar", "Alt Shift H"),
         ("keybindings.sidebar_focus", "Ctrl y"),
         (
@@ -1211,7 +1322,7 @@ fn expect_startup_diagnostics(yzx: &Path) {
         (
             "bad-welcome-style-config",
             "[open]\nlog_level = \"info\"\n\n[shell]\nprogram = \"nu\"\n\n[welcome]\nstyle = \"matrix\"\n",
-            "welcome.style must be one of: static, logo, boids, boids_predator, boids_schools, mandelbrot, game_of_life_gliders, game_of_life_oscillators, game_of_life_bloom, random",
+            "welcome.style must be one of: static, logo, asciiquarium, boids, boids_predator, boids_schools, mandelbrot, game_of_life_gliders, game_of_life_oscillators, game_of_life_bloom, random",
             "invalid welcome style",
         ),
         (
@@ -1437,7 +1548,27 @@ fn expect_mars_config_override(yzx: &Path) {
 
     let mars_config = mars_case.config_home.join("mars/config.toml");
     fs::create_dir_all(mars_config.parent().unwrap()).unwrap();
-    fs::write(&mars_config, "# user Mars config\n").unwrap();
+    mars_case.write_config("[appearance]\nmode = \"light\"\n");
+    fs::write(
+        &mars_config,
+        "# user Mars config\n\n[window]\nopacity = 0.5\n",
+    )
+    .unwrap();
+    let projection = successful_stdout(
+        Command::new(yzx.join("libexec/yazelix/yzx-config"))
+            .arg("--project-mars-appearance")
+            .env("YAZELIX_CONFIG_HOME", &mars_case.config_home),
+        "Mars appearance projection",
+    );
+    assert_eq!(projection.trim(), "config");
+    let projected = fs::read_to_string(&mars_config).unwrap();
+    expect_contains_all! {
+        &projected, "projected Mars appearance";
+        "# user Mars config",
+        "opacity = 0.5",
+        "[mars.appearance]",
+        "preset = \"light\"",
+    }
 
     let status = mars_case.run_yzx(&yzx_bin, "status", "Mars config override status");
     expect_contains_all! {
@@ -1472,16 +1603,24 @@ fn expect_zellij_config_sidecar(yzx: &Path) {
     let no_sidecar = run_zellij_config(&helper, &packaged_config, &sidecar, &generated_path);
     assert_eq!(PathBuf::from(no_sidecar), packaged_config);
 
-    let sidecar_config = "scroll_buffer_size 1234\npane_frames false\n";
+    let packaged_text = fs::read_to_string(&packaged_config).unwrap();
+    assert!(packaged_text.contains("theme_dark \"ansi\""));
+    assert!(packaged_text.contains("theme_light \"gruvbox-light\""));
+
+    let sidecar_config = "# { preserved comment\ntheme \"dracula\"\nfuture_label \"{opaque}\"\ntheme_dark \"custom-dark\"\nscroll_buffer_size 1234\npane_frames false\n";
     fs::write(&sidecar, sidecar_config).unwrap();
     let generated = run_zellij_config(&helper, &packaged_config, &sidecar, &generated_path);
     assert_eq!(PathBuf::from(&generated), generated_path);
-    let packaged_text = fs::read_to_string(&packaged_config).unwrap();
-    let expected_config = format!("{}\n{}", packaged_text.trim_end(), sidecar_config);
+    let applied_sidecar = "# { preserved comment\nfuture_label \"{opaque}\"\ntheme_dark \"custom-dark\"\nscroll_buffer_size 1234\npane_frames false\n";
+    let inherited_pair_removed = packaged_text.replace("theme_dark \"ansi\"\n", "");
+    let expected_config = format!("{}\n{}", inherited_pair_removed.trim_end(), applied_sidecar);
     assert_eq!(
         fs::read_to_string(&generated_path).unwrap(),
         expected_config
     );
+    assert_eq!(expected_config.matches("theme_dark ").count(), 1);
+    assert_eq!(expected_config.matches("theme_light ").count(), 1);
+    assert_eq!(fs::read_to_string(&sidecar).unwrap(), sidecar_config);
 
     for forbidden in [
         ("keybinds", "keybinds {}\n"),
@@ -1573,8 +1712,16 @@ fn expect_yazi_alt_z(yzx: &Path) {
         "YAZELIX_ZELLIJ_SESSION_NAME",
         "ZELLIJ_SESSION_NAME",
         "YZX_ZELLIJ",
-        "emit(\"plugin\", { \"git\", \"refresh-sidebar\" })",
     }
+    assert!(
+        !sidebar_state.contains("emit(\"plugin\", { \"git\""),
+        "sidebar-state must not invoke the fetch-only git plugin as a functional action",
+    );
+    assert!(
+        yzx.join("share/yazelix/yazi/plugins/git.yazi").is_dir(),
+        "packaged Yazi config is missing git.yazi",
+    );
+
     let plugin =
         fs::read_to_string(yzx.join("share/yazelix/yazi/plugins/zoxide-editor.yazi/main.lua"))
             .unwrap();
@@ -1587,6 +1734,12 @@ fn expect_yazi_alt_z(yzx: &Path) {
     }
 
     let layout = fs::read_to_string(yzx.join("share/yazelix/layout.kdl")).unwrap();
+    expect_contains_all! {
+        &layout, "packaged dark appearance layout";
+        r#"host_theme_mode "dark""#,
+        r##"host_theme_dark_tab_normal "#[fg=#ffff00] [{index}] {name} ""##,
+        r##"host_theme_light_tab_normal "#[fg=#5c5f77] [{index}] {name} ""##,
+    }
     let yzx_yazi = layout
         .lines()
         .find_map(|line| {
@@ -1626,6 +1779,7 @@ fn expect_yazi_alt_z(yzx: &Path) {
         "YAZELIX_EDITOR",
         "GIT_EDITOR",
         "editor.command",
+        "appearance.mode",
         "--yzx-workspace-popup",
         "YZX_YAZI_ROLE",
         "YZX_YAZI_BIN",
@@ -1677,6 +1831,7 @@ fn expect_keybinds(config: &str) {
         r#"bind "Alt l" "Alt Right" { MessagePlugin "yazelix_pane_orchestrator" { name "move_focus_right_or_tab"; }; }"#,
         r#"bind "Alt r" { MessagePlugin "yazelix_pane_orchestrator" { name "smart_reveal"; }; }"#,
         r#"bind "Alt Shift F" { ToggleFocusFullscreen; }"#,
+        r#"bind "Alt Shift S" {"#,
         r#"bind "Alt Shift H" { MessagePlugin "yazelix_pane_orchestrator" { name "toggle_sidebar"; }; }"#,
         r#"bind "Ctrl y" { MessagePlugin "yazelix_pane_orchestrator" { name "toggle_editor_sidebar_focus"; }; }"#,
         r#"bind "Ctrl Alt g" { SwitchToMode "Locked"; }"#,
@@ -1752,6 +1907,12 @@ fn expect_first_party_plugins(git_bin: &Path, config: &str) {
         ("git", "git_popup", "/bin/yzx-git", ""),
         ("menu", "menu_popup", "/bin/yzx-menu", ""),
         (
+            "screen",
+            "screen_popup",
+            "/bin/yzs",
+            "\n                arg_1 \"random\"",
+        ),
+        (
             "yazi",
             "yazi_popup",
             "/bin/yzx-yazi",
@@ -1768,8 +1929,8 @@ fn expect_first_party_plugins(git_bin: &Path, config: &str) {
             "config.kdl is missing {id} popup block\n{expected}",
         );
     }
-    assert_eq!(config.matches("width_percent 100").count(), 5);
-    assert_eq!(config.matches("height_percent 100").count(), 5);
+    assert_eq!(config.matches("width_percent 100").count(), 6);
+    assert_eq!(config.matches("height_percent 100").count(), 6);
     assert_eq!(config.matches("side_margin 1").count(), 1);
     assert_eq!(config.matches("vertical_margin 0").count(), 1);
     for (key, payload) in [
@@ -1777,6 +1938,7 @@ fn expect_first_party_plugins(git_bin: &Path, config: &str) {
         ("Alt Shift K", "config"),
         ("Alt Shift L", "agent"),
         ("Alt Shift M", "menu"),
+        ("Alt Shift S", "screen"),
         ("Alt Shift Y", "yazi"),
     ] {
         expect_popup_binding(config, key, payload, "packaged popup config");
@@ -1815,6 +1977,7 @@ fn expect_first_party_plugins(git_bin: &Path, config: &str) {
     );
 
     assert!(popup_command(config, "/bin/yzx-menu").is_file());
+    assert!(popup_command(config, "/bin/yzs").is_file());
 }
 
 fn expect_git_editor(editor: &Path, lazygit_config: &Path, git: &Path) {

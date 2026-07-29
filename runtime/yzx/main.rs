@@ -38,6 +38,8 @@ pub(crate) const YZX_MARS_CONFIG: &str = "@yzxMarsConfig@";
 pub(crate) const YZX_ZELLIJ_CONFIG: &str = "@yzxZellijConfig@";
 pub(crate) const YZX_CONFIG_KDL: &str = "@yzxConfigKdl@";
 pub(crate) const YZX_RUNTIME_IDENTITY: &str = "@yzxRuntimeIdentity@";
+pub(crate) const YZX_YAZI_CONFIG: &str = "@yzxYaziConfig@";
+pub(crate) const YZX_YAZI_MATERIALIZER: &str = "@yzxYaziMaterializer@";
 pub(crate) const YZX_REVEAL: &str = "@yzxReveal@";
 pub(crate) const YZX_SIDEBAR_REFRESH: &str = "@yzxSidebarRefresh@";
 pub(crate) const YAZI_SOURCE: &str = "@yaziSource@";
@@ -69,6 +71,7 @@ pub(crate) const MANAGED_KEYBINDING_SPECS: &[(&str, &str, &str)] = &[
     ("agent", "keybindings.agent", "@defaultAgentKeybinding@"),
     ("git", "keybindings.git", "@defaultGitKeybinding@"),
     ("menu", "keybindings.menu", "@defaultMenuKeybinding@"),
+    ("screen", "keybindings.screen", "@defaultScreenKeybinding@"),
     (
         "sidebar",
         "keybindings.sidebar",

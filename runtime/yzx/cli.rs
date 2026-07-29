@@ -1,9 +1,9 @@
 use std::{env, ffi::OsString, path::Path, process::Command};
 
 use crate::{
-    MARS, VERSION, YZX_CONFIG_UI, YZX_ENV_SUPERVISOR, YZX_MENU, YZX_REVEAL, YZX_SCREEN, YZX_SHELL,
-    YZX_TUTOR, YZX_WELCOME, YZX_YAZI, ZELLIJ,
-    command::exec,
+    MARS, VERSION, YZX_CONFIG, YZX_CONFIG_UI, YZX_ENV_SUPERVISOR, YZX_MENU, YZX_REVEAL, YZX_SCREEN,
+    YZX_SHELL, YZX_TUTOR, YZX_WELCOME, YZX_YAZI, YZX_YAZI_CONFIG, YZX_YAZI_MATERIALIZER, ZELLIJ,
+    command::{exec, run_checked, trim_output},
     desktop,
     doctor::print_doctor,
     error::{startup, AppError},
@@ -37,6 +37,7 @@ pub(crate) fn run() -> Result<(), AppError> {
             exec_plain(YZX_CONFIG_UI)
         }
         "desktop" => desktop::run(args),
+        "yazi-config" => exec_yazi_config(args),
         "menu" => {
             expect_no_args("menu", &args)?;
             exec_menu()
@@ -89,6 +90,50 @@ fn exec_plain(program: &str) -> Result<(), AppError> {
     let mut command = Command::new(program);
     command.env("PATH", runtime_path());
     exec(command, program)
+}
+
+fn exec_yazi_config(args: Vec<OsString>) -> Result<(), AppError> {
+    if args.is_empty() || matches!(args.as_slice(), [arg] if arg == "--help") {
+        print!("{YAZI_CONFIG_HELP}");
+        return Ok(());
+    }
+    match args.as_slice() {
+        [command, arg] if command == "materialize" && arg == "--help" => {
+            print!("{YAZI_CONFIG_MATERIALIZE_HELP}");
+            Ok(())
+        }
+        [command, args @ ..] if command == "materialize" => {
+            let Some((user_config_dir, state_dir)) = materialize_paths(args) else {
+                return Err(AppError::Usage(YAZI_CONFIG_MATERIALIZE_HELP.to_string()));
+            };
+            let appearance_mode = trim_output(run_checked(
+                Path::new(YZX_CONFIG),
+                Command::new(YZX_CONFIG).arg("--get").arg("appearance.mode"),
+            )?);
+            let mut command = Command::new(YZX_YAZI_MATERIALIZER);
+            command
+                .arg(YZX_YAZI_CONFIG)
+                .arg(user_config_dir)
+                .arg(state_dir)
+                .arg(appearance_mode);
+            exec(command, "yzx yazi-config materialize")
+        }
+        _ => Err(AppError::Usage(YAZI_CONFIG_HELP.to_string())),
+    }
+}
+
+fn materialize_paths(args: &[OsString]) -> Option<(&OsString, &OsString)> {
+    let [first_flag, first_path, second_flag, second_path] = args else {
+        return None;
+    };
+    if first_path.is_empty() || second_path.is_empty() {
+        return None;
+    }
+    match (first_flag.to_str(), second_flag.to_str()) {
+        (Some("--user-config-dir"), Some("--state-dir")) => Some((first_path, second_path)),
+        (Some("--state-dir"), Some("--user-config-dir")) => Some((second_path, first_path)),
+        _ => None,
+    }
 }
 
 fn exec_menu() -> Result<(), AppError> {
@@ -167,12 +212,18 @@ fn exec_screen(args: Vec<OsString>) -> Result<(), AppError> {
 fn exec_managed(through_mars: bool, zellij_args: Vec<OsString>) -> Result<(), AppError> {
     let program = managed_program(through_mars, MARS)?;
     let runtime = Runtime::prepare_with_yazi()?;
+    let mars_appearance = if through_mars {
+        runtime.project_mars_appearance()?
+    } else {
+        None
+    };
     let mut command = Command::new(program);
     if through_mars {
         command.arg("-e").arg(YZX_WELCOME).arg(ZELLIJ);
     } else {
         command.arg(ZELLIJ);
     }
+    apply_zellij_launch_theme_mode(&mut command, &runtime.appearance_mode);
     apply_zellij_session_args(
         &mut command,
         &runtime.zellij_config,
@@ -184,6 +235,7 @@ fn exec_managed(through_mars: bool, zellij_args: Vec<OsString>) -> Result<(), Ap
         &mut command,
         through_mars,
         &runtime.config_home.join("cursors.toml"),
+        mars_appearance.as_deref(),
     );
     command.env(
         "YAZELIX_SESSION_TERMINAL",
@@ -210,6 +262,10 @@ fn apply_zellij_session_args(
         .args(zellij_args);
 }
 
+fn apply_zellij_launch_theme_mode(command: &mut Command, mode: &str) {
+    command.arg("--theme-mode").arg(mode);
+}
+
 fn managed_program(through_mars: bool, mars: &'static str) -> Result<&'static str, AppError> {
     match (through_mars, mars) {
         (true, "") => Err(AppError::Usage(
@@ -220,11 +276,21 @@ fn managed_program(through_mars: bool, mars: &'static str) -> Result<&'static st
     }
 }
 
-fn apply_mars_launch_env(command: &mut Command, through_mars: bool, path: &Path) {
+fn apply_mars_launch_env(
+    command: &mut Command,
+    through_mars: bool,
+    path: &Path,
+    appearance: Option<&str>,
+) {
     if through_mars {
         command
             .env("MARS_APP_ID", "yzx")
             .env("YAZELIX_CURSOR_CONFIG", path);
+        if let Some(appearance) = appearance {
+            command.env("MARS_APPEARANCE", appearance);
+        } else {
+            command.env_remove("MARS_APPEARANCE");
+        }
     }
 }
 
@@ -239,16 +305,67 @@ mod tests {
         assert_eq!(managed_program(true, MARS).ok(), Some(MARS));
         let path = Path::new("/tmp/cursors.toml");
         let mut launch = Command::new(MARS);
-        apply_mars_launch_env(&mut launch, true, path);
+        apply_mars_launch_env(&mut launch, true, path, None);
         assert!(launch.get_envs().any(|(key, value)| {
             key == "MARS_APP_ID" && value == Some(std::ffi::OsStr::new("yzx"))
         }));
         assert!(launch.get_envs().any(|(key, value)| {
             key == "YAZELIX_CURSOR_CONFIG" && value == Some(path.as_os_str())
         }));
+        assert!(
+            launch
+                .get_envs()
+                .any(|(key, value)| { key == "MARS_APPEARANCE" && value.is_none() })
+        );
+        let mut declarative_launch = Command::new(MARS);
+        apply_mars_launch_env(&mut declarative_launch, true, path, Some("light"));
+        assert!(declarative_launch.get_envs().any(|(key, value)| {
+            key == "MARS_APPEARANCE" && value == Some(std::ffi::OsStr::new("light"))
+        }));
         let mut enter = Command::new(YZX_WELCOME);
-        apply_mars_launch_env(&mut enter, false, path);
+        apply_mars_launch_env(&mut enter, false, path, Some("light"));
         assert_eq!(enter.get_envs().next(), None);
+
+        let mut zellij = Command::new(ZELLIJ);
+        apply_zellij_launch_theme_mode(&mut zellij, "light");
+        assert_eq!(
+            zellij
+                .get_args()
+                .map(|arg| arg.to_string_lossy().into_owned())
+                .collect::<Vec<_>>(),
+            ["--theme-mode", "light"]
+        );
+    }
+
+    #[test]
+    fn yazi_config_materialize_requires_each_named_path_once() {
+        let user = OsString::from("/user/yazi");
+        let state = OsString::from("/state/yazelix");
+        let args = [
+            OsString::from("--state-dir"),
+            state.clone(),
+            OsString::from("--user-config-dir"),
+            user.clone(),
+        ];
+        assert_eq!(materialize_paths(&args), Some((&user, &state)));
+
+        for args in [
+            vec![OsString::from("--user-config-dir"), user.clone()],
+            vec![
+                OsString::from("--user-config-dir"),
+                user.clone(),
+                OsString::from("--user-config-dir"),
+                user.clone(),
+            ],
+            vec![
+                OsString::from("--unknown"),
+                user.clone(),
+                OsString::from("--state-dir"),
+                state.clone(),
+            ],
+        ] {
+            assert_eq!(materialize_paths(&args), None);
+        }
     }
 
     #[test]
@@ -302,6 +419,7 @@ Usage:
   yzx help
   yzx config
   yzx desktop <install|uninstall> [--print-path]
+  yzx yazi-config materialize --user-config-dir <path> --state-dir <path>
   yzx doctor
   yzx inspect [--json]
   yzx env
@@ -317,6 +435,7 @@ Usage:
 Commands:
   config  Open Yazelix Nova config
   desktop Install or remove an explicit XDG desktop entry
+  yazi-config  Materialize the effective Yazi configuration
   doctor  Check Yazelix runtime setup
   inspect Show active runtime, profile, and ownership truth
   env     Open the managed shell without launching the UI
@@ -331,4 +450,21 @@ Commands:
   help    Show this help
 
 Sponsor: https://github.com/sponsors/luccahuguet
+";
+
+const YAZI_CONFIG_HELP: &str = "Materialize Yazelix Nova's effective Yazi configuration
+
+Usage:
+  yzx yazi-config materialize --user-config-dir <path> --state-dir <path>
+
+Commands:
+  materialize  Build and print the effective Yazi config directory
+";
+
+const YAZI_CONFIG_MATERIALIZE_HELP: &str =
+    "Usage: yzx yazi-config materialize --user-config-dir <path> --state-dir <path>
+
+Options:
+  --user-config-dir <path>  Exact directory containing the user's Yazi configuration
+  --state-dir <path>        State directory in which to materialize the effective configuration
 ";
