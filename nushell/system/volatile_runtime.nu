@@ -68,9 +68,6 @@ const VOLATILE_DIRS = [
     "/run/user/1001/yazelix/profile-runtime/yazelix"
     "/run/user/1001/yazelix/volatile/cache"
     "/run/user/1001/yazelix/volatile/tmp"
-    "/run/user/1001/yazelix/volatile/cargo-home"
-    "/run/user/1001/yazelix/volatile/cargo-target"
-    "/run/user/1001/yazelix/volatile/rustup-home"
     "/run/user/1001/yazelix/volatile/cache/google-chrome"
 ]
 const VOLATILE_ROUTES = [

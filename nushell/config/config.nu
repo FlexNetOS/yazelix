@@ -18,9 +18,24 @@ if (($env.HOME? | default "") == "/home/flexnetos") {
     let volatile_root = (($env.XDG_RUNTIME_DIR? | default "/run/user/1001") | path join "yazelix" "volatile")
     let volatile_cache = ($volatile_root | path join "cache")
     let volatile_tmp = ($volatile_root | path join "tmp")
-    let cargo_home = ($volatile_root | path join "cargo-home")
-    let cargo_target = ($volatile_root | path join "cargo-target")
-    let rustup_home = ($volatile_root | path join "rustup-home")
+    # The Rust toolchain comes from fenix (flake.nix: flexnetosRustToolchain =
+    # fenixPkgs.combine [cargo rustc rustfmt clippy rust-analyzer]). fenix REPLACES
+    # rustup -- flexnetosRust189Lane even wraps cargo with --unset RUSTUP_TOOLCHAIN --
+    # so RUSTUP_HOME was never a real setting here and is dropped.
+    #
+    # What cargo genuinely needs is a registry cache and a build target dir, and both
+    # must be DURABLE. host-policy/99z-session-restore.conf states the rule: "Cargo
+    # MUST NOT resolve under /run/user/1001 -- that is XDG_RUNTIME_DIR, whose tmpfs
+    # budget is shared with the wayland socket, dconf, dbus and gnome-keyring. A single
+    # workspace build reached 30G there and drove the tmpfs to 84%." flake.nix also
+    # asserts the durable value in the generated environment.d.
+    #
+    # This file put both under $volatile_root and, running per-shell AFTER
+    # environment.d, silently won -- so every build landed on tmpfs and vanished on
+    # reboot, which is why `./target/debug/<bin>` read as "not found" while cargo
+    # reported success.
+    let cargo_home = "/home/flexnetos/meta/var/cache/cargo-home"
+    let cargo_target = "/home/flexnetos/meta/var/cargo-target"
     # Durable cache root on persistent home storage. Volatile tmpfs is correct
     # for mutable/session caches (browser, editor, webviews) but WRONG for
     # immutable, expensive-to-refetch artifacts (model weights, browser binaries)
@@ -30,7 +45,7 @@ if (($env.HOME? | default "") == "/home/flexnetos") {
     let profile_data = "/home/flexnetos/meta/var/xdg-data"
     let profile_state = "/home/flexnetos/meta/var/xdg-state"
     let yazelix_state = "/run/user/1001/yazelix/profile-runtime/yazelix"
-    for path in [$volatile_cache $volatile_tmp $cargo_home $cargo_target $rustup_home $durable_cache $profile_data $profile_state $yazelix_state] {
+    for path in [$volatile_cache $volatile_tmp $cargo_home $cargo_target $durable_cache $profile_data $profile_state $yazelix_state] {
         mkdir $path
     }
 
@@ -44,7 +59,6 @@ if (($env.HOME? | default "") == "/home/flexnetos") {
     $env.TEMP = $volatile_tmp
     $env.CARGO_HOME = $cargo_home
     $env.CARGO_TARGET_DIR = $cargo_target
-    $env.RUSTUP_HOME = $rustup_home
     $env.npm_config_cache = ($volatile_cache | path join "npm")
     $env.BUN_INSTALL_CACHE_DIR = ($volatile_cache | path join "bun")
     $env.YARN_CACHE_FOLDER = ($volatile_cache | path join "yarn")
