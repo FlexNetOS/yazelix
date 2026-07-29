@@ -18,12 +18,12 @@
   buildPgrxExtension ? pkgs.buildPgrxExtension,
   rustPlatform ? pkgs.rustPlatform,
 }: let
-  rev = "c0e86d8ad45f8497d0c6c763c086441ee2a351f6";
+  rev = "875ccb2fd";
   upstreamSrc = pkgs.fetchFromGitHub {
     owner = "FlexNetOS";
     repo = "meta-ruvector";
     inherit rev;
-    hash = "sha256-Y4pch81+VynpDZcepuxouOsxhXb7asVU6mjsMSGaDSU=";
+    hash = "sha256-QC4IWd8ZeTxXWfh2zrmQOLFjLlcVaIpMMe9CII8t7+I=";
   };
   # The pushed meta-ruvector source already contains the SHAKE256 entry point
   # and the full-feature dependency/default repairs.
