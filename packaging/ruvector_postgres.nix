@@ -128,6 +128,26 @@ in
           "$out/share/postgresql/extension/ruvector--0.3.1-pgrx-generated.sql"
       fi
 
+      # pgrx deliberately omits the low-level native ruvector I/O bindings
+      # (`sql = false`) and cannot emit PostgreSQL access methods/operator
+      # classes. Assemble them around the current all-features entity graph
+      # so a clean CREATE EXTENSION reaches the full catalog.
+      generated_sql="$out/share/postgresql/extension/ruvector--0.3.1-pgrx-generated.sql"
+      current_sql="$out/share/postgresql/extension/ruvector--0.3.1.sql"
+      native_sql="$TMPDIR/ruvector-native.sql"
+      structural_sql="$TMPDIR/ruvector-structural.sql"
+      sed -n '35,175p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql > "$native_sql"
+      {
+        sed -n '1085,1158p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql
+        sed -n '1460,1473p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql
+      } > "$structural_sql"
+      {
+        cat "$native_sql"
+        cat "$generated_sql"
+        cat "$structural_sql"
+      } > "$current_sql.assembled"
+      install -m 0444 "$current_sql.assembled" "$current_sql"
+
       for sql in crates/ruvector-postgres/sql/ruvector--0.1.0.sql \
         crates/ruvector-postgres/sql/ruvector--0.3.0.sql \
         crates/ruvector-postgres/sql/ruvector--0.3.0--0.3.1.sql \
@@ -136,7 +156,6 @@ in
         install -m 0444 "$sql" "$out/share/postgresql/extension/$(basename "$sql")"
       done
 
-      current_sql="$out/share/postgresql/extension/ruvector--0.3.1.sql"
       if grep -Eq "DEFAULT (auto|dot|validation|parameter_change|JsonB\\(|DEFAULT_CURVATURE)" "$current_sql"; then
         echo "ERROR: invalid generated SQL default remains in $current_sql" >&2
         grep -nE "DEFAULT (auto|dot|validation|parameter_change|JsonB\\(|DEFAULT_CURVATURE)" "$current_sql" >&2
