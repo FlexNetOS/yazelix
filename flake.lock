@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "agent_source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785366249,
+        "narHash": "sha256-/AYQ74fxX2B/PJfIRRXnRyJFbWh5wagI9c4wA3y2WDs=",
+        "owner": "FlexNetOS",
+        "repo": "agent",
+        "rev": "db7fae80d8467bd1ab018f8afbd3fdcf9022c0c3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "FlexNetOS",
+        "repo": "agent",
+        "rev": "db7fae80d8467bd1ab018f8afbd3fdcf9022c0c3",
+        "type": "github"
+      }
+    },
     "asciiquarium": {
       "flake": false,
       "locked": {
@@ -588,6 +605,7 @@
     },
     "root": {
       "inputs": {
+        "agent_source": "agent_source",
         "autoLayoutYazi": "autoLayoutYazi",
         "beads_rust_source": "beads_rust_source",
         "beads_viewer": "beads_viewer",

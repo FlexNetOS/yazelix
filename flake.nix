@@ -76,6 +76,14 @@
       url = "github:FlexNetOS/rtk-tokenkill/eee0dfbd3cf3dc82f5604c77ccc4f93c4a5f0c45";
       flake = false;
     };
+    # Supplies `agent guard`, the PreToolUse policy engine. It must be
+    # profile-owned for the same reason rtk and icm are: a hook pointed at a
+    # build directory dies the moment that directory is a tmpfs, which is the
+    # exact failure its own path-law patterns exist to deny.
+    agent_source = {
+      url = "github:FlexNetOS/agent/db7fae80d8467bd1ab018f8afbd3fdcf9022c0c3";
+      flake = false;
+    };
     grit_source = {
       url = "github:FlexNetOS/grit/89d8addd170f408d1d82860c39096929375bd2ce";
       flake = false;
@@ -145,6 +153,7 @@
     rtk_source,
     grit_source,
     icm_source,
+    agent_source,
     weave_source,
     obscura_source,
     flexnetos_runner_source,
@@ -933,6 +942,10 @@
         inherit pkgs;
         icmSource = icm_source;
       };
+      flexnetosAgent = import ./packaging/agent_release.nix {
+        inherit pkgs;
+        agentSource = agent_source;
+      };
       flexnetosWeave = import ./packaging/weave_release.nix {
         inherit pkgs;
         weaveSource = weave_source;
@@ -1140,6 +1153,7 @@
         "fxrun-dispatch" = "${flexnetosRunner}/bin/fxrun-dispatch";
         yazelix_host_policy = "${flexnetosHostPolicy}/bin/yazelix_host_policy";
         yazelix_volatile_runtime = "${flexnetosVolatileRuntime}/bin/yazelix_volatile_runtime";
+        agent = "${flexnetosAgent}/bin/agent";
         gh = "${pkgs.gh}/bin/gh";
         git = "${pkgs.git}/bin/git";
         git-kb = "${flexnetosGitKb}/bin/git-kb";
