@@ -135,8 +135,10 @@ in
       generated_sql="$out/share/postgresql/extension/ruvector--0.3.1-pgrx-generated.sql"
       current_sql="$out/share/postgresql/extension/ruvector--0.3.1.sql"
       native_sql="$TMPDIR/ruvector-native.sql"
+      operator_sql="$TMPDIR/ruvector-operators.sql"
       structural_sql="$TMPDIR/ruvector-structural.sql"
-      sed -n '35,175p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql > "$native_sql"
+      sed -n '35,67p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql > "$native_sql"
+      sed -n '138,175p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql > "$operator_sql"
       {
         sed -n '1085,1158p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql
         sed -n '1460,1473p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql
@@ -144,9 +146,11 @@ in
       {
         cat "$native_sql"
         cat "$generated_sql"
+        cat "$operator_sql"
         cat "$structural_sql"
       } > "$current_sql.assembled"
-      install -m 0444 "$current_sql.assembled" "$current_sql"
+      chmod u+w "$current_sql"
+      install -m 0644 "$current_sql.assembled" "$current_sql"
 
       for sql in crates/ruvector-postgres/sql/ruvector--0.1.0.sql \
         crates/ruvector-postgres/sql/ruvector--0.3.0.sql \
