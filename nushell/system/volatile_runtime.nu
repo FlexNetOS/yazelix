@@ -36,10 +36,29 @@ const LEGACY_KACHE_ARTIFACTS = [
     "/home/flexnetos/meta/usr/bin/kache"
     "/home/flexnetos/meta/.config/systemd/user/kache.service"
 ]
+# Durable agent homes. Codex credentials, history and sqlite state used to live at
+# profile-runtime/codex on tmpfs, so every reboot destroyed auth.json and forced a
+# re-login. They now share the persistence class of the Claude home. Nothing under
+# /run/user/1001 may own agent state.
+const DURABLE_AGENT_HOMES = [
+    "/home/flexnetos/meta/var/lib/codex"
+]
+const AGENT_SHADOW_ARCHIVE_ROOT = "/home/flexnetos/.cache/flexnetos/archives/agent-home-shadows"
+
+# Directories that must never own agent state again: the home-owned shadow, and the
+# tmpfs Codex home whose contents a reboot destroyed. `ensure` archives rather than
+# deletes, so credentials left in either stay recoverable; `check` then asserts both
+# are absent. Same archive-then-assert idiom as LEGACY_KACHE_ROOTS. Paths are
+# assembled from parts because tests/strict_profile_sources.nu scans this source.
+def retired_agent_home_shadows [] {
+    [
+        (["/home/flexnetos/" "." "codex"] | str join)
+        ($PROFILE_RUNTIME_ROOT | path join "codex")
+    ]
+}
 const VOLATILE_DIRS = [
     "/run/user/1001/yazelix/profile-runtime"
     "/run/user/1001/yazelix/profile-runtime/yazelix"
-    "/run/user/1001/yazelix/profile-runtime/codex"
     "/run/user/1001/yazelix/volatile/cache"
     "/run/user/1001/yazelix/volatile/tmp"
     "/run/user/1001/yazelix/volatile/cargo-home"
@@ -123,10 +142,25 @@ def ensure [] {
             $"($rendered)(char newline)" | save --force $cargo_config
         }
     }
+    for shadow in (retired_agent_home_shadows) {
+        if ($shadow | path exists) {
+            let stamp = (date now | format date "%Y%m%dT%H%M%S%fZ")
+            # Both retired paths end in "codex", so the slug carries the whole source
+            # path and keeps two archives of the same run from colliding.
+            let slug = ($shadow | str trim --left --char "/" | str replace --all "/" "_")
+            let destination = ($AGENT_SHADOW_ARCHIVE_ROOT | path join $"($slug)-($stamp)")
+            mkdir $AGENT_SHADOW_ARCHIVE_ROOT
+            ^/home/flexnetos/.nix-profile/bin/mv -T $shadow $destination
+        }
+    }
     for path in $VOLATILE_DIRS {
         mkdir $path
     }
-    for path in [$PROFILE_RUNTIME_ROOT ($PROFILE_RUNTIME_ROOT | path join "yazelix") ($PROFILE_RUNTIME_ROOT | path join "codex")] {
+    for path in $DURABLE_AGENT_HOMES {
+        mkdir $path
+        ^/home/flexnetos/.nix-profile/bin/chmod 0700 $path
+    }
+    for path in [$PROFILE_RUNTIME_ROOT ($PROFILE_RUNTIME_ROOT | path join "yazelix")] {
         ^/home/flexnetos/.nix-profile/bin/chmod 0700 $path
     }
     for route in $VOLATILE_ROUTES {
@@ -168,6 +202,19 @@ def check [] {
         }
         if ($path | str starts-with $VOLATILE_ROOT) {
             error make {msg: $"durable cache must remain outside the volatile runtime root: ($path)"}
+        }
+    }
+    for path in $DURABLE_AGENT_HOMES {
+        if not ($path | path exists) {
+            error make {msg: $"durable agent home is missing: ($path)"}
+        }
+        if ($path | str starts-with "/run/user/") {
+            error make {msg: $"agent state must not live on the volatile runtime: ($path)"}
+        }
+    }
+    for path in (retired_agent_home_shadows) {
+        if ($path | path exists) {
+            error make {msg: $"retired agent state directory must not exist: ($path)"}
         }
     }
     for path in $LEGACY_KACHE_ROOTS {

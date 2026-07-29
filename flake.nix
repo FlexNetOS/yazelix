@@ -92,8 +92,11 @@
       url = "github:FlexNetOS/obscura/4f5b6e52d358b0e7a6a021a24bd12ff77b3f3989";
       flake = false;
     };
+    # Retired lane: crates/{runner-cli,runner-core,runner-dispatch} -> fxrun, fxrun-dispatch.
+    # The canonical runner is `ghaRunner` below (nix/gha-runner -> flexnetos-runner-start).
+    # Same repository, two subtrees: do not conflate the two inputs.
     flexnetos_runner_source = {
-      url = "github:FlexNetOS/flexnetos_runner/998c3db9bbf5b0d79045b94f34b850cdc3482091";
+      url = "github:FlexNetOS/flexnetos_runner/8567ea882d5ca08281b15578559fb6e5c3477049";
       flake = false;
     };
     envctl_source = {
@@ -1062,6 +1065,15 @@
       flexnetosPython = pkgs.python3.withPackages (pythonPackages: [
         pythonPackages.pyyaml
       ]);
+      # Durable agent homes under the Meta payload. Each value is consumed twice --
+      # once by the agent frontdoor (which exports it and rejects a competing owner
+      # by byte-for-byte string comparison) and once by that agent's materializer
+      # wrapper -- so they are bound here rather than written out at each site.
+      # These must stay byte-identical to DEFAULT_CODEX_HOME in flexnetos_runner's
+      # crates/runner-cli/src/forge_loop.rs. Neither may live on tmpfs: /run/user/1001
+      # is wiped on reboot, which previously destroyed the Codex credentials.
+      codexStateHome = "/home/flexnetos/meta/var/lib/codex";
+      claudeStateHome = "/home/flexnetos/meta/var/lib/claude";
       profileEnvironmentFrontdoor = name: payload: nuApplication name ./nushell/system/profile_environment_frontdoor.nu {
         tool = name;
         inherit payload;
@@ -1310,7 +1322,7 @@
         def --wrapped main [...args] {
           if (\$args | is-empty) or \$args == ["--recover-only"] {
             let profile = "/home/flexnetos/.nix-profile"
-            let codex_home = "/run/user/1001/yazelix/profile-runtime/codex"
+            let codex_home = "${codexStateHome}"
             exec ${pkgs.nushell}/bin/nu \
               "$out/share/yazelix/nushell/scripts/materialize_codex_config.nu" \
               (\$profile | path join "share/yazelix/agent_configs/codex/config.toml.src") \
@@ -1342,7 +1354,7 @@
         def --wrapped main [...args] {
           if (\$args | is-empty) {
             let profile = "/home/flexnetos/.nix-profile"
-            let claude_home = "/home/flexnetos/meta/var/lib/claude"
+            let claude_home = "${claudeStateHome}"
             exec ${pkgs.nushell}/bin/nu \
               "$out/share/yazelix/nushell/scripts/materialize_claude_config.nu" \
               (\$profile | path join "share/yazelix/agent_configs/claude/settings.json.src") \
@@ -1360,14 +1372,14 @@
       '';
       flexnetosCodexFrontdoor = nuApplication "codex" ./nushell/agent/profile_frontdoor.nu {
         agent = "codex";
-        stateHome = "/run/user/1001/yazelix/profile-runtime/codex";
+        stateHome = codexStateHome;
         payload = "${flexnetosCodex}/bin/codex";
         materializer = "/home/flexnetos/.nix-profile/bin/yazelix_codex_materialize";
         chmod = "${pkgs.coreutils}/bin/chmod";
       };
       flexnetosClaudeFrontdoor = nuApplication "claude" ./nushell/agent/profile_frontdoor.nu {
         agent = "claude";
-        stateHome = "/home/flexnetos/meta/var/lib/claude";
+        stateHome = claudeStateHome;
         payload = "${flexnetosClaude}/bin/claude";
         materializer = "/home/flexnetos/.nix-profile/bin/yazelix_claude_materialize";
         chmod = "${pkgs.coreutils}/bin/chmod";
@@ -2318,6 +2330,28 @@
         test -x "$gha_runner_start"
         ! test -e ${foundation}/lib/systemd/user/flexnetos_runner@.service
         ! test -e ${foundation}/lib/systemd/user/gha-runner.service
+        # Path-law guard. No profile-facing executable may bake a home-owned agent
+        # path: neither the retired dot-codex home nor the dot-local tree (spelled
+        # out only in the assembled patterns below, so this source stays clean for
+        # tests/strict_profile_sources.nu). fxrun carried both, and because the agent
+        # frontdoor rejects a competing CODEX_HOME by byte-for-byte comparison, that
+        # made every non-dry-run forge-loop exit 1.
+        # -R (not -r) is required: bin/ and toolbin/ are symlink farms. -I must NOT
+        # be added -- it would skip the very binaries the literals are baked into.
+        # Patterns are concatenated at build time so this file never contains the
+        # retired literals itself; tests/strict_profile_sources.nu scans this source.
+        retired_codex_home="/home/flexnetos/.""codex"
+        retired_local_tree="/home/flexnetos/.""local"
+        forbidden_literals="$TMPDIR/forbidden-profile-literals"
+        grep -R -l -e "$retired_codex_home" -e "$retired_local_tree" \
+          ${foundation}/bin ${foundation}/toolbin > "$forbidden_literals" 2>/dev/null || true
+        if test -s "$forbidden_literals"; then
+          echo "profile executables carry home-owned agent paths:" >&2
+          cat "$forbidden_literals" >&2
+          exit 1
+        fi
+        # The durable Codex home must be what replaced them.
+        grep -q -e '/home/flexnetos/meta/var/lib/codex' ${foundation}/bin/fxrun
         YAZELIX_HOST_POLICY_ROOT=${foundation}/share/yazelix/host-policy \
           ${foundation}/bin/yazelix_host_policy check-bundle
         host_policy_test_root="$TMPDIR/host-policy-root"

@@ -1,6 +1,11 @@
 def main [root: path] {
     let source_root = ($root | path expand)
-    let retired_home_tree = (["." "local"] | str join)
+    # Anchored to the retired home tree itself. A bare "." + "local" substring also
+    # matched innocent text such as "example.local", so the absolute and tilde forms
+    # are matched instead -- the only two ways a source file can actually name it.
+    # Patterns stay assembled from parts because this gate scans its own source.
+    let retired_home_tree = (["/home/flexnetos/" "." "local"] | str join)
+    let retired_home_tree_tilde = (["~/" "." "local"] | str join)
     let root_agent_overlay = (["/" "." "codex"] | str join)
     let root_claude_overlay = (["/" "." "claude"] | str join)
     let text_extensions = ["" "conf" "json" "kdl" "lua" "md" "nix" "nu" "path" "rs" "service" "socket" "src" "toml" "yaml" "yml"]
@@ -15,7 +20,7 @@ def main [root: path] {
     for path in $candidates {
         let raw = (open --raw $path)
         if ($raw | describe) == "string" {
-            for pattern in [$retired_home_tree $root_agent_overlay $root_claude_overlay] {
+            for pattern in [$retired_home_tree $retired_home_tree_tilde $root_agent_overlay $root_claude_overlay] {
                 if ($raw | str contains $pattern) {
                     $failures = ($failures | append {
                         path: ($path | path relative-to $source_root)

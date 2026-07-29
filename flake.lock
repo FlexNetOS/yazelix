@@ -344,17 +344,17 @@
     "flexnetos_runner_source": {
       "flake": false,
       "locked": {
-        "lastModified": 1784860279,
-        "narHash": "sha256-ZK9Lf4Q/2aBYAImW8bPiuyNqS8Aip1iLv8aqzzz+gAg=",
+        "lastModified": 1785339038,
+        "narHash": "sha256-x13Mi+AZsBK3E79i0opHEVM+ez4/RYEIyoPnCJrG8EA=",
         "owner": "FlexNetOS",
         "repo": "flexnetos_runner",
-        "rev": "998c3db9bbf5b0d79045b94f34b850cdc3482091",
+        "rev": "8567ea882d5ca08281b15578559fb6e5c3477049",
         "type": "github"
       },
       "original": {
         "owner": "FlexNetOS",
         "repo": "flexnetos_runner",
-        "rev": "998c3db9bbf5b0d79045b94f34b850cdc3482091",
+        "rev": "8567ea882d5ca08281b15578559fb6e5c3477049",
         "type": "github"
       }
     },
