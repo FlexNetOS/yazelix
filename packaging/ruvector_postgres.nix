@@ -18,18 +18,16 @@
   buildPgrxExtension ? pkgs.buildPgrxExtension,
   rustPlatform ? pkgs.rustPlatform,
 }: let
-  rev = "5f0a2c2cc049dfe35f142cd58ab8c966bedef785";
+  rev = "d9e845f39a75a8f7fc10af372504426b7fb093fc";
   upstreamSrc = pkgs.fetchFromGitHub {
-    owner = "ruvnet";
-    repo = "RuVector";
+    owner = "FlexNetOS";
+    repo = "meta-ruvector";
     inherit rev;
-    hash = "sha256-bPdccVQjGlMMJ9/6gOoS3VemY3ubE3JrFwtiAqYEnFs=";
+    hash = "sha256-LECkeUJ8O/6d1A6l91cl7q/7zQ+4196hJUqKP/izAFw=";
   };
-  patchedSrc = pkgs.applyPatches {
-    name = "ruvector-postgres-0.3.1-source";
-    src = upstreamSrc;
-    patches = [./ruvector-postgres-0.3.1-shake256.patch];
-  };
+  # The pushed meta-ruvector source already contains the SHAKE256 entry point
+  # and the full-feature dependency/default repairs.
+  patchedSrc = upstreamSrc;
 
   # ruvector-postgres' Cargo.lock pins pgrx 0.12.9 exactly and cargo-pgrx has to
   # match the pgrx crate version, but nixpkgs only pins 0.12.6. Re-point the
@@ -53,17 +51,19 @@
 in
   buildPgrxExtension {
     pname = "ruvector-postgres";
-    version = "0.3.1-${builtins.substring 0 7 rev}-cap001";
+    version = "0.3.1-${builtins.substring 0 7 rev}-cap002";
 
     src = patchedSrc;
 
-    cargoHash = "sha256-TfPkFghFo5qorP76bQVb8NQOoq32P2u+v4Mp1gjv3Is=";
+    cargoRoot = "crates/ruvector-postgres";
+    buildAndTestSubdir = "crates/ruvector-postgres";
+    cargoHash = "sha256-0s7hIdf2qDhtqHEEZA9J5MDoVGqIXiZEWRytoyqsRB0=";
 
     cargo-pgrx = cargo-pgrx_0_12_9;
     postgresql = pkgs.postgresql_17;
 
     nativeBuildInputs = [pkgs.pkg-config];
-    buildInputs = [pkgs.openssl pkgs.onnxruntime];
+    buildInputs = [pkgs.onnxruntime];
 
     # The `embeddings` feature pulls fastembed -> ort -> ort-sys, whose build
     # script defaults to downloading a prebuilt ONNX Runtime from cdn.pyke.io.
@@ -87,6 +87,8 @@ in
     ORT_SKIP_DOWNLOAD = "1";
 
     # ruvector-postgres is one member of the RuVector cargo workspace.
+    # The extension is an intentionally detached workspace member; the build
+    # subdirectory and cargoRoot make both metadata and vendoring use its lock.
     cargoPgrxFlags = ["-p" "ruvector-postgres"];
 
     # Blueprint §17 step 4 (line 5576) requires pg17, index-all, quant-all,
@@ -119,11 +121,8 @@ in
     # install scripts and both upgrade edges remain available for existing
     # databases.
     postInstall = ''
-      # Preserve pgrx's generated install script before anything overwrites it.
-      # It is the only artifact that reflects buildFeatures: the substitution
-      # below pins the binding surface to the checked-in 0.3.0 script (190
-      # functions), which is why the live catalog bound 192 functions regardless
-      # of which features were compiled into the shared object.
+      # Preserve pgrx's generated install script before installing historical
+      # upgrade edges. It is the artifact that reflects buildFeatures.
       if [ -f "$out/share/postgresql/extension/ruvector--0.3.1.sql" ]; then
         install -m 0444 "$out/share/postgresql/extension/ruvector--0.3.1.sql" \
           "$out/share/postgresql/extension/ruvector--0.3.1-pgrx-generated.sql"
@@ -137,27 +136,10 @@ in
         install -m 0444 "$sql" "$out/share/postgresql/extension/$(basename "$sql")"
       done
 
-      # pgrx 0.12 serializes Rust JsonB default expressions literally, which
-      # makes exactly ONE line of its generated script invalid SQL:
-      #   "config_json" jsonb DEFAULT JsonB(serde_json::json!({}))
-      # The previous recipe responded by discarding the generated script and
-      # substituting the maintained 0.3.0 script. That capped the extension's
-      # bound surface at 190 functions no matter which features were compiled,
-      # which is why the live catalog exposed no ruvector_embed, no MinCut and
-      # no BM25 while the shared object contained their symbols.
-      #
-      # Repair that one default instead of discarding 3,821 lines of correct
-      # schema. The generated script declares 314 functions — including
-      # ruvector_shake256_256, so the manual append is no longer needed; only
-      # its grants are still applied.
       current_sql="$out/share/postgresql/extension/ruvector--0.3.1.sql"
-      sed -i \
-        's|DEFAULT JsonB(serde_json::json!({}))|DEFAULT '"'"'{}'"'"'::jsonb|g' \
-        "$current_sql"
-
-      if grep -q 'serde_json::json!' "$current_sql"; then
-        echo "ERROR: unrepaired Rust default expression remains in $current_sql" >&2
-        grep -n 'serde_json::json!' "$current_sql" >&2
+      if grep -Eq "DEFAULT (auto|dot|validation|parameter_change|JsonB\\(|DEFAULT_CURVATURE)" "$current_sql"; then
+        echo "ERROR: invalid generated SQL default remains in $current_sql" >&2
+        grep -nE "DEFAULT (auto|dot|validation|parameter_change|JsonB\\(|DEFAULT_CURVATURE)" "$current_sql" >&2
         exit 1
       fi
       if ! grep -q 'ruvector_embed' "$current_sql"; then
