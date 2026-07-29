@@ -419,17 +419,17 @@
     "icm_source": {
       "flake": false,
       "locked": {
-        "lastModified": 1784742993,
-        "narHash": "sha256-VTzydRl9r3zerggaDn7jakdX0US8/7sx6hkpwqGW3IE=",
+        "lastModified": 1785362962,
+        "narHash": "sha256-B3ywx6+Qjq1fhj3b+m/c2MkgArVjClXMSj6wLqlP794=",
         "owner": "FlexNetOS",
         "repo": "icm",
-        "rev": "6c357d85b7bcbb3dcb2e11f6a42a6a198255e99d",
+        "rev": "dfeba4efa880f58ece6d91c3f1da4c8358c71564",
         "type": "github"
       },
       "original": {
         "owner": "FlexNetOS",
         "repo": "icm",
-        "rev": "6c357d85b7bcbb3dcb2e11f6a42a6a198255e99d",
+        "rev": "dfeba4efa880f58ece6d91c3f1da4c8358c71564",
         "type": "github"
       }
     },

@@ -81,7 +81,7 @@
       flake = false;
     };
     icm_source = {
-      url = "github:FlexNetOS/icm/6c357d85b7bcbb3dcb2e11f6a42a6a198255e99d";
+      url = "github:FlexNetOS/icm/dfeba4efa880f58ece6d91c3f1da4c8358c71564";
       flake = false;
     };
     weave_source = {
