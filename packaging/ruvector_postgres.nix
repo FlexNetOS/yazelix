@@ -18,12 +18,12 @@
   buildPgrxExtension ? pkgs.buildPgrxExtension,
   rustPlatform ? pkgs.rustPlatform,
 }: let
-  rev = "b32677faf83dc379341183c8ff0604fd7412a9f1";
+  rev = "c0e86d8ad45f8497d0c6c763c086441ee2a351f6";
   upstreamSrc = pkgs.fetchFromGitHub {
     owner = "FlexNetOS";
     repo = "meta-ruvector";
     inherit rev;
-    hash = "sha256-IxSrQjhDjAVM/NQYHnE5lY000tIHzwZGxkV79lacy/w=";
+    hash = "sha256-Y4pch81+VynpDZcepuxouOsxhXb7asVU6mjsMSGaDSU=";
   };
   # The pushed meta-ruvector source already contains the SHAKE256 entry point
   # and the full-feature dependency/default repairs.
@@ -135,20 +135,26 @@ in
       generated_sql="$out/share/postgresql/extension/ruvector--0.3.1-pgrx-generated.sql"
       current_sql="$out/share/postgresql/extension/ruvector--0.3.1.sql"
       native_sql="$TMPDIR/ruvector-native.sql"
+      aggregate_sql="$TMPDIR/ruvector-aggregate.sql"
       operator_sql="$TMPDIR/ruvector-operators.sql"
       structural_sql="$TMPDIR/ruvector-structural.sql"
       sed -n '35,67p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql > "$native_sql"
+      sed -n '282,308p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql > "$aggregate_sql"
       sed -n '138,175p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql > "$operator_sql"
       {
-        sed -n '1085,1158p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql
+        sed -n '1085,1137p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql
+        sed -n '1141,1158p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql
         sed -n '1460,1473p' crates/ruvector-postgres/sql/ruvector--0.3.0.sql
       } > "$structural_sql"
       {
         cat "$native_sql"
         cat "$generated_sql"
+        cat "$aggregate_sql"
         cat "$operator_sql"
         cat "$structural_sql"
       } > "$current_sql.assembled"
+      sed -i '/"sample_queries" jsonb /s/jsonb /jsonb DEFAULT NULL /' \
+        "$current_sql.assembled"
       chmod u+w "$current_sql"
       install -m 0644 "$current_sql.assembled" "$current_sql"
 
