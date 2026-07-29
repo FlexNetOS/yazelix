@@ -59,7 +59,7 @@ trust_level = "trusted"
 [projects."/home/flexnetos/meta/src/meta-ruvector"]
 trust_level = "trusted"
 
-[projects."/home/flexnetos/meta/src/flexnetos_runner"]
+[projects."/home/flexnetos/meta/flexnetos_runner"]
 trust_level = "trusted"
 
 [tui.model_availability_nux]

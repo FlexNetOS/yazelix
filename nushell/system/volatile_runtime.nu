@@ -26,6 +26,12 @@ const ICM_DURABLE_CACHE = "/home/flexnetos/.cache/icm"
 const LEGACY_KACHE_ROOTS = [
     "/home/flexnetos/meta/.cache/kache"
     "/home/flexnetos/meta/var/cache/kache"
+    # The runner was promoted out of src/ to the meta root, so its live _work tree
+    # is under meta/flexnetos_runner. The src/ entries are kept for the retired
+    # checkout; the promoted paths are the ones that can actually accrue a shadow
+    # Kache root today, and were previously unguarded.
+    "/home/flexnetos/meta/flexnetos_runner/_work/runner-home-01/.cache/kache"
+    "/home/flexnetos/meta/flexnetos_runner/_work/runner-home-02/.cache/kache"
     "/home/flexnetos/meta/src/flexnetos_runner/_work/runner-home-01/.cache/kache"
     "/home/flexnetos/meta/src/flexnetos_runner/_work/runner-home-02/.cache/kache"
     "/home/flexnetos/Downloads/runner/runner-home-01/.cache/kache"
