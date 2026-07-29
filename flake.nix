@@ -115,6 +115,10 @@
       url = "github:luccahuguet/zjstatus/yazelix-tab-activity-pipe";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    yaziBistro = {
+      url = "github:luccahuguet/yazi-bistro";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -147,9 +151,10 @@
     ghaRunner,
     autoLayoutYazi,
     starshipYazi,
+    yaziBistro,
     zjstatus,
   }: let
-    novaVersion = "1.0.0-beta.2";
+    novaVersion = "1.0.0-beta.3";
     compactNovaVersion = version:
       if version == "dev"
       then "NOVA DEV"
@@ -246,16 +251,17 @@
         mkdir -p "$out"
         cp -R ${pkgs.lib.cleanSource ./crates/yzx-config}/. "$out/"
         chmod -R u+w "$out"
-        ln -s ${ratconfig} "$out/ratconfig"
         ln -s ${yazelixCursors} "$out/yazelix-cursors"
         cp ${./defaults/config.toml} "$out/config.toml"
         cp ${./defaults/mars/config.toml} "$out/mars.toml"
+        cp ${mars}/docs/yazelix/config_inventory.v1.json "$out/mars-config-inventory.v1.json"
         substituteInPlace "$out/Cargo.toml" \
-          --replace-fail '../../../ratconfig' './ratconfig' \
           --replace-fail '../../../yazelix-cursors' './yazelix-cursors'
         substituteInPlace "$out/src/catalog.rs" \
           --replace-fail '../../../defaults/config.toml' '../config.toml' \
           --replace-fail '../../../defaults/mars/config.toml' '../mars.toml'
+        substituteInPlace "$out/src/mars_inventory.rs" \
+          --replace-fail '../../../../mars/docs/yazelix/config_inventory.v1.json' '../mars-config-inventory.v1.json'
       '';
       yzxConfig = pkgs.rustPlatform.buildRustPackage {
         pname = "yzx-config";
@@ -263,7 +269,10 @@
         src = yzxConfigSrc;
         cargoLock = {
           lockFile = ./crates/yzx-config/Cargo.lock;
+          # Two ratconfig majors coexist after the upstream sync: yazelix-cursors
+          # still pins 2.0.0 while yzx-config itself moved to 6.0.0.
           outputHashes."ratconfig-2.0.0" = "sha256-NXnn7WOBEa7uQl8rs52gpIhpEGTeanRL5+au9ltjQyE=";
+          outputHashes."ratconfig-6.0.0" = "sha256-cXi++JuTkC47J0geYyxi+Eh3M/mESK0qAkKwBFj1RdY=";
         };
         YAZELIX_NIX_STORE_ROOT = builtins.storeDir;
         YZX_TEST_NU = "${pkgs.nushell}/bin/nu";
@@ -394,28 +403,7 @@
         chmod 755 "$out/bin/yzx-hx"
         ln -s yzx-hx "$out/bin/hx"
       '';
-      yaziAssetsSelection = pkgs.fetchFromGitHub {
-        owner = "luccahuguet";
-        repo = "yazelix-yazi-assets";
-        rev = "677c127bceca9b9de3aab1251f8b65fe81631309";
-        sparseCheckout = ["plugins/git.yazi" "yazelix_starship.toml"];
-        nonConeMode = true;
-        hash = "sha256-E40pXHSUX75ig0ACcuinTSC4xiJu0r8fO/G9z+w+YuI=";
-      };
-      yaziFlavorNames = [
-        "catppuccin-frappe.yazi"
-        "catppuccin-latte.yazi"
-        "catppuccin-macchiato.yazi"
-        "catppuccin-mocha.yazi"
-        "dracula.yazi"
-      ];
-      yaziFlavorsSelection = pkgs.fetchFromGitHub {
-        owner = "yazi-rs";
-        repo = "flavors";
-        rev = "4770a3467169bfdb0a3b11601921aaf27c100630";
-        sparseCheckout = yaziFlavorNames;
-        hash = "sha256-TwYnWeRnclmHFwq6bisn7OTXqzWmGiEaEGIZFGAYhsw=";
-      };
+      yaziBistroPackage = yaziBistro.packages.${system}.default;
       yzxOpenCore = pkgs.rustPlatform.buildRustPackage {
         pname = "yzx-open";
         version = "0.1.0";
@@ -440,11 +428,8 @@
         ln -s ${flexnetosYaziAssetsRoot}/plugins/auto-layout.yazi "$out/plugins/auto-layout.yazi"
         ln -s ${flexnetosYaziAssetsRoot}/plugins/git.yazi "$out/plugins/git.yazi"
         ln -s ${flexnetosYaziAssetsRoot}/plugins/starship.yazi "$out/plugins/starship.yazi"
-        for flavor in ${pkgs.lib.concatStringsSep " " yaziFlavorNames}; do
-          for file in flavor.toml tmtheme.xml LICENSE LICENSE-tmtheme; do
-            install -D -m 644 ${yaziFlavorsSelection}/"$flavor/$file" "$out/flavors/$flavor/$file"
-          done
-        done
+        ln -s ${yaziBistroPackage}/share/yazi-flavors/catalog.toml "$out/catalog.toml"
+        ln -s ${yaziBistroPackage}/share/yazi-flavors/flavors "$out/flavors"
       '';
       yzxYaziMaterializer = yzxYaziMaterializerFor pkgs;
       # Fork: top-level full-variant yzx-yazi feeds the FlexNetOS workspace
@@ -477,11 +462,13 @@
       };
       yzxBarRenderRequest =
         pkgs.writeText "yzx-bar-render-request.json" (builtins.toJSON (barRenderRequest {
+          appearanceMode = "dark";
           widgetTray = defaultBarWidgets;
           shellLabel = defaultShellProgram;
         }));
       yzxBarRenderRequestTemplate =
         pkgs.writeText "yzx-bar-render-request-template.json" (builtins.toJSON (barRenderRequest {
+          appearanceMode = "__YZX_APPEARANCE_MODE__";
           widgetTray = "__YZX_BAR_WIDGET_TRAY__";
           shellLabel = "__YZX_SHELL_LABEL__";
         }));
@@ -568,11 +555,13 @@
         agentKey = defaultConfig.keybindings.agent;
         gitKey = defaultConfig.keybindings.git;
         menuKey = defaultConfig.keybindings.menu;
+        screenKey = defaultConfig.keybindings.screen;
         sidebarKey = defaultConfig.keybindings.sidebar;
         sidebarFocusKey = defaultConfig.keybindings.sidebar_focus;
         inherit defaultPopupSideMargin defaultPopupVerticalMargin;
         yzxConfig = "${yzxConfigUi}/bin/yzx-config-ui";
         yzxMenu = "${yzxMenu}/bin/yzx-menu";
+        yzxScreen = "${yazelixScreenPackage}/bin/yzs";
         yzxYazi = "${yzxYazi}/bin/yzx-yazi";
         yzxSidebarRefresh = "${yzxOpenCore}/bin/yzx-sidebar-refresh";
         git = "${yzxGit}/bin/yzx-git";
@@ -728,11 +717,13 @@
           agentKey = defaultConfig.keybindings.agent;
           gitKey = defaultConfig.keybindings.git;
           menuKey = defaultConfig.keybindings.menu;
+          screenKey = defaultConfig.keybindings.screen;
           sidebarKey = defaultConfig.keybindings.sidebar;
           sidebarFocusKey = defaultConfig.keybindings.sidebar_focus;
           inherit defaultPopupSideMargin defaultPopupVerticalMargin;
           yzxConfig = "${configUi}/bin/yzx-config-ui";
           yzxMenu = "${yzxMenu}/bin/yzx-menu";
+          yzxScreen = "${yazelixScreenPackage}/bin/yzs";
           yzxYazi = "${yazi}/bin/yzx-yazi";
           yzxSidebarRefresh = "${yzxOpenCore}/bin/yzx-sidebar-refresh";
           git = "${git}/bin/yzx-git";
@@ -763,6 +754,8 @@
           yzxZellijConfig = "${yzxZellijConfig}/bin/yzx-zellij-config";
           yzxConfigKdl = "${configKdl}";
           yzxRuntimeIdentity = "${yzxRuntimeIdentity}/runtime_identity.json";
+          yzxYaziConfig = "${yzxYaziConfig}";
+          yzxYaziMaterializer = "${yzxYaziMaterializer}/bin/yzx-yazi-config";
           yzxReveal = "${yzxOpenCore}/bin/yzx-reveal";
           yzxSidebarRefresh = "${yzxOpenCore}/bin/yzx-sidebar-refresh";
           yaziSource = yaziRuntime.source;
@@ -780,6 +773,7 @@
           defaultAgentKeybinding = defaultConfig.keybindings.agent;
           defaultGitKeybinding = defaultConfig.keybindings.git;
           defaultMenuKeybinding = defaultConfig.keybindings.menu;
+          defaultScreenKeybinding = defaultConfig.keybindings.screen;
           defaultSidebarKeybinding = defaultConfig.keybindings.sidebar;
           defaultSidebarFocusKeybinding = defaultConfig.keybindings.sidebar_focus;
           inherit defaultPopupSideMargin defaultPopupVerticalMargin;
@@ -1552,6 +1546,7 @@
       noHelixContractsCheck =
         rustBinFor pkgs "no-helix-contracts-check" "${checksSrc}/no-helix-contracts.rs";
       mkFakeHostYazi = {
+        multiline ? false,
         name,
         yaVersion ? pkgs.yazi.version,
         yaziVersion ? pkgs.yazi.version,
@@ -1587,7 +1582,15 @@
           chmod 755 "$out/bin/yazi" "$out/bin/ya"
         '';
       fakeHostYazi = mkFakeHostYazi {name = "fake-host-yazi";};
+      # Upstream's shim relies on one argv0-switching bash script; this fork's fake
+      # host Yazi ships separate Nushell-backed yazi and ya binaries, so link each.
+      fakeShimHostYazi = pkgs.runCommand "fake-shim-host-yazi" {} ''
+        mkdir -p "$out/bin"
+        ln -s ${fakeHostYazi}/bin/yazi "$out/bin/yazi"
+        ln -s ${fakeHostYazi}/bin/ya "$out/bin/ya"
+      '';
       fakeNewerHostYazi = mkFakeHostYazi {
+        multiline = true;
         name = "fake-newer-host-yazi";
         yaVersion = "99.0.0";
         yaziVersion = "99.0.0";
@@ -1627,6 +1630,9 @@
         [settings]
         trail = "reef"
       '';
+      fakeStarship = pkgs.writeText "hm-starship.toml" ''
+        format = "$directory$git_branch"
+      '';
       fakeYaziFlavor = pkgs.writeTextDir "flavor.toml" ''
         [mgr]
         cwd = { fg = "#c0ffee" }
@@ -1657,6 +1663,12 @@
         home.packages = [pkgs.yazi];
         programs.yazelix.package = yzxNoYazi;
       };
+      homeManagerSharedStarship = homeManagerConfiguration {
+        programs.yazelix.config = {
+          starship.source = fakeStarship;
+          yazi.starship.source = fakeStarship;
+        };
+      };
       homeManagerConfigFiles = homeManagerConfiguration {
         xdg.configFile."yazelix/yazi/flavors/example.yazi".source = fakeYaziFlavor;
         programs.yazelix.config = {
@@ -1667,6 +1679,7 @@
             keybindings.agent = "Alt Shift A";
             keybindings.git = "Alt Shift G";
             keybindings.menu = "Alt Shift U";
+            keybindings.screen = "Ctrl Shift S";
             keybindings.sidebar = "Ctrl Shift B";
             keybindings.sidebar_focus = "Ctrl Shift E";
             bar.widgets = ["editor" "shell"];
@@ -1683,6 +1696,7 @@
           yazi.init.text = "-- init\n";
           yazi.keymap.text = "[manager]\n";
           yazi.package.text = "[plugin]\ndeps = []\n";
+          yazi.starship.source = fakeStarship;
           yazi.theme.text = "[flavor]\ndark = \"example\"\n";
           nu.env.text = "# env\n";
           nu.config.text = "# config\n";
@@ -1770,6 +1784,7 @@
         override_path="${homeManagerOverride.activationPackage}/home-path"
         no_mars_path="${homeManagerNoMars.activationPackage}/home-path"
         no_yazi_path="${homeManagerNoYazi.activationPackage}/home-path"
+        shared_config_files="${homeManagerSharedStarship.activationPackage}/home-files/.config/yazelix"
         hm_yzx="${homeManagerConfigFiles.activationPackage}/home-path/bin/yzx"
         config_files="${homeManagerConfigFiles.activationPackage}/home-files/.config/yazelix"
 
@@ -1803,6 +1818,7 @@
         grep -q 'agent = "Alt Shift A"' "$config_files/config.toml"
         grep -q 'git = "Alt Shift G"' "$config_files/config.toml"
         grep -q 'menu = "Alt Shift U"' "$config_files/config.toml"
+        grep -q 'screen = "Ctrl Shift S"' "$config_files/config.toml"
         grep -q 'sidebar = "Ctrl Shift B"' "$config_files/config.toml"
         grep -q 'sidebar_focus = "Ctrl Shift E"' "$config_files/config.toml"
         ! grep -q 'ratconfig' "$config_files/config.toml"
@@ -1820,9 +1836,13 @@
         test "$(YAZELIX_CONFIG_HOME="$config_files" ${yzx}/libexec/yazelix/yzx-config --get keybindings.agent)" = "Alt Shift A"
         test "$(YAZELIX_CONFIG_HOME="$config_files" ${yzx}/libexec/yazelix/yzx-config --get keybindings.git)" = "Alt Shift G"
         test "$(YAZELIX_CONFIG_HOME="$config_files" ${yzx}/libexec/yazelix/yzx-config --get keybindings.menu)" = "Alt Shift U"
+        test "$(YAZELIX_CONFIG_HOME="$config_files" ${yzx}/libexec/yazelix/yzx-config --get keybindings.screen)" = "Ctrl Shift S"
         test "$(YAZELIX_CONFIG_HOME="$config_files" ${yzx}/libexec/yazelix/yzx-config --get keybindings.sidebar)" = "Ctrl Shift B"
         test "$(YAZELIX_CONFIG_HOME="$config_files" ${yzx}/libexec/yazelix/yzx-config --get keybindings.sidebar_focus)" = "Ctrl Shift E"
         grep -q 'width = 1200' "$config_files/mars/config.toml"
+        test "$(YAZELIX_CONFIG_HOME="$config_files" ${yzx}/libexec/yazelix/yzx-config --project-mars-appearance)" = "environment light"
+        grep -q 'width = 1200' "$config_files/mars/config.toml"
+        ! grep -q 'preset' "$config_files/mars/config.toml"
         grep -q 'pane_frames false' "$config_files/zellij/config.kdl"
         grep -q '^\[character\]$' "$config_files/starship.toml"
         grep -q 'format = "::"' "$config_files/starship.toml"
@@ -1832,15 +1852,22 @@
         grep -q 'show_hidden = true' "$config_files/yazi/yazi.toml"
         grep -q -- '-- init' "$config_files/yazi/init.lua"
         grep -q 'deps = \[\]' "$config_files/yazi/package.toml"
+        grep -Fqx 'format = "$directory$git_branch"' "$config_files/yazi/starship.toml"
+        test "$(readlink -f "$config_files/starship.toml")" != \
+          "$(readlink -f "$config_files/yazi/starship.toml")"
         grep -q 'dark = "example"' "$config_files/yazi/theme.toml"
         test -L "$config_files/yazi/flavors/example.yazi"
         case "$(readlink "$config_files/yazi/flavors/example.yazi")" in
           /nix/store/*) ;;
           *) printf '%s\n' 'Home Manager Yazi flavor is not store-backed' >&2; exit 1 ;;
         esac
-        hm_yazi_runtime="$(${yzxYaziMaterializer}/bin/yzx-yazi-config ${yzx}/share/yazelix/yazi "$config_files/yazi" "$TMPDIR/hm-yazi-state")"
+        hm_yazi_runtime="$(${yzxYaziMaterializer}/bin/yzx-yazi-config ${yzx}/share/yazelix/yazi "$config_files/yazi" "$TMPDIR/hm-yazi-state" dark)"
+        grep -Fqx 'format = "$directory$git_branch"' "$hm_yazi_runtime/yazelix_starship.toml"
         YAZI_CONFIG_HOME="$hm_yazi_runtime" ${pkgs.yazi}/bin/yazi --debug > hm-yazi-debug
         grep -q 'Dark/light flavor:.*example' hm-yazi-debug
+
+        test "$(readlink -f "$shared_config_files/starship.toml")" = \
+          "$(readlink -f "$shared_config_files/yazi/starship.toml")"
         grep -q '# config' "$config_files/nu/config.nu"
 
         export HOME="$TMPDIR/hm-yzx-home"
@@ -1863,6 +1890,9 @@
         grep -q "state dir: $YAZELIX_STATE_DIR" status
         grep -q 'shell: nu' status
         grep -q 'welcome enabled: false' status
+        grep -q 'layout: runtime (' status
+        grep -q 'host_theme_mode "light"' "$YAZELIX_STATE_DIR/zellij/layout.kdl"
+        grep -Fq 'host_theme_light_tab_normal "#[fg=#5c5f77] [{index}] {name} "' "$YAZELIX_STATE_DIR/zellij/layout.kdl"
         grep -q 'Yazelix Nova doctor' doctor
         grep -q "ok config home: $runtime_config" doctor
         grep -q 'ok shell.program: nu' doctor
@@ -1882,7 +1912,7 @@
         printf '%s\n' 'require("smart-enter"):setup { open_multi = false }' > "$user/init.lua"
         printf '%s\n' '[[mgr.prepend_keymap]]' 'on = "l"' 'run = "plugin smart-enter"' > "$user/keymap.toml"
 
-        runtime="$(${yzxYaziMaterializer}/bin/yzx-yazi-config ${yzx}/share/yazelix/yazi "$user" "$state")"
+        runtime="$(${yzxYaziMaterializer}/bin/yzx-yazi-config ${yzx}/share/yazelix/yazi "$user" "$state" dark)"
         YZX_YAZI_STARSHIP_CONFIG="$runtime/yazelix_starship.toml" YAZI_CONFIG_HOME="$runtime" ${pkgs.yazi}/bin/yazi --debug > yazi-debug
         test -f "$runtime/plugins/smart-enter.yazi/main.lua"
         for plugin in auto-layout git sidebar-state sidebar-status starship zoxide-editor; do
@@ -1894,13 +1924,19 @@
         grep -q 'plugin smart-enter' "$runtime/keymap.toml"
         grep -q 'yzx-open' yazi-debug
 
+        light_runtime="$(${yzxYaziMaterializer}/bin/yzx-yazi-config ${yzx}/share/yazelix/yazi "$TMPDIR/no-yazi-user" "$TMPDIR/light-state" light)"
+        grep -Fqx 'dark = "${yaziBistro.lib.defaultLight}"' "$light_runtime/theme.toml"
+        grep -Fqx 'light = "${yaziBistro.lib.defaultLight}"' "$light_runtime/theme.toml"
+        YAZI_CONFIG_HOME="$light_runtime" ${pkgs.yazi}/bin/yazi --debug > light-yazi-debug
+        grep -q 'Dark/light flavor:.*${yaziBistro.lib.defaultLight}' light-yazi-debug
+
         for flavor_path in ${yzx}/share/yazelix/yazi/flavors/*.yazi; do
           flavor_dir="''${flavor_path##*/}"
           flavor="''${flavor_dir%.yazi}"
           flavor_user="$TMPDIR/flavor-$flavor"
           mkdir -p "$flavor_user"
           printf '[flavor]\ndark = "%s"\nlight = "%s"\n' "$flavor" "$flavor" > "$flavor_user/theme.toml"
-          flavor_runtime="$(${yzxYaziMaterializer}/bin/yzx-yazi-config ${yzx}/share/yazelix/yazi "$flavor_user" "$TMPDIR/state-$flavor")"
+          flavor_runtime="$(${yzxYaziMaterializer}/bin/yzx-yazi-config ${yzx}/share/yazelix/yazi "$flavor_user" "$TMPDIR/state-$flavor" dark)"
           YAZI_CONFIG_HOME="$flavor_runtime" ${pkgs.yazi}/bin/yazi --debug > "debug-$flavor"
           grep -q "Dark/light flavor:.*$flavor" "debug-$flavor"
           test -f "$flavor_runtime/flavors/$flavor_dir/flavor.toml"
@@ -2037,6 +2073,8 @@
           "$package/bin/yzx" status > "$root/status"
           grep -Fqx "package: $variant" "$root/status"
           grep -Fqx 'mars config: not included' "$root/status"
+          grep -q 'host_theme_mode "dark"' "$package/share/yazelix/layout.kdl"
+          grep -Fq 'host_theme_light_tab_normal "#[fg=#5c5f77] [{index}] {name} "' "$package/share/yazelix/layout.kdl"
           "$package/bin/yzx" doctor > "$root/doctor"
           grep -Fqx 'ok mars: not included' "$root/doctor"
           if "$package/bin/yzx" launch 2> "$root/launch-error"; then
@@ -2062,6 +2100,7 @@
           stackPromptGuard = "${./nushell/config/stack_prompt_guard.nu}";
           flexnetosInit = "${./nushell/scripts/flexnetos_init.nu}";
           profileNu = "/home/flexnetos/.nix-profile/toolbin/nu";
+          rtkWrappers = "${./nushell/config/rtk_wrappers.nu}";
         };
       in pkgs.runCommand "flexnetos-foundation-contracts" {} ''
         test -x ${foundation}/bin/yzx
@@ -2259,7 +2298,9 @@
         test -f ${foundation}/nushell/config/rtk_wrappers.nu
         test -f ${foundation}/nushell/scripts/flexnetos_init.nu
         test -f ${foundation}/nushell/system/profile_environment_frontdoor.nu
-        grep -F 'use rtk_wrappers.nu *' ${foundation}/nushell/config/config.nu
+        # @rtkWrappers@ resolves to a store path, so match the module by suffix
+        # rather than the pre-substitution literal.
+        grep -Eq '^use "/nix/store/[^"]+-rtk_wrappers\.nu" \*$' ${foundation}/nushell/config/config.nu
         grep -F 'XDG_DATA_HOME = $DATA_HOME' ${foundation}/nushell/system/profile_environment_frontdoor.nu
         grep -F 'source "${flexnetosNuConfig}"' ${foundation}/share/yazelix/nu/config.nu
         grep -F ${./nushell/scripts/flexnetos_init.nu} ${flexnetosNuConfig}
@@ -2464,6 +2505,59 @@
         mkdir -p "$HOME" "$YAZELIX_CONFIG_HOME" "$YAZELIX_STATE_DIR" "$XDG_DATA_HOME"
         printf '%s\n' '[welcome]' 'enabled = false' > "$YAZELIX_CONFIG_HOME/config.toml"
 
+        user_yazi="$root/user-yazi"
+        materialized_state="$root/materialized-state"
+        mkdir -p "$user_yazi"
+        printf '%s\n' '[mgr]' 'show_hidden = true' > "$user_yazi/yazi.toml"
+        effective="$({
+          PATH=${pkgs.coreutils}/bin "$package/bin/yzx" yazi-config materialize \
+            --state-dir "$materialized_state" \
+            --user-config-dir "$user_yazi"
+        } 2> "$root/materialize-error")"
+        test ! -s "$root/materialize-error"
+        test "$effective" = "$(${pkgs.coreutils}/bin/readlink -f "$materialized_state")/yazi"
+        grep -Fqx 'show_hidden = true' "$effective/yazi.toml"
+        grep -F 'yzx-open' "$effective/yazi.toml"
+
+        empty_user_yazi="$root/empty-user-yazi"
+        empty_state="$root/empty-state"
+        mkdir -p "$empty_user_yazi"
+        empty_effective="$(PATH=${pkgs.coreutils}/bin "$package/bin/yzx" yazi-config materialize \
+          --user-config-dir "$empty_user_yazi" \
+          --state-dir "$empty_state")"
+        test "$(${pkgs.coreutils}/bin/readlink -f "$empty_effective")" = \
+          "$(${pkgs.coreutils}/bin/readlink -f "$package/share/yazelix/yazi")"
+        test ! -e "$empty_state"
+
+        invalid_user_yazi="$root/invalid-user-yazi"
+        invalid_state="$root/invalid-state"
+        mkdir -p "$invalid_user_yazi" "$invalid_state/yazi"
+        printf '%s\n' '[mgr' > "$invalid_user_yazi/yazi.toml"
+        printf '%s\n' keep > "$invalid_state/yazi/sentinel"
+        set +e
+        PATH=${pkgs.coreutils}/bin "$package/bin/yzx" yazi-config materialize \
+          --user-config-dir "$invalid_user_yazi" \
+          --state-dir "$invalid_state" \
+          > "$root/invalid-output" 2> "$root/invalid-error"
+        invalid_status=$?
+        set -e
+        test "$invalid_status" -eq 1
+        test ! -s "$root/invalid-output"
+        grep -F 'invalid user Yazi TOML' "$root/invalid-error"
+        grep -Fqx keep "$invalid_state/yazi/sentinel"
+
+        PATH=${pkgs.coreutils}/bin "$package/bin/yzx" yazi-config --help > "$root/yazi-config-help"
+        grep -F 'yzx yazi-config materialize' "$root/yazi-config-help"
+        PATH=${pkgs.coreutils}/bin "$package/bin/yzx" yazi-config materialize --help > "$root/materialize-help"
+        grep -F -- '--user-config-dir <path>' "$root/materialize-help"
+        set +e
+        PATH=${pkgs.coreutils}/bin "$package/bin/yzx" yazi-config materialize \
+          --user-config-dir "$user_yazi" > /dev/null 2> "$root/materialize-usage"
+        usage_status=$?
+        set -e
+        test "$usage_status" -eq 64
+        grep -F 'Usage: yzx yazi-config materialize' "$root/materialize-usage"
+
         PATH=${fakeHostYazi}/bin:${pkgs.coreutils}/bin "$package/bin/yzx" doctor > "$root/doctor"
         grep -Fqx 'ok yazi source: host' "$root/doctor"
         grep -Fqx 'ok yazi: ${fakeHostYazi}/bin/yazi' "$root/doctor"
@@ -2475,9 +2569,25 @@
         grep -Fqx 'Ya ${pkgs.yazi.version}' "$root/ya-version"
         PATH=${fakeHostYazi}/bin:${pkgs.coreutils}/bin "$package/bin/yzx" run yazi --version > "$root/yazi-version"
         grep -Fqx 'Yazi ${pkgs.yazi.version}' "$root/yazi-version"
+        PATH=${fakeShimHostYazi}/bin:${pkgs.coreutils}/bin "$package/bin/yzx" status > "$root/shim-status"
+        grep -Fqx 'yazi: ${fakeShimHostYazi}/bin/yazi' "$root/shim-status"
+        grep -Fqx 'ya: ${fakeShimHostYazi}/bin/ya' "$root/shim-status"
+        PATH=${fakeShimHostYazi}/bin:${pkgs.coreutils}/bin "$package/bin/yzx" run ya --version > "$root/shim-ya-version"
+        grep -Fqx 'Ya ${pkgs.yazi.version}' "$root/shim-ya-version"
+        PATH=${fakeShimHostYazi}/bin:${pkgs.coreutils}/bin "$package/bin/yzx" run yazi --version > "$root/shim-yazi-version"
+        grep -Fqx 'Yazi ${pkgs.yazi.version}' "$root/shim-yazi-version"
+        mkdir -p "$YAZELIX_CONFIG_HOME/yazi"
+        printf '%s\n' 'format = "$directory$git_branch"' > "$YAZELIX_CONFIG_HOME/yazi/starship.toml"
         PATH=${fakeHostYazi}/bin:${pkgs.coreutils}/bin "$package/bin/yzx" run yazi managed > "$root/yazi-managed"
         grep -F 'fake Yazi config=' "$root/yazi-managed"
+        grep -F "starship=$YAZELIX_STATE_DIR/yazi/yazelix_starship.toml" "$root/yazi-managed"
+        grep -F 'role= ya=' "$root/yazi-managed"
         grep -F 'ya=${fakeHostYazi}/bin/ya' "$root/yazi-managed"
+        PATH=${fakeHostYazi}/bin:${pkgs.coreutils}/bin "$package/bin/yzx" run yazi \
+          --yzx-workspace-popup popup > "$root/yazi-popup"
+        grep -F "starship=$YAZELIX_STATE_DIR/yazi/yazelix_starship.toml" "$root/yazi-popup"
+        grep -F 'role=workspace-popup' "$root/yazi-popup"
+        grep -F 'args=popup ' "$root/yazi-popup"
 
         YZX_YAZI_BIN=${fakeHostYazi}/bin/yazi \
           YZX_YA=${fakeHostYazi}/bin/ya \

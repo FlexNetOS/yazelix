@@ -35,7 +35,8 @@ fn run() -> io::Result<()> {
         )
     })?;
     let state_dir = state_dir()?;
-    let yazi_config = yazi_config_home(&state_dir)?;
+    let appearance_mode = yzx_config_value("appearance.mode")?;
+    let yazi_config = yazi_config_home(&state_dir, &appearance_mode)?;
     let yzx_open_log = yzx_config_value("open.log_level")?;
     let editor = effective_editor_command(yzx_config_value("editor.command")?);
     let mut args = env::args_os().skip(1).collect::<Vec<_>>();
@@ -89,10 +90,11 @@ fn take_workspace_popup_flag(args: &mut Vec<OsString>) -> bool {
     workspace_popup
 }
 
-fn yazi_config_home(state_dir: &Path) -> io::Result<PathBuf> {
+fn yazi_config_home(state_dir: &Path, appearance_mode: &str) -> io::Result<PathBuf> {
     let user_yazi = config_home()?.join("yazi");
     let output = Command::new(YZX_YAZI_MATERIALIZER)
         .args([Path::new(YZX_YAZI_CONFIG), &user_yazi, state_dir])
+        .arg(appearance_mode)
         .output()?;
     if !output.status.success() {
         return Err(io::Error::other(trim_output(

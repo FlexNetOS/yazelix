@@ -14,6 +14,7 @@ Manager config system, or a main-Yazelix compatibility layer.
 yzx launch  →  Mars  →  yzx-welcome  →  Yazelix Zellij  →  Yazi sidebar + work panes
 yzx enter   →  yzx-welcome  →  Yazelix Zellij  →  same layout
 yzx run     →  prepared Yazelix environment  →  exact child argv/status
+yzx yazi-config materialize  →  private materializer  →  effective Yazi config path
 ```
 
 Bare `yzx` prints help. `launch` is the only Mars route.
@@ -46,6 +47,7 @@ into eight explicit package and app outputs.
 | `enter` | Managed session in current terminal |
 | `run` | Structured command in the prepared runtime environment |
 | `config` | Ratconfig UI |
+| `yazi-config materialize` | Explicit-path Yazi config materialization for automation |
 | `menu` | Curated command palette |
 | `tutor` | Guided lessons / native tutor hints |
 | `screen` | Terminal screens / welcome styles |
@@ -84,15 +86,15 @@ One owner per concern. Paths are the durable map.
 
 | Path | Owns |
 | --- | --- |
-| `runtime/yzx/` | CLI, startup env, host-Yazi pair resolution, launch/enter handoff |
+| `runtime/yzx/` | CLI, public Yazi materializer grammar/delegation, startup env, host-Yazi pair resolution, launch/enter handoff |
 | `runtime/yzx-menu.rs` | Menu palette |
 | `runtime/yzx-agent.rs` | Initial agent title, custom-command exec, and provider bootstrap (`codex resume` → `grok` → `opencode` → `pi` → `claude --resume`) |
-| `runtime/yzx-yazi.rs` | Managed Yazi process/env launch, editor resolve, non-sidebar workspace-popup role |
+| `runtime/yzx-yazi.rs` | Managed Yazi process/env launch, current root appearance lookup, editor resolve, non-sidebar workspace-popup role |
 | `runtime/yzx-nu.rs` | Managed Nu layering; runtime-effective Starship config request |
 | `runtime/yzx-zellij-config.rs` | Packaged + guarded Zellij scalar sidecar merge |
 | `runtime/yzx/zellij.rs` | Plugin sidecar inject; launch materialize/patches |
 | `crates/yzx-open/` | Editor open, Helix bridge, sidebar target follow/reveal, bounded diagnostics |
-| `crates/yzx-yazi-config/` | Managed Yazi config-home materialization and native TOML layering |
+| `crates/yzx-yazi-config/` | Managed Yazi config-home materialization, native TOML layering, and runtime-only flavor projection |
 | `crates/yzx-tutor/` | Tutor CLI and lessons |
 | `runtime/yzx_helix.nu` (`yzx-hx`) | Effective Helix config + Steel wiring |
 | `yazelix-screen` (child) | Screen styles; packaged as `yzx screen` |
@@ -102,15 +104,29 @@ One owner per concern. Paths are the durable map.
 
 `crates/yzx-config/` is the Ratconfig host.
 
-- Supplies stable source/path identities for Ratconfig Core membership; the
-  reviewed root inventory uses a local product-essential allowlist, while
-  Ratconfig owns Core/All filtering, explicit-value visibility, counts,
-  toggling, and All-scope search. Unreviewed non-root inventories remain Core
+- Supplies one stable source/path identity per field and reviewed root, Mars,
+  cursor, and Zellij recommendation allowlists. Ratconfig owns Overview/All filtering,
+  meaningful reduction thresholds, attention-state visibility, toggling, and
+  All-scope search
+- Consumes the versioned catalog from the exact pinned Mars source at build
+  time. Mars owns field completeness and semantic metadata; Yazelix owns the
+  single appearance exclusion, recommendation set, conservative apply labels,
+  and the bounded mapping from owner shapes to sparse inline controls. The
+  compiled consumer does not retain Mars in no-Mars runtime closures
+- Resolves sparse override intent separately from baseline and effective values,
+  declares editor capabilities independently of display types, and completes
+  reloads by field identity rather than stale row position
 - Seeds only the child-owned cursor TOML; root, Mars, Zellij, and Starship stay
   sparse
-- Routes edits to the right file; Helix/Advanced open-file rows; Keys read-only
+- Routes edits and true unset operations to the right file; absent cursor
+  settings resolve through the child owner from the file's definitions and
+  packaged setting defaults, while cursor definitions, Helix/Advanced open-file
+  rows, and Keys remain read-only
 - Resolves known config targets against the packaged Nix store root so
   Home Manager-owned sources stay read-only with exact module-option guidance
+- Keeps localized invalid values as field intent. Wholly unsafe root documents
+  become source diagnostics with an exact `config.toml` file action instead of
+  preventing the UI from opening
 - Hidden package-internal reads for launch + custom-popup KDL render
 - `agent.popup.kdl` is an internal render path that routes custom managed agent
   argv through the packaged launcher
@@ -125,16 +141,18 @@ The root validator derives fixed leaves from that catalog, rejects unknown paths
 before runtime or Ratconfig use, and delegates only `popups.<id>` to its dynamic
 field validator.
 
-`ROOT_CONFIG_CORE_PATHS` contains `shell.program`, `editor.command`,
-`agent.command`, the two ordinary welcome controls, all six managed action
-keys, and `bar.widgets`. Diagnostics (`open.log_level`), argument and duration
-fine tuning, and popup geometry are All-only until explicitly configured.
+`ROOT_CONFIG_RECOMMENDED_PATHS` contains `appearance.mode`, `shell.program`,
+`editor.command`, `agent.command`, the two ordinary welcome controls, the
+managed action keys, and `bar.widgets`. Diagnostics (`open.log_level`), argument
+and duration fine tuning, and popup geometry are All-only until they require
+attention.
 Configured custom popup leaves use Ratconfig's generic TOML rows and belong to
 All; because every discovered leaf is explicit, Ratconfig also keeps it visible
-in Core. Absent optional leaves and unconfigured popup ids are not synthesized
+in Overview. Absent optional leaves and unconfigured popup ids are not synthesized
 
 | Root path | Type | Default | Effect | Applies |
 | --- | --- | --- | --- | --- |
+| `appearance.mode` | string enum | `dark` | Ratconfig palette; projected to Mars and the current managed Zellij session, whose bar follows the native mode event; selects the matching Yazi flavor for each new process | live where addressable, otherwise next launch |
 | `open.log_level` | string enum | `info` | `YZX_OPEN_LOG` diagnostics for managed opens | new opens |
 | `shell.program` | string enum | `nu` | Packaged shell for new panes | new panes |
 | `editor.command` | executable string | `yzx-hx` | Yazi opens, config text edits, and Git clients | new opens |
@@ -149,6 +167,7 @@ in Core. Absent optional leaves and unconfigured popup ids are not synthesized
 | `keybindings.agent` | key chord | `Alt Shift L` | Agent popup trigger | next launch |
 | `keybindings.git` | key chord | `Alt Shift J` | Git popup trigger | next launch |
 | `keybindings.menu` | key chord | `Alt Shift M` | Menu popup trigger | next launch |
+| `keybindings.screen` | key chord | `Alt Shift S` | Random full-screen visual trigger | next launch |
 | `keybindings.sidebar` | key chord | `Alt Shift H` | Sidebar visibility | next launch |
 | `keybindings.sidebar_focus` | key chord | `Ctrl y` | Editor/sidebar focus | next launch |
 | `bar.widgets` | ordered string array | `editor`, `shell`, `term`, `codex_usage`, `cpu`, `ram` | Top-bar tray order; `BAR_WIDGET_VALUES` and `bar_widgets` own validation | next launch |
@@ -172,7 +191,7 @@ custom popup entry.
 
 | Path | Owns |
 | --- | --- |
-| `defaults/mars/config.toml` | Default Mars window/font/appearance; `mars.appearance.preset` is also Ratconfig UI theme (live palette) |
+| `defaults/mars/config.toml` | Default Mars window/font/appearance; writable regular-file sessions receive root `appearance.mode` through `mars.appearance.preset` |
 | `defaults/zellij/config.kdl` | Zellij keys, plugins load, popup wiring, Kitty protocol |
 | `defaults/zellij/layout*.kdl` | Sidebar + stacked panes, open/closed swap |
 | `defaults/nu/` | Packaged Nu: carapace, zoxide, and Starship invocation |
@@ -191,34 +210,22 @@ custom popup entry.
 | yazelix-zellij-bar | Top bar render + widgets |
 | ratconfig | Config UI toolkit |
 | yazelix-screen | Welcome / screen animations |
+| yazi-bistro | Complete pinned Yazi flavors, provenance, licenses, dark/light classification, and the packaged light default |
 
 This repo packages them and applies product policy only.
 
 ### Installed closure topology
 
-`flake.nix` owns the package graph. On `x86_64-linux`, the full package realizes
-to **2.28 GiB across 619 store paths**. The no-Helix package is **2.00 GiB
-across 321 paths**, excluding managed Helix, Steel, and packaged grammars. The
-fixed Mars-free variant is **1.37 GiB across 591 paths**, a measured 927 MiB
-reduction; its source-build graph contains 2,407 fewer derivations. The
-Mars- and Helix-free variant is **1.10 GiB across 293 paths**. Nova's top-level
-outputs are thin command, desktop-entry, and asset joins whose references pull
-in their selected runtime graph.
+`flake.nix` owns the package graph. The full package includes the terminal,
+workspace, managed editor, and managed Yazi. Variant outputs remove Mars,
+managed Helix, and/or the bundled Yazi executable without changing the
+remaining integration contracts. Nova's top-level outputs are thin command,
+desktop-entry, and asset joins whose references pull in their selected runtime
+graph.
 
-The individual package closures below explain the architectural weight. They
-share libraries and tools, so no row is additive and removing one root does not
-necessarily save its complete closure size.
-
-| Layer | Package roots and complete individual closures |
-| --- | --- |
-| Terminal | Mars 1.13 GiB, including Rio, graphics, Python, and fonts |
-| Workspace | Yazi + preview tools 503.2 MiB; Yazelix Zellij 101.9 MiB |
-| Editor | Yazelix Helix 327.6 MiB, including runtime queries and grammars |
-| Source control | Git 373.8 MiB; LazyGit 59.4 MiB |
-| Config | Ratconfig / `yzx-config` 124.4 MiB |
-| Shell and navigation | Carapace 105.9 MiB; Nushell 104.1 MiB; zoxide 60.8 MiB; Starship 58.9 MiB; fzf 49.5 MiB |
-| Status and welcome | tokenusage 75.5 MiB; Yazelix Zellij bar 43.0 MiB; Yazelix Screen 36.7 MiB |
-| Zellij control plugins | Pane orchestrator 2.1 MiB; popup 1.9 MiB |
+The [installation size table](docs/installation.md#installed-size) owns the
+reproducible measurements for all eight variants and their principal package
+closures.
 
 Closure size describes distribution cost, not source ownership or local code
 volume. Child packages and packaged tools carry most binary data; Nova keeps
@@ -264,7 +271,7 @@ Packaged first, unless a surface opts into native replacement.
   starship.toml            # optional sparse prompt overrides
   nu/{env,config}.nu       # after packaged Nu
   helix/*                  # lazy; created on tab use
-  yazi/{yazi.toml,theme.toml,package.toml,init.lua,keymap.toml,plugins/,flavors/}
+  yazi/{yazi.toml,theme.toml,package.toml,starship.toml,init.lua,keymap.toml,plugins/,flavors/}
 ```
 
 Override the source-input root with `YAZELIX_CONFIG_HOME`. Runtime state uses
@@ -274,12 +281,12 @@ foundation fixes it at `/run/user/1001/yazelix/profile-runtime/yazelix`.
 | Surface | Layering |
 | --- | --- |
 | Root TOML | Packaged semantic defaults → sparse explicit user overrides |
-| Cursors | Child-owned template → user file; Ratconfig edits bounded common fields and preserves custom definitions |
+| Cursors | Pinned child-owned field catalog and parser → seeded user file with sparse finite-setting intent; an absent enabled pool uses that file's definitions, other absent settings use packaged defaults, Ratconfig preserves custom definitions, and schema/definition discovery stays read-only with the exact file action |
 | Mars | Packaged base → recursive sparse user override; cursor selection arrives separately through `YAZELIX_CURSOR_CONFIG` |
 | Nu | Packaged → optional host `mise activate nu` → optional user Nu |
 | Starship | Native defaults + `yzx-config` `character.format` → sparse user overrides → runtime-effective TOML |
 | Helix | See Helix notes below |
-| Yazi | Packaged TOML → recursive user tables + replacing scalars/arrays → managed opener/Git fetchers |
+| Yazi | Packaged TOML → recursive user tables + replacing scalars/arrays → managed opener/Git fetchers → runtime-only root-mode flavor projection; optional complete Starship config replacement |
 | Zellij | Packaged → guarded scalar sidecar → runtime materialize under state dir |
 | Host `~/.config/{helix,yazi,starship}` | Not loaded by default |
 
@@ -292,20 +299,35 @@ top-level ownership nodes are rejected, including:
 `load_plugins`, `support_kitty_keyboard_protocol`, `env`, `session_name`,
 `attach_to_session`.
 
-The sidecar is optional and sparse. Ratconfig displays nine effective scalar
-defaults without creating it, including a theme picker derived from the 41
-identities embedded by the pinned Zellij package. Its virtual `default` removes
-the theme assignment; custom native theme names remain accepted. Assignment
-presence is explicit intent, and removing the final assignment removes the
-sidecar.
+The sidecar is optional and sparse. Ratconfig displays ten effective scalar
+defaults without creating it, including separate dark and light theme pickers
+derived from the same 41 identities embedded by the pinned Zellij package.
+Packaged configuration owns the inherited `ansi` / `gruvbox-light` pair, while
+custom native names remain accepted per field. Assignment presence is explicit
+intent, and removing the final assignment removes the sidecar. A legacy static
+`theme` assignment remains untouched in the user file but is diagnosed and
+omitted from runtime materialization.
+
+Yazelix recommends six high-use fields in the Zellij Overview and leaves four
+fine-tuning fields in All. Ratconfig keeps explicit, invalid, externally
+managed, and diagnosed values in Overview and searches the All inventory.
+Safe opaque leaves remain byte-for-byte unchanged and are reached through the
+exact `zellij/config.kdl` file action without a synthetic field or informational
+diagnostic per leaf. Advanced diagnostics are reserved for ignored, invalid,
+structurally unsafe, or integration-owned state. Guarded diagnostics name the
+Yazelix integration owner. This uses Ratconfig's existing views, search, file
+actions, and diagnostics without extending its API or Yazelix's typed schema.
 
 `zellij/plugins.kdl` accepts only `plugins` / `load_plugins` and must not
 redeclare Yazelix-owned plugin ids (`yzpp`, `yazelix_pane_orchestrator`, …).
 
 Inside a managed session, `yzx config` Zellij scalar saves and resets also patch
 `$YAZELIX_STATE_DIR/zellij/config.kdl` (watched active file) without wiping
-launch patches. Many scalars apply live; some (e.g. `scroll_buffer_size`) need
-a new session.
+launch patches. Pane frames, rounded corners, copy-on-select, and clipboard
+target reconfigure the active session; mouse mode, scrollback size, styled
+underlines, and startup tips need a new session. Root appearance uses the fork's
+native dark/light action for the addressed session. The fork sends the resulting
+mode event to the bar, which chooses its internal palette.
 
 ### Helix
 
@@ -344,7 +366,7 @@ Owned by `runtime/yzx/` (Nix substitutes paths; Rust owns wiring and `exec`).
 1. `YAZELIX_STATE_DIR` + optional `YAZELIX_HELIX_BRIDGE_SESSION_ID` (when `yzx-hx`)
 2. Effective `YZX_EDITOR` / `YAZELIX_EDITOR`; standard editor variables route through `yzx-editor`
 3. Config home: `YAZELIX_CONFIG_HOME` → `XDG_CONFIG_HOME/yazelix` → `~/.config/yazelix`
-4. Root settings → env (`YZX_OPEN_LOG`, welcome, popup chords/custom KDL, bar tray)
+4. Root settings → env and launch args (`YZX_OPEN_LOG`, welcome, Zellij theme mode, popup chords/custom KDL, bar tray)
 5. Mars packaged base + sparse user config homes
 6. Zellij materialize (sidecar + patches) + status-bar cache path + plugin permission seeds  
 
@@ -389,11 +411,11 @@ Detail lives in Owners, checks, and the notes below.
 
 | ID | Contract | Owner | Check | Gap |
 | --- | --- | --- | --- | --- |
-| C2 | Mars packaged base + sparse user config; appearance preset as UI theme | `defaults/mars/config.toml`, flake, `yzx-config` | `yzx-contracts`, config tests | Visual |
+| C2 | Root appearance authority projected to the Mars sparse config, with read-only launch fallback | `defaults/config.toml`, `defaults/mars/config.toml`, runtime, `yzx-config` | `yzx-contracts`, config tests | Visual |
 | C3 | Layout sidebar template for swaps | `defaults/zellij/layout*.kdl` | `zellij-layout` | — |
 | C4 | Packaged keys + guarded Zellij sidecar | `defaults/zellij/config.kdl`, `yzx-zellij-config` | `yzx-contracts` | Full keys |
 | C5 | Managed Nu layering | `yzx-nu`, `defaults/nu/` | `yzx-contracts` | — |
-| C6 | Managed Yazi (preview env, open logs, plugins) + `yzx-open` + zoxide | `defaults/yazi/`, `yzx-yazi`, `yzx-open` | contracts + materialization + open tests | Yazi UI |
+| C6 | Managed Yazi layering, public noninteractive materialization, `yzx-open`, and zoxide | `defaults/yazi/`, `runtime/yzx-yazi.rs`, `runtime/yzx/`, `crates/yzx-yazi-config/`, `crates/yzx-open/` | host-Yazi contracts + materialization + open tests | Yazi UI |
 | C7 | Helix bridge window/tab isolation (`session` + `tab_id`) | `yzx-open`, flake | `yzx-open` tests | Multi-window |
 | C10 | Top bar tray, home-marker tabs, home-scoped new tabs, usage `tu` + cache | layout, config, runtime, tokenusage | layout + contracts | Visual bar |
 | C12 | Welcome defaults and random pool | screen child, runtime, root config | screen tests + contracts | Animation |
@@ -413,7 +435,7 @@ Detail lives in Owners, checks, and the notes below.
 | ID | Contract | Owner | Check | Gap |
 | --- | --- | --- | --- | --- |
 | C11a | Root semantic schema + sparse persistence | `yzx-config`, `defaults/config.toml` | config tests + contracts | UI |
-| C11b | Popups/Mars/Cursors/Zellij/Starship tabs; session Zellij active-file patch | `yzx-config` | config tests + contracts | Session live scalars |
+| C11b | Popups/Mars/Cursors/Zellij/Starship tabs; complete pinned Mars inventory with sparse bounded controls; session Zellij active-file patch | Mars catalog + `yzx-config` | config tests + contracts | Session live scalars |
 | C11c | Helix tab + `yzx-hx` merge / `Alt r` / Steel | `yzx-config`, helix, `yzx-hx` | `helix-contracts` + config tests | UI |
 | C11d | Keys read-only + Advanced open-file | `yzx-config` | Keys/Advanced tests, key parity | UI |
 
@@ -431,10 +453,19 @@ the managed Zellij/Yazi workspace and selected editor without Mars or display
 variables; terminal-specific graphics and clipboard behavior remain host-owned.
 Diagnostics stop before Mars/Zellij handoff.
 
-**C2:** Saving `mars.appearance.preset` through `yzx config` switches the
-Ratconfig palette live. Mars also reloads opacity, font size, line height,
-scrollbar, and bell behavior in open windows; width and height apply to newly
-created windows.
+**C2:** Saving root `appearance.mode` switches the Ratconfig palette and
+projects only `mars.appearance.preset` into writable regular-file Mars config.
+Mars reloads that file live, and `yzx launch` reconciles manual divergence.
+Symlinked or read-only Mars config is not changed and receives the root value
+through `MARS_APPEARANCE` for that launch. Mars also reloads opacity, font size,
+line height, scrollbar, and bell behavior in open windows; width and height
+apply to newly created windows. Yazelix passes the root mode at launch and
+Zellij selects the matching theme-pair member; after a save, Yazelix calls the
+native action for the current managed session. Zellij sends the mode event to
+the bar's internal palette pair. Each new managed Yazi reads the same root mode;
+its materializer projects the selected native flavor into generated
+`theme.toml`, leaving user and Home Manager sources unchanged. The packaged
+light fallback and flavor classification remain owned by Yazi Bistro.
 
 **C9:** Protocol/packaging (a), shared role wiring (b), user custom (c),
 agent hide + bootstrap (d), Git close-on-toggle + editor env (e). Agent

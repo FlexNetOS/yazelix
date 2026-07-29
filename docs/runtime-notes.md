@@ -18,6 +18,9 @@ The UI leaves these sparse sources absent until you save a field:
 ~/.config/yazelix/starship.toml
 ```
 
+`yzx launch` may create `mars/config.toml` containing only the managed
+appearance projection before Mars starts.
+
 The Helix and advanced native files stay lazy. Opening a file-action row creates
 its starter file. Activating either Steel row creates both
 `helix/helix.scm` and `helix/init.scm`.
@@ -25,32 +28,81 @@ its starter file. Activating either Steel row creates both
 While editing a text field, `Ctrl+e` opens the staged value in the configured
 editor environment and returns the edited text to the row. `Enter` saves.
 
+## Appearance Projection
+
+Root `appearance.mode` is the managed dark/light authority. Ratconfig uses it
+for its own palette. When Mars is included and
+`~/.config/yazelix/mars/config.toml` is a writable regular file, a global save
+or reset updates only `mars.appearance.preset`; Mars's existing directory
+watcher reloads that change. Before `yzx launch`, the runtime performs the same
+reconciliation and removes any inherited `MARS_APPEARANCE` that could override
+the file.
+
+A store-backed, symlinked, or otherwise read-only Mars file is never replaced.
+In that case, launch sets `MARS_APPEARANCE` to the validated root value and the
+change applies to the new process. `yzx enter`, SSH use, and no-Mars packages do
+not project terminal appearance. Direct edits to the native Mars field may
+affect a running window, but the next global save or managed launch restores the
+root value.
+
+Yazelix passes only the root dark/light mode to each new managed Zellij
+session. Zellij resolves the matching `theme_dark` or `theme_light` member. A
+managed session ignores ambient terminal appearance reports so the explicit
+root mode remains authoritative. A root appearance save from inside that
+session calls `set-dark-theme` or `set-light-theme` against that exact session.
+Zellij's host-theme event switches the top bar between its child-owned dark and
+light palettes. A bar loaded by a later tab receives the session's current mode
+even when no new host-theme transition occurs. Ratconfig keeps the saved root
+value when either component projection fails and reports that the next launch
+will retry it.
+
+Each managed Yazi launch reads the current root mode before materializing its
+config. Yazelix selects the matching native `flavor.dark` or `flavor.light`,
+using Yazi Bistro's Bluloco Light default when the light side is absent. An
+absent dark side uses Yazi's native preset; Ratconfig exposes that state as the
+first dark choice, `default`, without writing it as a flavor name. When a flavor
+is selected, both runtime flavor keys receive it so ambient detection cannot
+choose the opposite side. The source `theme.toml` is never rewritten, and an
+existing Yazi process keeps its current theme until it is reopened.
+
 ## Zellij Sidecars
 
-`zellij/config.kdl` is a guarded sidecar for scalar preferences such as theme,
-pane frames, mouse mode, scrollback size, copy behavior, styled underlines,
-startup tips, and `ui.pane_frames.rounded_corners`. Ratconfig lists the 41
-themes in the pinned Zellij assets, with a flake check keeping both inventories
-aligned. Its virtual `default` choice removes the assignment instead of naming
-a synthetic theme.
+`zellij/config.kdl` is a guarded sidecar for scalar preferences such as paired
+dark/light themes, pane frames, mouse mode, scrollback size, copy behavior,
+styled underlines, startup tips, and `ui.pane_frames.rounded_corners`.
+Ratconfig uses the same 41 identities from the pinned Zellij assets for both
+theme fields, with a flake check keeping the inventory aligned. The inherited
+pair is `theme_dark "ansi"` and `theme_light "gruvbox-light"`; resetting a
+field removes only its sparse override. Custom names found on either member
+join the shared pool shown by both pickers.
+
+The former static `theme` field is not part of the managed model. An existing
+assignment remains untouched in the user sidecar and is reported as ignored,
+while runtime materialization omits it so the complete pair has one clear
+authority.
 
 When `yzx config` runs inside a managed session (`ZELLIJ_SESSION_NAME` or
 `YAZELIX_ZELLIJ_SESSION_NAME`, plus `YAZELIX_STATE_DIR`), saving a Zellij tab
 field also patches `$YAZELIX_STATE_DIR/zellij/config.kdl` so the running Zellij
-watcher can pick up scalars without rewriting integration patches. Fields such
-as `theme` and `pane_frames` apply live; `scroll_buffer_size` is session-scoped
-and still needs a new session. Quoted custom theme names without KDL escapes
-remain accepted; richer string syntax stays preserved but native-file-only.
+watcher can pick up scalars without rewriting integration patches. Editing the
+active theme-pair member applies live; editing the other member takes effect on
+the next appearance change or managed session launch. Ratconfig labels pane
+frames, rounded corners, copy-on-select, and clipboard target as `now` when
+that active runtime file is addressable. Mouse mode, scrollback size, styled
+underlines, and startup tips say `next session`; outside an active managed
+session, every Zellij field is next-session. Quoted custom theme names without
+KDL escapes remain accepted; richer string syntax stays preserved but
+native-file-only.
 
 Ratconfig scopes sidecar diagnostics instead of marking every Zellij field
-invalid. Unexposed top-level native leaf nodes are reported as unvalidated,
-nonblocking entries on the Advanced tab and kept unchanged across unrelated
-saves and resets without interpreting their arguments, properties, or values.
-Zellij, not Yazelix, owns whether those nodes are valid.
-Invalid known fields affect only their own row and remain repairable. Malformed
-or structured native nodes, structural KDL comments or continuations, extra
-metadata on managed blocks, and integration-owned nodes remain source-blocking
-because the sidecar writer cannot prove those documents safe to update.
+invalid. Safe untyped top-level leaves stay unchanged across unrelated saves
+and resets without a synthetic field or informational diagnostic for each
+leaf. The exact native-file action opens the sidecar for those settings.
+Invalid known fields affect only their own row and remain repairable. Advanced
+diagnostics report ignored legacy settings, malformed or structured native
+nodes, structural KDL comments or continuations, extra metadata on managed
+blocks, and integration-owned nodes. Unsafe source state blocks writes, and
+each guarded diagnostic names its Yazelix owner.
 
 The runtime rejects uncommented top-level ownership nodes in that sidecar:
 
@@ -83,6 +135,15 @@ load_plugins {
 Plugin ids owned by Yazelix, such as `yzpp` and
 `yazelix_pane_orchestrator`, cannot be redeclared. Plugin keybindings are not
 managed by this sidecar.
+
+## Popup Lifecycle
+
+Opening or revealing a managed popup shows Zellij's tab-wide floating layer.
+Toggling the focused popup off or explicitly closing it hides that layer after
+closing or suppressing the managed pane. This returns directly to the tiled
+workspace instead of exposing a session manager, terminal, or other floating
+pane underneath. Suppressed keep-alive popups and unrelated floating panes
+continue running; their explicit keybindings can show them again.
 
 ## Agent Popup
 
@@ -209,6 +270,7 @@ user-owned asset tree:
 ~/.config/yazelix/yazi/yazi.toml
 ~/.config/yazelix/yazi/theme.toml
 ~/.config/yazelix/yazi/package.toml
+~/.config/yazelix/yazi/starship.toml
 ~/.config/yazelix/yazi/init.lua
 ~/.config/yazelix/yazi/keymap.toml
 ~/.config/yazelix/yazi/plugins/*.yazi/
@@ -221,14 +283,60 @@ which keeps user fetchers while restoring the two sidebar Git fetchers exactly
 once. Broken config paths, invalid TOML, and incomplete flavors stop Yazi launch.
 The managed edit opener is always restored. Normal `~/.config/yazi` is not read.
 
+Optional `yazi/starship.toml` is a complete replacement for Nova's packaged
+compact Starship header config, not a merge layer. Its presence alone activates
+materialization. The materializer requires readable TOML and links it into the
+effective config as `yazelix_starship.toml`; omission retains the packaged file.
+Both the normal sidebar and workspace popup use that same effective path.
+
+Automation can materialize that config without starting Yazi, Zellij, Mars, an
+editor, or the full Yazelix runtime:
+
+```sh
+effective_config="$(
+  yzx yazi-config materialize \
+    --user-config-dir "$PWD/yazi" \
+    --state-dir "$PWD/state"
+)"
+YAZI_CONFIG_HOME="$effective_config" yazi --debug
+```
+
+`--user-config-dir` names the exact directory that contains `yazi.toml`,
+`init.lua`, `plugins/`, and the other native Yazi entries. `--state-dir` names
+the isolated state root. Callers must pass both flags; the command does not use
+`YAZELIX_CONFIG_HOME` or `YAZELIX_STATE_DIR` as defaults. The selected Yazelix
+package supplies the packaged config, including for `no-yazi` variants and
+Home Manager installations. Root `appearance.mode` and the packaged Yazi
+Bistro light default are supplied internally; the public command takes no
+appearance flags. The Home Manager module adds no materializer option.
+
+Successful calls print one absolute effective config directory and a newline
+to stdout, with no stderr output. In dark mode, a user directory with no
+managed entries returns the package's read-only config directory and leaves the
+state path absent. Light mode materializes runtime `theme.toml` even without
+user entries so it can select the packaged light default. Other inputs replace
+only `<state-dir>/yazi` through a staging directory. Bad command usage exits
+64. Materialization failures exit 1; validation failures leave an existing
+effective directory intact.
+
+The materializer validates paths, TOML syntax and merge structure, required
+integration fields, plugin and flavor shapes and collisions, appearance
+projection, source/state overlap, and output construction. Yazi remains
+responsible for semantic config checks, Lua and plugin behavior, and external
+commands. Run `yazi --debug` with the printed `YAZI_CONFIG_HOME` when automation
+needs those checks.
+
 Plugin and flavor directories activate materialization independently of
 `init.lua` and are linked into the runtime config. Packaged plugin names cannot
 be overridden. A user flavor with a packaged name takes precedence over the
-packaged copy. `theme.toml` is the native Yazi surface for choosing flavors;
-Ratconfig renders its simple values and the sparse `yazi.toml` layer in the
-Yazi tab. `package.toml` passes through as opaque `ya pkg` metadata, but Yazelix
-never runs the package manager. Create asset directories in this tree or
-symlink them from another checkout.
+packaged copy. Yazi Bistro supplies the packaged flavor catalog and its
+dark/light classification. User-installed, unclassified flavors join both
+Ratconfig pools. `theme.toml` remains the native source for explicit choices
+and unrelated theme settings; the materializer copies it only when runtime
+appearance projection is required. Ratconfig renders its simple values and the
+sparse `yazi.toml` layer in the Yazi tab. `package.toml` passes through as
+opaque `ya pkg` metadata, but Yazelix never runs the package manager. Create
+asset directories in this tree or symlink them from another checkout.
 
 Example managed Yazi plugin layout:
 

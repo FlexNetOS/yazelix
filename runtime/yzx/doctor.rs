@@ -92,6 +92,9 @@ pub(crate) fn print_doctor() -> Result<(), AppError> {
     if has_managed_helix {
         doctor_helix_config_warning(&runtime.config_home).map_err(doctor_failure)?;
     }
+    for line in classic_residue_lines(&runtime.config_home, &runtime.state_dir) {
+        println!("{line}");
+    }
 
     println!(
         "warn session: {}",
@@ -209,4 +212,82 @@ fn doctor_helix_config_warning(config_home: &Path) -> Result<(), AppError> {
         );
     }
     Ok(())
+}
+
+fn classic_residue_lines(config_home: &Path, state_dir: &Path) -> Vec<String> {
+    let mut residue = Vec::new();
+    for (relative, exact_generated_file) in [
+        ("configs", false),
+        ("sessions", false),
+        ("initializers/nushell/yazelix_extern.nu", true),
+        ("initializers/nushell/yazelix_extern.fingerprint.json", true),
+    ] {
+        let Some(metadata) = metadata_without_symlink_parents(state_dir, relative) else {
+            continue;
+        };
+        let certain = exact_generated_file && metadata.is_file();
+        residue.push(classic_residue_line(
+            &state_dir.join(relative),
+            if certain { "certain" } else { "ambiguous" },
+        ));
+    }
+
+    if fs::symlink_metadata(config_home).is_ok_and(|metadata| metadata.is_dir()) {
+        let mut backups = fs::read_dir(config_home)
+            .into_iter()
+            .flatten()
+            .filter_map(Result::ok)
+            .filter(|entry| {
+                entry.file_name().to_str().is_some_and(|name| {
+                    [
+                        "config.toml.backup-",
+                        "settings.jsonc.backup-",
+                        "zellij.kdl.backup-",
+                        "config.toml.home-manager-prepare-backup-",
+                    ]
+                    .iter()
+                    .any(|prefix| name.starts_with(prefix))
+                })
+            })
+            .map(|entry| entry.path())
+            .collect::<Vec<_>>();
+        backups.sort();
+        residue.extend(
+            backups
+                .iter()
+                .map(|path| classic_residue_line(path, "ambiguous")),
+        );
+    }
+
+    if residue.is_empty() {
+        return vec!["ok classic residue: none recognized in active roots".into()];
+    }
+    residue.push(
+        "warn classic residue: external scripts may still reference these paths; Nova did not load or modify them"
+            .into(),
+    );
+    residue
+}
+
+fn metadata_without_symlink_parents(root: &Path, relative: &str) -> Option<fs::Metadata> {
+    if !fs::symlink_metadata(root).ok()?.is_dir() {
+        return None;
+    }
+
+    let relative = Path::new(relative);
+    let mut parent = root.to_path_buf();
+    for component in relative.parent()?.components() {
+        parent.push(component);
+        if !fs::symlink_metadata(&parent).ok()?.is_dir() {
+            return None;
+        }
+    }
+    fs::symlink_metadata(root.join(relative)).ok()
+}
+
+fn classic_residue_line(path: &Path, ownership: &str) -> String {
+    format!(
+        "warn classic residue: ownership={ownership} nova=unused path={}",
+        path.display()
+    )
 }

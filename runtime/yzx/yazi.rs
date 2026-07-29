@@ -1,8 +1,7 @@
 use std::{
     env,
     ffi::{OsStr, OsString},
-    fs,
-    path::PathBuf,
+    path::{PathBuf, absolute},
     process::Command,
 };
 
@@ -133,17 +132,20 @@ fn resolve_command(command: &OsStr, lookup_path: &OsStr) -> Result<PathBuf, Stri
             candidate.display()
         ));
     }
-    fs::canonicalize(&candidate)
-        .map_err(|error| format!("could not resolve {}: {error}", candidate.display()))
+    absolute(&candidate)
+        .map_err(|error| format!("could not make {} absolute: {error}", candidate.display()))
 }
 
 fn parse_version(label: &str, output: &str) -> Option<String> {
     let mut fields = output.split_whitespace();
-    let program = fields.next()?;
-    if !program.eq_ignore_ascii_case(label) {
+    if !fields.next()?.eq_ignore_ascii_case(label) {
         return None;
     }
-    let version = fields.next()?.trim_start_matches('v');
+    let version = match fields.next()? {
+        "Version:" => fields.next()?,
+        version => version,
+    };
+    let version = version.trim_start_matches('v');
     (!version.is_empty() && version.contains('.')).then(|| version.to_string())
 }
 
@@ -171,7 +173,10 @@ fn host_pair_error(failures: Vec<String>, lookup_path: &OsStr) -> AppError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::os::unix::fs::{PermissionsExt, symlink};
+    use std::{
+        fs,
+        os::unix::fs::{PermissionsExt, symlink},
+    };
 
     #[test]
     fn parses_upstream_and_distribution_version_output() {
@@ -180,7 +185,22 @@ mod tests {
             Some("26.5.6".into())
         );
         assert_eq!(parse_version("ya", "Ya v26.5.6"), Some("26.5.6".into()));
+        assert_eq!(
+            parse_version(
+                "yazi",
+                "Yazi\n    Version: 26.5.6 (9accf92 2026-07-21)\n    Debug  : false"
+            ),
+            Some("26.5.6".into())
+        );
+        assert_eq!(
+            parse_version(
+                "ya",
+                "Ya\n    Version: 26.5.6 (9accf92 2026-07-21)\n    Debug  : false"
+            ),
+            Some("26.5.6".into())
+        );
         assert_eq!(parse_version("ya", "Yazi 26.5.6"), None);
+        assert_eq!(parse_version("ya", "Yazi\n    Version: 26.5.6"), None);
         assert_eq!(parse_version("yazi", "Yazi unknown"), None);
     }
 
@@ -215,7 +235,7 @@ mod tests {
 
         assert_eq!(
             resolve_command(OsStr::new("yazi"), &path).unwrap(),
-            fs::canonicalize(executable).unwrap()
+            first.join("yazi")
         );
         fs::set_permissions(&invalid_executable, fs::Permissions::from_mode(0o644)).unwrap();
         let error = resolve_command(invalid_executable.as_os_str(), &path).unwrap_err();

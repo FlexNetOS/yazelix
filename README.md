@@ -169,9 +169,9 @@ Press `Alt Shift K` to open Ratconfig:
 | `1`-`9` | Jump to a tab |
 | `Tab` / `Shift-Tab`, `h` / `l` | Change tabs |
 | `j` / `k`, `/` | Move through rows or search All settings |
-| `a` | Switch between Core and All |
+| `a` | Switch between Overview and All when the tab has a meaningful reduced view |
 | `e`, `Enter`, `Space` | Run the selected row's contextual action |
-| `u`, `q` | Reset the selected setting or quit |
+| `u`, `q` | Remove the selected explicit override or quit |
 
 The footer lists the selected row's controls.
 
@@ -191,14 +191,20 @@ Yazi and the menu use their initials:
 
 - `Alt Shift Y` toggles the full Yazi popup.
 - `Alt Shift M` toggles the command menu.
+- `Alt Shift S` opens a transient full-screen random visual. Press any ordinary
+  screen input to return to the unchanged workspace; this is not a session lock.
+  Set `keybindings.screen` to remap it for newly launched sessions.
 
-Press a popup's key again to close or hide it. Other useful bindings are:
+Press a popup's key again to close or hide it and return to the tiled workspace.
+Other floating panes keep running until explicitly shown again. Other useful
+bindings are:
 
 | Scope | Key | Action |
 | --- | --- | --- |
 | Workspace | `Ctrl q` | Quit the Yazelix session |
 | Workspace | `Alt m` | Open a new pane |
 | Workspace | `Alt Shift F` | Toggle the focused pane fullscreen |
+| Workspace | `Alt Shift S` | Show a random full-screen visual |
 | Workspace | `Ctrl y` | Toggle focus between the editor and Yazi sidebar |
 | Workspace | `Alt 1-9` | Go directly to tab 1-9 |
 | Editor | `Alt r` | Reveal the current editor file in Yazi |
@@ -221,6 +227,7 @@ Ratconfig's Keys tab is the complete packaged reference, and
 | `yzx enter [zellij-args...]` | Start managed Zellij in the current terminal |
 | `yzx run <program> [args...]` | Run exact argv inside the prepared Yazelix environment |
 | `yzx config` | Open the Ratconfig-backed config UI |
+| `yzx yazi-config materialize --user-config-dir <path> --state-dir <path>` | Materialize and print the effective Yazi config directory for automation |
 | `yzx menu` | Open the command palette |
 | `yzx doctor` | Check owned runtime setup without launching Mars or Zellij |
 | `yzx inspect [--json]` | Report runtime, profile-frontdoor, shadow, and session provenance |
@@ -282,14 +289,15 @@ Yazelix assembles focused first-party forks, plugins, libraries, and commands:
 | Component | Yazelix role |
 | --- | --- |
 | [Mars](https://github.com/luccahuguet/mars) | GUI terminal used by `yzx launch`, with Kitty graphics, cursor shaders, and Yazelix session integration |
-| [Yazelix Zellij](https://github.com/luccahuguet/yazelix-zellij) | Multiplexer fork with Kitty graphics passthrough for the workspace |
+| [Yazelix Zellij](https://github.com/luccahuguet/yazelix-zellij) | Multiplexer fork with Kitty graphics passthrough and managed runtime appearance switching |
 | [Yazelix Helix](https://github.com/luccahuguet/yazelix-helix) | Steel-enabled editor fork with isolated configuration and explicit workspace bridge hooks |
 | [Yazelix Zellij Pane Orchestrator](https://github.com/luccahuguet/yazelix-zellij-pane-orchestrator) | Zellij plugin that owns tab-local workspace roots and coordinates panes, focus, popups, the editor, and agent activity |
 | [Yazelix Zellij Popup](https://github.com/luccahuguet/yazelix-zellij-popup) | Zellij plugin that opens, focuses, hides, and closes configured floating TUI panes |
 | [Yazelix Zellij Bar](https://github.com/luccahuguet/yazelix-zellij-bar) | Zellij plugin package for the compact top bar, tabs, modes, session details, and status widgets |
 | [Ratconfig](https://github.com/luccahuguet/ratconfig) | Reusable Ratatui configuration editor and TOML patching and migration library |
-| [Yazelix Screen](https://github.com/luccahuguet/yazelix-screen) | Terminal welcome animations exposed through `yzx screen` |
+| [Yazelix Screen](https://github.com/luccahuguet/yazelix-screen) | Terminal welcome animations and the separately packaged GPL aquarium exposed through `yzx screen` |
 | [Yazelix Cursors](https://github.com/luccahuguet/yazelix-cursors) | Shared cursor presets and validation for Ratconfig, plus palettes and shader assets for Mars |
+| [Yazi Bistro](https://github.com/luccahuguet/yazi-bistro) | Curated complete Yazi flavors with pinned provenance, licenses, and explicit dark/light classification |
 | [auto-layout.yazi](https://github.com/luccahuguet/auto-layout.yazi) | Yazi plugin that changes the column layout to match the available pane width |
 | [zjstatus](https://github.com/luccahuguet/zjstatus) | Fork that gives the bar activity-aware tab markers without changing native Zellij tab names |
 
@@ -297,8 +305,51 @@ Yazelix assembles focused first-party forks, plugins, libraries, and commands:
 
 `yzx config` opens Ratconfig over the managed tree at
 `~/.config/yazelix/`. Yazelix inherits packaged defaults and persists only
-explicit overrides. Core shows the settings most users need. All includes the
-complete inventory.
+explicit overrides. Overview combines recommended settings with every explicit,
+invalid, externally managed, or diagnosed field. All includes the complete
+inventory. Tabs whose Overview would hide fewer than three fields or less than
+one quarter of their inventory simply show All.
+
+The Cursors inventory comes from the pinned Yazelix Cursors package. It exposes
+every finite setting and its owner-defined choices, while custom definition
+tables remain searchable and read-only with an exact `cursors.toml` action.
+
+The Mars tab consumes the complete public inventory from the pinned Mars
+revision. Overview recommends 15 common window, font, input, and bell settings;
+All exposes the other specialist and platform settings, and search spans that
+complete inventory. Scalar and finite-choice controls with a safe sparse write
+path are editable; platform-restricted choices appear only on their matching
+platform. Structured settings remain read-only and do not invent a second Mars
+schema or native-file action. `mars.appearance.preset` is omitted because root
+`appearance.mode` is the product appearance control.
+
+`appearance.mode` selects `dark` or `light` for managed Yazelix components and
+also controls Ratconfig's palette. In packages with Mars, Yazelix projects that
+value to only `mars.appearance.preset` when its native config is a writable
+regular file; the rest of `mars/config.toml` remains native Mars configuration.
+Read-only or symlinked config is left untouched and receives the mode on the
+next launch. A manual edit may temporarily diverge Mars until the next global
+appearance save or `yzx launch`.
+
+Zellij stores one dark theme and one light theme over its pinned packaged
+inventory. Ratconfig inherits `ansi` and `gruvbox-light`, lets either field
+retain a custom native name, and saves only explicit overrides. Legacy static
+`theme` assignments remain in the user sidecar for recovery but are ignored by
+the managed runtime. Yazelix passes root appearance at launch and Zellij
+resolves the matching pair member. Saving root appearance inside a managed
+session calls Zellij's native action for that session. Zellij sends the same
+mode to the top bar, which switches between its internal dark and light
+palettes. Bars loaded by new tabs immediately inherit the session's current
+mode, including after a live switch.
+
+Each new managed Yazi reads the same root mode. Ratconfig offers separate
+packaged dark and light flavor pools from Yazi Bistro; user-installed
+unclassified flavors appear in both. `default` is the first dark choice and
+uses Yazi's native preset by leaving `flavor.dark` unset. Light mode inherits
+Bluloco Light. Explicit native `flavor.dark` and `flavor.light` selections
+win. Yazelix projects the selected side into generated runtime config without
+modifying the user or Home Manager `theme.toml`; already-running Yazi processes
+stay as they are.
 
 Set `shell.program` in Ratconfig or `config.toml` to choose packaged Nushell
 (default), Bash, Zsh, or Fish for new panes and sessions.

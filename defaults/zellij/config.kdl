@@ -1,5 +1,7 @@
 default_shell "@yzxShell@"
 support_kitty_keyboard_protocol true
+theme_dark "ansi"
+theme_light "gruvbox-light"
 
 plugins {
     yzpp location="@yzpp@" {
@@ -44,6 +46,14 @@ plugins {
                 pane_title "menu_popup"
                 width_percent 100
                 height_percent 100
+            }
+
+            screen {
+                command "@yzxScreen@"
+                pane_title "screen_popup"
+                width_percent 100
+                height_percent 100
+                arg_1 "random"
             }
 
             yazi {
@@ -127,6 +137,12 @@ keybinds {
             MessagePlugin "yzpp" {
                 name "toggle"
                 payload "menu"
+            }
+        }
+        bind "@screenKey@" {
+            MessagePlugin "yzpp" {
+                name "toggle"
+                payload "screen"
             }
         }
         bind "Alt h" "Alt Left" { MessagePlugin "yazelix_pane_orchestrator" { name "move_focus_left_or_tab"; }; }
