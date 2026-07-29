@@ -73,7 +73,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     rtk_source = {
-      url = "github:FlexNetOS/rtk-tokenkill/d09cf2a";
+      url = "github:FlexNetOS/rtk-tokenkill/eee0dfbd3cf3dc82f5604c77ccc4f93c4a5f0c45";
       flake = false;
     };
     grit_source = {
