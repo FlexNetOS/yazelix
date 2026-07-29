@@ -1562,9 +1562,11 @@
             echo "    print 'Yazi ${yaziVersion}'"
             echo '  } else {'
             echo '    let config = ($env.YAZI_CONFIG_HOME? | default "")'
+            echo '    let starship = ($env.YZX_YAZI_STARSHIP_CONFIG? | default "")'
+            echo '    let role = ($env.YZX_YAZI_ROLE? | default "")'
             echo '    let ya = ($env.YZX_YA? | default "")'
             echo '    let joined = ($args | str join (char space))'
-            echo '    print $"fake Yazi config=($config) ya=($ya) args=($joined) "'
+            echo '    print $"fake Yazi config=($config) starship=($starship) role=($role) ya=($ya) args=($joined) "'
             echo '  }'
             echo '}'
           } > "$out/bin/yazi"
@@ -1673,6 +1675,9 @@
         xdg.configFile."yazelix/yazi/flavors/example.yazi".source = fakeYaziFlavor;
         programs.yazelix.config = {
           settings = {
+            # Nushell stays the fork's only shell; the appearance mode is
+            # upstream's and the --project-mars-appearance assertion needs it.
+            appearance.mode = "light";
             shell.program = "nu";
             welcome.enabled = false;
             keybindings.config = "Alt Shift C";
