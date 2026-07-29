@@ -45,7 +45,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     yazelixYaziAssets = {
-      url = "github:FlexNetOS/yazelix-yazi-assets/bd0deff7e83ecd7788b61f5c0cda122272826f74";
+      url = "github:FlexNetOS/yazelix-yazi-assets/91c1530";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     yazelixTerminalSupport = {

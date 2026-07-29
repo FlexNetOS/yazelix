@@ -98,17 +98,17 @@
         "rust-overlay": "rust-overlay_3"
       },
       "locked": {
-        "lastModified": 1783970564,
-        "narHash": "sha256-OaClnusHFU+4lTFlZ6BeT/2gPW9NYtTgWyIdEesSXts=",
+        "lastModified": 1785284469,
+        "narHash": "sha256-ZXay9+prltcpcNB1c5RRKMuDd6QZROj7Rs8klbDlhts=",
         "owner": "FlexNetOS",
         "repo": "nu_plugin",
-        "rev": "2c0272ca324550c684086ecc74ab4ea56fe8ef36",
+        "rev": "5cc8c97b1b05a47949af455c951570fbee9701e4",
         "type": "github"
       },
       "original": {
         "owner": "FlexNetOS",
         "repo": "nu_plugin",
-        "rev": "2c0272ca324550c684086ecc74ab4ea56fe8ef36",
+        "rev": "5cc8c97b1b05a47949af455c951570fbee9701e4",
         "type": "github"
       }
     },
@@ -1009,17 +1009,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1784594956,
-        "narHash": "sha256-bUAFWdBeYTiEHEoItADU4jlD3cQ7YtHttlyf6sr+18Y=",
+        "lastModified": 1785288465,
+        "narHash": "sha256-kR1TKsoTNgpxunCAwFxLo+vv2cGE3+BfrOoaDa4Vzj4=",
         "owner": "FlexNetOS",
         "repo": "yazelix-yazi-assets",
-        "rev": "bd0deff7e83ecd7788b61f5c0cda122272826f74",
+        "rev": "91c1530eb129b282893f5ac408b7f3f314455176",
         "type": "github"
       },
       "original": {
         "owner": "FlexNetOS",
+        "ref": "91c1530",
         "repo": "yazelix-yazi-assets",
-        "rev": "bd0deff7e83ecd7788b61f5c0cda122272826f74",
         "type": "github"
       }
     },
