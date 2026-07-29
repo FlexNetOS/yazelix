@@ -59,6 +59,7 @@ const AGENT_SHADOW_ARCHIVE_ROOT = "/home/flexnetos/.cache/flexnetos/archives/age
 def retired_agent_home_shadows [] {
     [
         (["/home/flexnetos/" "." "codex"] | str join)
+        (["/home/flexnetos/" "." "claude"] | str join)
         ($PROFILE_RUNTIME_ROOT | path join "codex")
     ]
 }
