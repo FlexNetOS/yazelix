@@ -1,6 +1,6 @@
 // FlexNetOS workspace expressed through the canonical Yazelix Nova runtime.
 layout {
-    cwd "/home/flexnetos/FlexNetOS"
+    cwd "@workspaceRoot@"
 
     tab_template name="ui" {
         pane size=1 borderless=true {

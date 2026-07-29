@@ -523,6 +523,7 @@
       flexnetosRedbOwner = "${flexnetosLinuxYaziRuntimeTools}/share/yazelix_yazi_assets/runtime_tools/codedb/bin/flexnetos-redb-owner";
       flexnetosLayoutTemplate = pkgs.runCommand "flexnetos-agent-workspace-template.kdl" {} ''
         substitute ${./defaults/zellij/flexnetos_agent_workspace.kdl} "$out" \
+          --replace-fail '@workspaceRoot@' '${metaWorkspaceRoot}' \
           --replace-fail '@yazi@' '${yzxYazi}/bin/yzx-yazi' \
           --replace-fail '@shell@' '${flexnetosYzxShell}/bin/yzx-shell' \
           --replace-fail '@agent@' '${yzxAgent}/bin/yzx-agent' \
@@ -1072,8 +1073,12 @@
       # These must stay byte-identical to DEFAULT_CODEX_HOME in flexnetos_runner's
       # crates/runner-cli/src/forge_loop.rs. Neither may live on tmpfs: /run/user/1001
       # is wiped on reboot, which previously destroyed the Codex credentials.
-      codexStateHome = "/home/flexnetos/meta/var/lib/codex";
-      claudeStateHome = "/home/flexnetos/meta/var/lib/claude";
+      # The meta workspace root -- the directory holding the .meta.yaml marker.
+      # The retired /home/flexnetos/FlexNetOS mirror is gone; anything that used it
+      # as a working directory belongs here.
+      metaWorkspaceRoot = "/home/flexnetos/meta";
+      codexStateHome = "${metaWorkspaceRoot}/var/lib/codex";
+      claudeStateHome = "${metaWorkspaceRoot}/var/lib/claude";
       profileEnvironmentFrontdoor = name: payload: nuApplication name ./nushell/system/profile_environment_frontdoor.nu {
         tool = name;
         inherit payload;
