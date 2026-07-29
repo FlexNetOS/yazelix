@@ -20,7 +20,7 @@ def main [workdir: path, source: path, nu_bin: path, chmod_bin: path] {
     mkdir $root
     let payload = ($root | path join "payload")
     let wrapper = ($root | path join "icm")
-    let default_db = ($root | path join "meta" | path join "var" | path join "lib" | path join "icm" | path join "memories.db")
+    let default_db = ($root | path join "meta" | path join "var" | path join "xdg-data" | path join "icm" | path join "memories.db")
 
     [
         $"#!($nu_bin)"

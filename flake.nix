@@ -1374,7 +1374,7 @@
       };
       flexnetosIcmFrontdoor = nuApplication "icm" ./nushell/agent/icm_profile_frontdoor.nu {
         payload = "${flexnetosIcm}/bin/icm";
-        defaultDb = "/home/flexnetos/meta/var/lib/icm/memories.db";
+        defaultDb = "/home/flexnetos/meta/var/xdg-data/icm/memories.db";
       };
       flexnetosDesktopSource = pkgs.makeDesktopItem {
         name = "com.flexnetos.Yazelix.Agent";
@@ -2410,7 +2410,7 @@
           echo 'ERROR: cargo must not point at the XDG_RUNTIME_DIR tmpfs' >&2
           exit 1
         fi
-        grep -Fx 'ICM_DB=/home/flexnetos/meta/var/lib/icm/memories.db' "$session_env"
+        grep -Fx 'ICM_DB=/home/flexnetos/meta/var/xdg-data/icm/memories.db' "$session_env"
 
         # PostgreSQL/RuVector is the Swarm Primary Runtime (hard rule 1). The profile
         # must expose the server AND client tools, and must carry ruvector.so in the
