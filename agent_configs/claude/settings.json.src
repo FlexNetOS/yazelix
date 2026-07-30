@@ -22,6 +22,15 @@
             "command": "/home/flexnetos/.nix-profile/toolbin/icm hook pre"
           }
         ]
+      },
+      {
+        "matcher": "Bash|Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/flexnetos/.nix-profile/toolbin/agent guard"
+          }
+        ]
       }
     ],
     "PostToolUse": [

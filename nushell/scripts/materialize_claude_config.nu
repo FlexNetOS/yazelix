@@ -74,6 +74,7 @@ def main [
         "/home/flexnetos/.nix-profile/toolbin/rtk hook claude"
         "/home/flexnetos/.nix-profile/toolbin/icm hook pre"
         "/home/flexnetos/.nix-profile/toolbin/icm hook end"
+        "/home/flexnetos/.nix-profile/toolbin/agent guard"
     ] {
         if not ($settings | str contains $required) {
             fail $"reviewed Claude settings omit required profile hook: ($required)"

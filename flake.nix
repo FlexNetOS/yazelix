@@ -2262,6 +2262,7 @@
         grep -F '/home/flexnetos/.nix-profile/toolbin/rtk hook claude' "$claude_test_runtime/settings.json"
         grep -F '/home/flexnetos/.nix-profile/toolbin/icm hook pre' "$claude_test_runtime/settings.json"
         grep -F '/home/flexnetos/.nix-profile/toolbin/icm hook end' "$claude_test_runtime/settings.json"
+        grep -F '/home/flexnetos/.nix-profile/toolbin/agent guard' "$claude_test_runtime/settings.json"
         cmp ${foundation}/share/yazelix/agent_configs/claude/settings.json.src "$claude_test_runtime/settings.json"
         cmp ${foundation}/share/yazelix/agent_configs/claude/CLAUDE.md.src "$claude_test_runtime/CLAUDE.md"
         cmp ${foundation}/share/yazelix/agent_configs/claude/RTK.md.src "$claude_test_runtime/RTK.md"
