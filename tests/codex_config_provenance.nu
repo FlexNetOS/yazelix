@@ -191,6 +191,7 @@ def main [
         let hook_map = ($parsed.hooks? | default {})
         let commands = (try { $hook_map | values | flatten | get hooks | flatten | get command } catch { [] })
         let required_commands = [
+            "/home/flexnetos/.nix-profile/bin/agent guard"
             "/home/flexnetos/.nix-profile/bin/icm hook compact"
             "/home/flexnetos/.nix-profile/bin/icm hook end"
             "/home/flexnetos/.nix-profile/bin/icm hook post"

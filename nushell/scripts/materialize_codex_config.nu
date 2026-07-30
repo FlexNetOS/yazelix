@@ -33,6 +33,7 @@ const OWNED_HOOK_COMMANDS = [
     "/home/flexnetos/.nix-profile/bin/icm hook start"
     "/home/flexnetos/.nix-profile/bin/rtk hook codex"
     "/home/flexnetos/.nix-profile/bin/icm hook pre"
+    "/home/flexnetos/.nix-profile/bin/agent guard"
     "/home/flexnetos/.nix-profile/bin/icm hook compact"
     "/home/flexnetos/.nix-profile/bin/icm hook prompt"
     "/home/flexnetos/.nix-profile/bin/icm hook end"
@@ -45,6 +46,7 @@ const REQUIRED_HOOKS = {
     PreToolUse: [{matcher: "^Bash$", hooks: [
         {type: "command", command: "/home/flexnetos/.nix-profile/bin/rtk hook codex"}
         {type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook pre"}
+        {type: "command", command: "/home/flexnetos/.nix-profile/bin/agent guard"}
     ]}]
     PreCompact: [{hooks: [{type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook compact"}]}]
     UserPromptSubmit: [{hooks: [{type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook prompt"}]}]

@@ -110,6 +110,7 @@ def main [root: path] {
     }
     let hook_commands = ($hooks_declared.hooks | values | flatten | get hooks | flatten | get command | sort)
     let required_commands = [
+        "/home/flexnetos/.nix-profile/bin/agent guard"
         "/home/flexnetos/.nix-profile/bin/icm hook compact"
         "/home/flexnetos/.nix-profile/bin/icm hook end"
         "/home/flexnetos/.nix-profile/bin/icm hook pre"
@@ -118,7 +119,7 @@ def main [root: path] {
         "/home/flexnetos/.nix-profile/bin/rtk hook codex"
     ]
     if $hook_commands != $required_commands {
-        fail "reviewed hooks input does not use the exact profile-owned RTK and ICM commands"
+        fail "reviewed hooks input does not use the exact profile-owned RTK, ICM, and agent-guard commands"
     }
     if ($hooks_declared | columns | any {|column| $column =~ '(?i)trust' }) {
         fail "reviewed hooks input attempts to author Codex trust state"
