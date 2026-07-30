@@ -81,7 +81,7 @@
     # build directory dies the moment that directory is a tmpfs, which is the
     # exact failure its own path-law patterns exist to deny.
     agent_source = {
-      url = "github:FlexNetOS/agent/2cbb3717eac57cfbebc90712ad39fe356524f8aa";
+      url = "github:FlexNetOS/agent/212716d649ca9a80b1d67243fa31eebf1a691a92";
       flake = false;
     };
     grit_source = {
