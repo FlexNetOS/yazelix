@@ -2,10 +2,11 @@
 # Credentials, sessions, histories, databases, and other mutable Claude state
 # are deliberately untouched.
 
-const RECEIPT_SCHEMA = "yazelix.claude-config-generation.v1"
+const RECEIPT_SCHEMA = "yazelix.claude-config-generation.v2"
 const CANONICAL_SETTINGS_INPUT = "/home/flexnetos/.nix-profile/share/yazelix/agent_configs/claude/settings.json.src"
 const CANONICAL_CLAUDE_INPUT = "/home/flexnetos/.nix-profile/share/yazelix/agent_configs/claude/CLAUDE.md.src"
 const CANONICAL_RTK_INPUT = "/home/flexnetos/.nix-profile/share/yazelix/agent_configs/claude/RTK.md.src"
+const CANONICAL_GUARD_INPUT = "/home/flexnetos/.nix-profile/share/yazelix/agent_configs/claude/agent-guard.toml.src"
 
 def fail [message: string] {
     print --stderr $"claude config materializer: ($message)"
@@ -39,6 +40,15 @@ def validate-source [path: path] {
     }
 }
 
+# The guard intentionally contains path patterns that ordinary configuration
+# validation rejects. Its installed input is pinned to agent_source.
+def validate-guard-source [path: path] {
+    if not ($path | path exists) { fail $"reviewed guard input is absent: ($path)" }
+    let resolved = ($path | path expand --strict)
+    if (($resolved | path type) != "file") { fail $"reviewed guard input is not a file: ($path)" }
+    if ((open --raw $path) | is-empty) { fail $"reviewed guard input is empty: ($path)" }
+}
+
 def publish [source: path, target: path, mode: int] {
     if ($target | path exists) and (($target | path type) == "dir") {
         fail $"generated output is a directory: ($target)"
@@ -64,8 +74,11 @@ def main [
     claude_out: path
     rtk_src: path
     rtk_out: path
+    guard_src: path
+    guard_out: path
 ] {
     for source in [$settings_src $claude_src $rtk_src] { validate-source $source }
+    validate-guard-source $guard_src
     try { open --raw $settings_src | from json | ignore } catch {
         fail $"reviewed Claude settings are invalid JSON: ($settings_src)"
     }
@@ -82,7 +95,7 @@ def main [
     }
 
     let output_directories = (
-        [$settings_out $claude_out $rtk_out]
+        [$settings_out $claude_out $rtk_out $guard_out]
         | each {|path| $path | path dirname | path expand }
         | uniq
     )
@@ -93,6 +106,7 @@ def main [
     publish $settings_src $settings_out 600
     publish $claude_src $claude_out 644
     publish $rtk_src $rtk_out 644
+    publish $guard_src $guard_out 644
 
     let receipt = ($output_directories.0 | path join ".yazelix-claude-generation.json")
     let receipt_stage = ($output_directories.0 | path join $".yazelix-claude-generation-stage-(random uuid)")
@@ -102,10 +116,11 @@ def main [
             {installed: $CANONICAL_SETTINGS_INPUT, sha256: (source-hash $settings_src), output: ($settings_out | path basename)}
             {installed: $CANONICAL_CLAUDE_INPUT, sha256: (source-hash $claude_src), output: ($claude_out | path basename)}
             {installed: $CANONICAL_RTK_INPUT, sha256: (source-hash $rtk_src), output: ($rtk_out | path basename)}
+            {installed: $CANONICAL_GUARD_INPUT, sha256: (source-hash $guard_src), output: ($guard_out | path basename)}
         ]
     } | to json --indent 2 | save --raw --force $receipt_stage
     ^chmod 600 $receipt_stage
     mv --force $receipt_stage $receipt
     do { ^sync -f $output_directories.0 } | complete | ignore
-    print $"ok materialized Claude settings/instructions under ($output_directories.0)"
+    print $"ok materialized Claude settings/instructions/guard under ($output_directories.0)"
 }

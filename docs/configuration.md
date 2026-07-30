@@ -91,10 +91,10 @@ The profile-owned `claude` wrapper applies the same boundary through
 `CLAUDE_CONFIG_DIR=/home/flexnetos/meta/var/lib/claude`. Unlike Codex, whose
 state is volatile, Claude's home is durable under Meta so sessions and history
 persist across reboots; reviewed config is still re-materialized on each launch. Reviewed
-`settings.json`, `CLAUDE.md`, and `RTK.md` inputs live in
+`settings.json`, `CLAUDE.md`, `RTK.md`, and the pinned agent guard input live in
 `agent_configs/claude/`; the profile installs them and
 `yazelix_claude_materialize`, then the wrapper publishes exact copies before
-the Claude payload runs. The mode-`0600` generation receipt records all three
+the Claude payload runs. The mode-`0600` generation receipt records all four
 source hashes. Credentials, sessions, histories, databases, and plugin state
 remain untouched. Both agent wrappers reject a competing inherited state owner
 before invoking their immutable payload.

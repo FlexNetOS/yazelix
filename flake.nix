@@ -81,7 +81,7 @@
     # build directory dies the moment that directory is a tmpfs, which is the
     # exact failure its own path-law patterns exist to deny.
     agent_source = {
-      url = "github:FlexNetOS/agent/212716d649ca9a80b1d67243fa31eebf1a691a92";
+      url = "github:FlexNetOS/agent/47d31deefece620cc99a499e49a74a97bbd1a1d3";
       flake = false;
     };
     grit_source = {
@@ -1366,6 +1366,8 @@
           "$out/share/yazelix/agent_configs/claude/CLAUDE.md.src"
         install -m 644 ${./agent_configs/claude/RTK.md.src} \
           "$out/share/yazelix/agent_configs/claude/RTK.md.src"
+        install -m 644 ${agent_source}/.claude/agent-guard.toml \
+          "$out/share/yazelix/agent_configs/claude/agent-guard.toml.src"
         install -m 644 ${./nushell/scripts/materialize_claude_config.nu} \
           "$out/share/yazelix/nushell/scripts/materialize_claude_config.nu"
         cat > "$out/bin/yazelix_claude_materialize" <<EOF
@@ -1381,7 +1383,9 @@
               (\$profile | path join "share/yazelix/agent_configs/claude/CLAUDE.md.src") \
               (\$claude_home | path join "CLAUDE.md") \
               (\$profile | path join "share/yazelix/agent_configs/claude/RTK.md.src") \
-              (\$claude_home | path join "RTK.md")
+              (\$claude_home | path join "RTK.md") \
+              (\$profile | path join "share/yazelix/agent_configs/claude/agent-guard.toml.src") \
+              (\$claude_home | path join "agent-guard.toml")
           }
           exec ${pkgs.nushell}/bin/nu \
             "$out/share/yazelix/nushell/scripts/materialize_claude_config.nu" ...\$args
@@ -2238,6 +2242,7 @@
         test -f ${foundation}/share/yazelix/agent_configs/claude/settings.json.src
         test -f ${foundation}/share/yazelix/agent_configs/claude/CLAUDE.md.src
         test -f ${foundation}/share/yazelix/agent_configs/claude/RTK.md.src
+        test -f ${foundation}/share/yazelix/agent_configs/claude/agent-guard.toml.src
         test -f ${foundation}/share/yazelix/nushell/scripts/materialize_claude_config.nu
         claude_test_runtime="$TMPDIR/claude-owner-runtime"
         mkdir -p "$claude_test_runtime"
@@ -2250,14 +2255,18 @@
           ${foundation}/share/yazelix/agent_configs/claude/CLAUDE.md.src \
           "$claude_test_runtime/CLAUDE.md" \
           ${foundation}/share/yazelix/agent_configs/claude/RTK.md.src \
-          "$claude_test_runtime/RTK.md"
+          "$claude_test_runtime/RTK.md" \
+          ${foundation}/share/yazelix/agent_configs/claude/agent-guard.toml.src \
+          "$claude_test_runtime/agent-guard.toml"
         ${foundation}/bin/yazelix_claude_materialize \
           ${foundation}/share/yazelix/agent_configs/claude/settings.json.src \
           "$claude_test_runtime/settings.json" \
           ${foundation}/share/yazelix/agent_configs/claude/CLAUDE.md.src \
           "$claude_test_runtime/CLAUDE.md" \
           ${foundation}/share/yazelix/agent_configs/claude/RTK.md.src \
-          "$claude_test_runtime/RTK.md"
+          "$claude_test_runtime/RTK.md" \
+          ${foundation}/share/yazelix/agent_configs/claude/agent-guard.toml.src \
+          "$claude_test_runtime/agent-guard.toml"
         ${pkgs.jq}/bin/jq -e '.hooks.PreToolUse and .hooks.SessionEnd' "$claude_test_runtime/settings.json"
         grep -F '/home/flexnetos/.nix-profile/toolbin/rtk hook claude' "$claude_test_runtime/settings.json"
         grep -F '/home/flexnetos/.nix-profile/toolbin/icm hook pre' "$claude_test_runtime/settings.json"
@@ -2266,12 +2275,14 @@
         cmp ${foundation}/share/yazelix/agent_configs/claude/settings.json.src "$claude_test_runtime/settings.json"
         cmp ${foundation}/share/yazelix/agent_configs/claude/CLAUDE.md.src "$claude_test_runtime/CLAUDE.md"
         cmp ${foundation}/share/yazelix/agent_configs/claude/RTK.md.src "$claude_test_runtime/RTK.md"
+        cmp ${foundation}/share/yazelix/agent_configs/claude/agent-guard.toml.src "$claude_test_runtime/agent-guard.toml"
         test "$(stat -c %a "$claude_test_runtime/settings.json")" = 600
         test "$(stat -c %a "$claude_test_runtime/CLAUDE.md")" = 644
         test "$(stat -c %a "$claude_test_runtime/RTK.md")" = 644
+        test "$(stat -c %a "$claude_test_runtime/agent-guard.toml")" = 644
         test "$(stat -c %a "$claude_test_runtime/.yazelix-claude-generation.json")" = 600
         ${pkgs.jq}/bin/jq -e \
-          '.schema == "yazelix.claude-config-generation.v1" and (.sources | length == 3)' \
+          '.schema == "yazelix.claude-config-generation.v2" and (.sources | length == 4)' \
           "$claude_test_runtime/.yazelix-claude-generation.json"
         test "$claude_credentials_before" = "$(${pkgs.coreutils}/bin/sha256sum "$claude_test_runtime/.credentials.json")"
         test ! -e ${foundation}/bin/yzx-desktop-launch
