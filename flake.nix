@@ -81,7 +81,7 @@
     # build directory dies the moment that directory is a tmpfs, which is the
     # exact failure its own path-law patterns exist to deny.
     agent_source = {
-      url = "github:FlexNetOS/agent/000cb9e8b49fc162b72cb7262fcb8cf08a9dfa18";
+      url = "github:FlexNetOS/agent/60a6e929f06ab7f3608e2254081cc7ef91e74cb3";
       flake = false;
     };
     grit_source = {
@@ -1387,7 +1387,7 @@
           "$out/share/yazelix/agent_configs/claude/CLAUDE.md.src"
         install -m 644 ${./agent_configs/claude/RTK.md.src} \
           "$out/share/yazelix/agent_configs/claude/RTK.md.src"
-        install -m 644 ${agent_source}/.claude/agent-guard.toml \
+        install -m 644 ${agent_source}/policy/agent-guard.toml \
           "$out/share/yazelix/agent_configs/claude/agent-guard.toml.src"
         install -m 644 ${./nushell/scripts/materialize_claude_config.nu} \
           "$out/share/yazelix/nushell/scripts/materialize_claude_config.nu"
