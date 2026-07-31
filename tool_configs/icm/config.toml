@@ -1,0 +1,15 @@
+# Active ICM configuration owned by the Yazelix profile.
+#
+# ICM reads exactly one configuration file. The profile frontdoor supplies this
+# immutable file through ICM_CONFIG unless the caller explicitly selects another
+# documented configuration surface.
+
+[embeddings]
+model = "jinaai/jina-embeddings-v2-base-code"
+fast_model = "Xenova/all-MiniLM-L12-v2"
+
+[extraction.summarizer]
+provider = "auto"
+
+[consolidate.summarizer]
+provider = "auto"

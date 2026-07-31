@@ -37,4 +37,4 @@ jobs:
       - name: Nushell step (foundation shell law)
         shell: nu {0}
         run: |
-          print $"profile-runtime reachable: (('/run/user/1001/yazelix/profile-runtime' | path exists))"
+          print $"profile-runtime reachable: (('/home/flexnetos/meta/var/lib/yazelix/runtime/profile' | path exists))"

@@ -1,11 +1,11 @@
 #!/usr/bin/env nu
 
-const VOLATILE_ROOT = "/run/user/1001/yazelix/volatile"
-const PROFILE_RUNTIME_ROOT = "/run/user/1001/yazelix/profile-runtime"
+const VOLATILE_ROOT = "@runtimeRoot@"
+const PROFILE_RUNTIME_ROOT = "@profileRuntimeRoot@"
 const KACHE_ROOT = "/home/flexnetos/.cache/kache"
 const DURABLE_CACHE_ROOT = "/home/flexnetos/.cache"
 # Immutable, expensive-to-refetch artifacts (model weights, browser binaries)
-# and the starship log dir live on durable home storage, never the tmpfs that a
+# and the starship log dir live on durable home storage, never transient storage that a
 # reboot wipes. Same persistence class as KACHE_ROOT.
 const DURABLE_DIRS = [
     "/home/flexnetos/.cache/huggingface"
@@ -21,7 +21,7 @@ const DURABLE_DIRS = [
 # fastembed_embedder.rs) at a durable target, so the model survives regardless of
 # which path a future fastembed version honours. (Reverse of VOLATILE_ROUTES: a
 # volatile link -> durable target.) Best-effort — not a hard activation gate.
-const ICM_VOLATILE_CACHE = "/run/user/1001/yazelix/volatile/cache/icm"
+const ICM_VOLATILE_CACHE = "@runtimeRoot@/cache/icm"
 const ICM_DURABLE_CACHE = "/home/flexnetos/.cache/icm"
 const LEGACY_KACHE_ROOTS = [
     "/home/flexnetos/meta/.cache/kache"
@@ -42,16 +42,16 @@ const LEGACY_KACHE_ARTIFACTS = [
     "/home/flexnetos/meta/usr/bin/kache"
 ]
 # Durable agent homes. Codex credentials, history and sqlite state used to live at
-# profile-runtime/codex on tmpfs, so every reboot destroyed auth.json and forced a
-# re-login. They now share the persistence class of the Claude home. Nothing under
-# /run/user/1001 may own agent state.
+# profile-runtime/codex in the host runtime, so every reboot destroyed auth.json and forced a
+# re-login. They now share the persistence class of the Claude home. No transient
+# host directory may own agent state.
 const DURABLE_AGENT_HOMES = [
     "/home/flexnetos/meta/var/lib/codex"
 ]
 const AGENT_SHADOW_ARCHIVE_ROOT = "/home/flexnetos/.cache/flexnetos/archives/agent-home-shadows"
 
 # Directories that must never own agent state again: the home-owned shadow, and the
-# tmpfs Codex home whose contents a reboot destroyed. `ensure` archives rather than
+# transient Codex home whose contents a reboot destroyed. `ensure` archives rather than
 # deletes, so credentials left in either stay recoverable; `check` then asserts both
 # are absent. Same archive-then-assert idiom as LEGACY_KACHE_ROOTS. Paths are
 # assembled from parts because tests/strict_profile_sources.nu scans this source.
@@ -63,34 +63,34 @@ def retired_agent_home_shadows [] {
     ]
 }
 const VOLATILE_DIRS = [
-    "/run/user/1001/yazelix/profile-runtime"
-    "/run/user/1001/yazelix/profile-runtime/yazelix"
-    "/run/user/1001/yazelix/volatile/cache"
-    "/run/user/1001/yazelix/volatile/tmp"
-    "/run/user/1001/yazelix/volatile/cache/google-chrome"
+    "@profileRuntimeRoot@"
+    "@profileRuntimeRoot@/yazelix"
+    "@runtimeRoot@/cache"
+    "@runtimeRoot@/tmp"
+    "@runtimeRoot@/cache/google-chrome"
 ]
 const VOLATILE_ROUTES = [
-    { link: "/home/flexnetos/.config/google-chrome/Default/Service Worker", target: "/run/user/1001/yazelix/volatile/cache/google-chrome/service-worker" }
-    { link: "/home/flexnetos/.config/google-chrome/Default/Shared Dictionary", target: "/run/user/1001/yazelix/volatile/cache/google-chrome/shared-dictionary" }
-    { link: "/home/flexnetos/.config/google-chrome/component_crx_cache", target: "/run/user/1001/yazelix/volatile/cache/google-chrome/component-crx" }
-    { link: "/home/flexnetos/.config/google-chrome/extensions_crx_cache", target: "/run/user/1001/yazelix/volatile/cache/google-chrome/extensions-crx" }
-    { link: "/home/flexnetos/.config/google-chrome/GrShaderCache", target: "/run/user/1001/yazelix/volatile/cache/google-chrome/gr-shader" }
-    { link: "/home/flexnetos/.config/google-chrome/GPUPersistentCache", target: "/run/user/1001/yazelix/volatile/cache/google-chrome/gpu-persistent" }
-    { link: "/home/flexnetos/.config/google-chrome/ShaderCache", target: "/run/user/1001/yazelix/volatile/cache/google-chrome/shader" }
-    { link: "/home/flexnetos/.config/google-chrome/Default/GPUCache", target: "/run/user/1001/yazelix/volatile/cache/google-chrome/default-gpu" }
-    { link: "/home/flexnetos/.config/google-chrome/Crash Reports", target: "/run/user/1001/yazelix/volatile/tmp/google-chrome-crash-reports" }
-    { link: "/home/flexnetos/.config/google-chrome/BrowserMetrics", target: "/run/user/1001/yazelix/volatile/tmp/google-chrome-browser-metrics" }
-    { link: "/home/flexnetos/.config/google-chrome/DeferredBrowserMetrics", target: "/run/user/1001/yazelix/volatile/tmp/google-chrome-deferred-metrics" }
-    { link: "/home/flexnetos/.config/Code/Cache", target: "/run/user/1001/yazelix/volatile/cache/code/cache" }
-    { link: "/home/flexnetos/.config/Code/CachedData", target: "/run/user/1001/yazelix/volatile/cache/code/cached-data" }
-    { link: "/home/flexnetos/.config/Code/CachedConfigurations", target: "/run/user/1001/yazelix/volatile/cache/code/cached-configurations" }
-    { link: "/home/flexnetos/.config/Code/CachedProfilesData", target: "/run/user/1001/yazelix/volatile/cache/code/cached-profiles" }
-    { link: "/home/flexnetos/.config/Code/Code Cache", target: "/run/user/1001/yazelix/volatile/cache/code/code-cache" }
-    { link: "/home/flexnetos/.config/Code/GPUCache", target: "/run/user/1001/yazelix/volatile/cache/code/gpu" }
-    { link: "/home/flexnetos/.config/Code/DawnGraphiteCache", target: "/run/user/1001/yazelix/volatile/cache/code/dawn-graphite" }
-    { link: "/home/flexnetos/.config/Code/DawnWebGPUCache", target: "/run/user/1001/yazelix/volatile/cache/code/dawn-webgpu" }
-    { link: "/home/flexnetos/.config/Code/Shared Dictionary", target: "/run/user/1001/yazelix/volatile/cache/code/shared-dictionary" }
-    { link: "/home/flexnetos/.config/Code/logs", target: "/run/user/1001/yazelix/volatile/tmp/code-logs" }
+    { link: "/home/flexnetos/.config/google-chrome/Default/Service Worker", target: "@runtimeRoot@/cache/google-chrome/service-worker" }
+    { link: "/home/flexnetos/.config/google-chrome/Default/Shared Dictionary", target: "@runtimeRoot@/cache/google-chrome/shared-dictionary" }
+    { link: "/home/flexnetos/.config/google-chrome/component_crx_cache", target: "@runtimeRoot@/cache/google-chrome/component-crx" }
+    { link: "/home/flexnetos/.config/google-chrome/extensions_crx_cache", target: "@runtimeRoot@/cache/google-chrome/extensions-crx" }
+    { link: "/home/flexnetos/.config/google-chrome/GrShaderCache", target: "@runtimeRoot@/cache/google-chrome/gr-shader" }
+    { link: "/home/flexnetos/.config/google-chrome/GPUPersistentCache", target: "@runtimeRoot@/cache/google-chrome/gpu-persistent" }
+    { link: "/home/flexnetos/.config/google-chrome/ShaderCache", target: "@runtimeRoot@/cache/google-chrome/shader" }
+    { link: "/home/flexnetos/.config/google-chrome/Default/GPUCache", target: "@runtimeRoot@/cache/google-chrome/default-gpu" }
+    { link: "/home/flexnetos/.config/google-chrome/Crash Reports", target: "@runtimeRoot@/tmp/google-chrome-crash-reports" }
+    { link: "/home/flexnetos/.config/google-chrome/BrowserMetrics", target: "@runtimeRoot@/tmp/google-chrome-browser-metrics" }
+    { link: "/home/flexnetos/.config/google-chrome/DeferredBrowserMetrics", target: "@runtimeRoot@/tmp/google-chrome-deferred-metrics" }
+    { link: "/home/flexnetos/.config/Code/Cache", target: "@runtimeRoot@/cache/code/cache" }
+    { link: "/home/flexnetos/.config/Code/CachedData", target: "@runtimeRoot@/cache/code/cached-data" }
+    { link: "/home/flexnetos/.config/Code/CachedConfigurations", target: "@runtimeRoot@/cache/code/cached-configurations" }
+    { link: "/home/flexnetos/.config/Code/CachedProfilesData", target: "@runtimeRoot@/cache/code/cached-profiles" }
+    { link: "/home/flexnetos/.config/Code/Code Cache", target: "@runtimeRoot@/cache/code/code-cache" }
+    { link: "/home/flexnetos/.config/Code/GPUCache", target: "@runtimeRoot@/cache/code/gpu" }
+    { link: "/home/flexnetos/.config/Code/DawnGraphiteCache", target: "@runtimeRoot@/cache/code/dawn-graphite" }
+    { link: "/home/flexnetos/.config/Code/DawnWebGPUCache", target: "@runtimeRoot@/cache/code/dawn-webgpu" }
+    { link: "/home/flexnetos/.config/Code/Shared Dictionary", target: "@runtimeRoot@/cache/code/shared-dictionary" }
+    { link: "/home/flexnetos/.config/Code/logs", target: "@runtimeRoot@/tmp/code-logs" }
 ]
 
 def route_volatile [route: record] {

@@ -32,7 +32,7 @@ Set `YAZELIX_CONFIG_HOME` to use another source-input root. The FlexNetOS
 foundation fixes generated runtime state to:
 
 ```text
-/run/user/1001/yazelix/profile-runtime/yazelix
+/home/flexnetos/meta/var/lib/yazelix/runtime/state
 ```
 
 That volatile directory is created and secured by the profile-owned runtime
@@ -63,7 +63,7 @@ rollback copies rather than claiming a three-path atomic rename. If interrupted
 after either early replacement, the next invocation restores the exact prior
 generation before
 continuing. The profile-owned `codex` wrapper fixes `CODEX_HOME` to
-`/run/user/1001/yazelix/profile-runtime/codex` and writes `config.toml`,
+`/home/flexnetos/meta/var/lib/codex` and writes `config.toml`,
 `RULES.md`, and `hooks.json` there with exact source hashes and do-not-edit
 markers.
 

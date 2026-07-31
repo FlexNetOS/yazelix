@@ -6,6 +6,7 @@
 
 const PAYLOAD = "@payload@"
 const DEFAULT_DB = "@defaultDb@"
+const DEFAULT_CONFIG = "@defaultConfig@"
 
 def has-db-override [args: list<any>] {
     $args | any {|arg|
@@ -15,6 +16,10 @@ def has-db-override [args: list<any>] {
 }
 
 def --wrapped main [...args] {
+    if not ("ICM_CONFIG" in $env) {
+        $env.ICM_CONFIG = $DEFAULT_CONFIG
+    }
+
     if (has-db-override $args) {
         exec $PAYLOAD ...$args
     }
