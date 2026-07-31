@@ -3,17 +3,17 @@
     "agent_source": {
       "flake": false,
       "locked": {
-        "lastModified": 1785486289,
-        "narHash": "sha256-RxkS8CRcR7273h4Nr97gCCnHNiBi8LV33Yd93+/Phgw=",
+        "lastModified": 1785486823,
+        "narHash": "sha256-g37WjAxo79PFm6+LIRFGeWhpuuSMv+uykHquB6XlA4c=",
         "owner": "FlexNetOS",
         "repo": "agent",
-        "rev": "1f28498690e374f8dbfe5ba42078c333f73b5561",
+        "rev": "8e75357defa74b1bb056990a03bd12488942cca6",
         "type": "github"
       },
       "original": {
         "owner": "FlexNetOS",
         "repo": "agent",
-        "rev": "1f28498690e374f8dbfe5ba42078c333f73b5561",
+        "rev": "8e75357defa74b1bb056990a03bd12488942cca6",
         "type": "github"
       }
     },
