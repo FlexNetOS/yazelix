@@ -24,16 +24,16 @@ if (($env.HOME? | default "") == "@productHome@") {
     # so RUSTUP_HOME was never a real setting here and is dropped.
     #
     # What cargo genuinely needs is a registry cache and a build target dir, and both
-    # must be DURABLE. host-policy/99z-session-restore.conf states the rule: "Cargo
-    # MUST NOT resolve under /run/user/1001 -- that is XDG_RUNTIME_DIR, whose tmpfs
-    # budget is shared with the wayland socket, dconf, dbus and gnome-keyring. A single
-    # workspace build reached 30G there and drove the tmpfs to 84%." flake.nix also
-    # asserts the durable value in the generated environment.d.
+    # must be DURABLE. Cargo MUST NOT resolve under /run/user/1001 -- that is
+    # XDG_RUNTIME_DIR, whose tmpfs budget is shared with the wayland socket, dconf,
+    # dbus and gnome-keyring. A single workspace build reached 30G there and drove the
+    # tmpfs to 84%.
     #
-    # This file put both under $volatile_root and, running per-shell AFTER
-    # environment.d, silently won -- so every build landed on tmpfs and vanished on
-    # reboot, which is why `./target/debug/<bin>` read as "not found" while cargo
-    # reported success.
+    # This file is the sole owner of both values. It once put them under
+    # $volatile_root while a session-env layer also set them, and running per-shell it
+    # silently won -- so every build landed on tmpfs and vanished on reboot, which is
+    # why `./target/debug/<bin>` read as "not found" while cargo reported success.
+    # That session-env layer is retired; nothing outside this file sets them now.
     let cargo_home = "@cargoHome@"
     let cargo_target = "@cargoTargetDir@"
     # Durable cache root on persistent home storage. Volatile tmpfs is correct
