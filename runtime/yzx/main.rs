@@ -7,6 +7,7 @@ mod inspect;
 mod paths;
 mod runtime;
 mod status;
+mod stack;
 mod yazi;
 mod zellij;
 
@@ -20,6 +21,7 @@ pub(crate) const YZX_SCREEN: &str = "@yzxScreen@";
 pub(crate) const YZX_WELCOME: &str = "@yzxWelcome@";
 pub(crate) const YZX_SHELL: &str = "@yzxShell@";
 pub(crate) const YZX_ENV_SUPERVISOR: &str = "@yzxEnvSupervisor@";
+pub(crate) const YZX_STACK_BOOTSTRAP: &str = "@yzxStackBootstrap@";
 pub(crate) const ZELLIJ: &str = "@zellij@";
 pub(crate) const MARS: &str = "@mars@";
 pub(crate) const DESKTOP_ENTRY_SOURCE: &str = "@desktopEntrySource@";

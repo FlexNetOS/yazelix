@@ -10,6 +10,7 @@ use crate::{
     inspect::{print_inspect, print_inspect_json},
     paths::{enter_terminal_label, nonempty_env, runtime_path},
     runtime::Runtime,
+    stack::bootstrap_owned_stack,
     status::{print_status, print_status_json},
     yazi::YaziRuntime,
 };
@@ -210,6 +211,7 @@ fn exec_screen(args: Vec<OsString>) -> Result<(), AppError> {
 }
 
 fn exec_managed(through_mars: bool, zellij_args: Vec<OsString>) -> Result<(), AppError> {
+    bootstrap_owned_stack()?;
     let program = managed_program(through_mars, MARS)?;
     let runtime = Runtime::prepare_with_yazi()?;
     let mars_appearance = if through_mars {

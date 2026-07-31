@@ -62,9 +62,11 @@ Yazelix should have had from the start.
 
 ## Install and launch
 
-Yazelix requires Nix with flakes enabled. `launch` opens the packaged Mars window
-in a graphical session, while `enter` starts the same workspace in the current
-terminal or over SSH.
+Yazelix requires Nix with flakes enabled. Both `launch` and `enter` first run the
+Yazelix-owned stack bootstrap: durable Meta paths, sqld, PostgreSQL/RuVector,
+secretd, USB-backed vault unlock, and the runner. Only then is the managed session
+started; `launch` opens the packaged Mars window in a graphical session, while
+`enter` starts the same workspace in the current terminal or over SSH.
 
 The `stable` branch advances from a checked
 and dogfooded `main` revision at most once per week. Use `main` for more constant updates or an

@@ -81,7 +81,7 @@
     # build directory dies the moment that directory is a tmpfs, which is the
     # exact failure its own path-law patterns exist to deny.
     agent_source = {
-      url = "github:FlexNetOS/agent/8e75357defa74b1bb056990a03bd12488942cca6";
+      url = "github:FlexNetOS/agent/b6f4df3984d6c35b603432e105522f8b683a1c46";
       flake = false;
     };
     grit_source = {
@@ -656,6 +656,7 @@
         desktopEntrySource = args.desktopEntrySource or "";
         desktopDatabaseUpdater = args.desktopDatabaseUpdater or "";
         defaultStateDir = args.defaultStateDir or "";
+        stackBootstrap = args.stackBootstrap or "";
         yaziRuntime =
           if withManagedYazi
           then {
@@ -773,6 +774,7 @@
           yzxWelcome = "${yzxWelcome}/bin/yzx-welcome";
           yzxShell = "${shellPackage}/bin/yzx-shell";
           yzxEnvSupervisor = "${yzxEnvSupervisor}/bin/yzx-env-supervisor";
+          yzxStackBootstrap = stackBootstrap;
           zellij = "${yazelixZellijPackage}/bin/zellij";
           mars = if withMars then "${marsPackage}/bin/mars" else "";
           inherit desktopEntrySource desktopDatabaseUpdater defaultStateDir;
@@ -829,6 +831,7 @@
           cp -R ${pkgs.lib.cleanSource ./runtime/yzx}/. "$out/"
           chmod -R u+w "$out"
           cp ${main} "$out/main.rs"
+          cp ${./runtime/yzx/stack.rs} "$out/stack.rs"
         '';
         command = rustBin "yzx" "${src}/main.rs";
         desktop = pkgs.makeDesktopItem {
@@ -1010,21 +1013,8 @@
         name = "kache-with-rustc-wrapper-${flexnetosKacheBase.version}";
         paths = [flexnetosKacheBase flexnetosKacheWrappers];
       };
-      flexnetosHostPolicy = nuApplication "yazelix_host_policy" ./nushell/system/host_policy.nu {};
       flexnetosVolatileRuntime = nuApplication "yazelix_volatile_runtime" ./nushell/system/volatile_runtime.nu {
         cargoConfig = "/home/flexnetos/meta/.cargo/config.toml";
-      };
-      flexnetosHostPolicyBundle = pkgs.symlinkJoin {
-        name = "yazelix-host-policy";
-        paths = [
-          (pkgs.writeTextDir "share/yazelix/host-policy/nix.conf" (builtins.readFile ./host-policy/nix.conf))
-          (pkgs.writeTextDir "share/yazelix/host-policy/nix.custom.conf" (builtins.readFile ./host-policy/nix.custom.conf))
-          (pkgs.writeTextDir "share/yazelix/host-policy/determinate-config.json" (builtins.readFile ./host-policy/determinate-config.json))
-          (pkgs.writeTextDir "share/yazelix/host-policy/shells" (builtins.readFile ./host-policy/shells))
-          (pkgs.writeTextDir "share/yazelix/host-policy/journald-no-storage.conf" (builtins.readFile ./host-policy/journald-no-storage.conf))
-          (pkgs.writeTextDir "share/yazelix/host-policy/docker-daemon.json" (builtins.readFile ./host-policy/docker-daemon.json))
-          (pkgs.writeTextDir "share/yazelix/host-policy/chrome-storage.json" (builtins.readFile ./host-policy/chrome-storage.json))
-        ];
       };
       flexnetosRustToolchain = fenixPkgs.combine (
         [
@@ -1154,7 +1144,6 @@
         flexnetos-redb-owner = flexnetosRedbOwner;
         fxrun = "${flexnetosRunner}/bin/fxrun";
         "fxrun-dispatch" = "${flexnetosRunner}/bin/fxrun-dispatch";
-        yazelix_host_policy = "${flexnetosHostPolicy}/bin/yazelix_host_policy";
         yazelix_volatile_runtime = "${flexnetosVolatileRuntime}/bin/yazelix_volatile_runtime";
         agent = "${flexnetosAgent}/bin/agent";
         gh = "${pkgs.gh}/bin/gh";
@@ -1186,7 +1175,6 @@
         nix-instantiate = "${pkgs.nix}/bin/nix-instantiate";
         nix-shell = "${pkgs.nix}/bin/nix-shell";
         nix-store = "${pkgs.nix}/bin/nix-store";
-        journalctl = "${pkgs.systemd}/bin/journalctl";
         ln = "${pkgs.coreutils}/bin/ln";
         notebooklm = "${flexnetosNotebooklm}/bin/notebooklm";
         nvim = "${pkgs.neovim}/bin/nvim";
@@ -1211,7 +1199,6 @@
         ssh = "${pkgs.openssh}/bin/ssh";
         stat = "${pkgs.coreutils}/bin/stat";
         rtk_nu = "${flexnetosRtkNuFrontdoor}/bin/rtk_nu";
-        systemctl = "${pkgs.systemd}/bin/systemctl";
         rust-analyzer = "${flexnetosRustToolchain}/bin/rust-analyzer";
         rustc = "${flexnetosRustToolchain}/bin/rustc";
         "rustc-msrv-1.89" = "${flexnetosRust189Lane}/bin/rustc-msrv-1.89";
@@ -1228,7 +1215,6 @@
         sqlite3 = "${pkgs.sqlite}/bin/sqlite3";
         tu = "${tokenusage}/bin/tu";
         uname = "${pkgs.coreutils}/bin/uname";
-        usermod = "${pkgs.shadow}/bin/usermod";
         uv = "${pkgs.uv}/bin/uv";
         uvx = "${pkgs.uv}/bin/uvx";
         wasm-pack = "${pkgs.wasm-pack}/bin/wasm-pack";
@@ -1472,6 +1458,7 @@
         shellPackage = flexnetosYzxShell;
         extraPathPrefix = [flexnetosTools];
         defaultStateDir = "/run/user/1001/yazelix/profile-runtime/yazelix";
+        stackBootstrap = "${flexnetosStackBootstrap}/bin/yazelix-stack-bootstrap";
       };
       # PostgreSQL/RuVector is the Swarm Primary Runtime (blueprint hard rule 1), yet
       # the profile shipped no postgres, psql or pg_ctl at all -- `git log -S postgresql`
@@ -1500,9 +1487,37 @@
       flexnetosPostgresRuvector =
         pkgs.postgresql_17.withPackages (_: [flexnetosRuvectorPostgres]);
 
+      # The Yazelix runtime, not systemd or a manual operator step, owns the
+      # complete FlexNetOS stack. This launcher starts only profile/Nix-owned
+      # binaries, waits for their readiness, and performs USB-first vault
+      # unlock before the managed Zellij session is allowed to start.
+      flexnetosStackBootstrapSource =
+        pkgs.replaceVars ./runtime/yzx_stack_bootstrap.rs {
+          runtimeRoot = "/run/user/1001/yazelix/profile-runtime/services";
+          logRoot = "/home/flexnetos/meta/var/xdg-state/yazelix/runtime-logs";
+          configHome = "/home/flexnetos/meta/.config";
+          dataHome = "/home/flexnetos/meta/var/xdg-data";
+          stateHome = "/home/flexnetos/meta/var/xdg-state";
+          sqld = "${pkgs.sqld}/bin/sqld";
+          secretd = "${flexnetosEnvctl}/bin/secretd";
+          secretctl = "${flexnetosEnvctl}/bin/secretctl";
+          seedCa = "/home/flexnetos/meta/var/xdg-data/env-ctl/cognitum-ca.crt";
+          sqldAuthKey = "/home/flexnetos/meta/.config/sqld/auth-jwt-key.pem";
+          sqldClientToken = "/home/flexnetos/meta/.config/sqld/client.jwt";
+          sqldData = "/home/flexnetos/meta/var/lib/sqld";
+          pgCtl = "${flexnetosPostgresRuvector}/bin/pg_ctl";
+          pgData = "/home/flexnetos/meta/var/lib/postgresql/17";
+          pgSocket = "/home/flexnetos/meta/var/run/postgresql";
+          redbOwner = flexnetosRedbOwner;
+          redbRoot = "/home/flexnetos/meta/var/lib/redb";
+          runner = "${flexnetosGhaRunnerStart}/bin/flexnetos-runner-start";
+        };
+      flexnetosStackBootstrap =
+        rustBin "yazelix-stack-bootstrap" flexnetosStackBootstrapSource;
+
       lifeosFoundationYzx = assert flexnetosTerminalSupportContract; pkgs.symlinkJoin {
         name = "lifeos-foundation-yzx";
-        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosCodexConfigOwner flexnetosClaudeConfigOwner flexnetosGitnexusBlockOwner flexnetosDesktopSource flexnetosClaudeDesktopSource flexnetosTerminalSupport flexnetosGhaRunnerStart flexnetosHostPolicyBundle flexnetosPostgresRuvector];
+        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosCodexConfigOwner flexnetosClaudeConfigOwner flexnetosGitnexusBlockOwner flexnetosDesktopSource flexnetosClaudeDesktopSource flexnetosTerminalSupport flexnetosGhaRunnerStart flexnetosPostgresRuvector flexnetosStackBootstrap];
         nativeBuildInputs = [pkgs.desktop-file-utils];
         postBuild = ''
           install -D -m 644 ${flexnetosZellijLayout}/layout.kdl \
@@ -2205,29 +2220,30 @@
         test -x ${foundation}/bin/codedb
         test -x ${foundation}/bin/nu_plugin_codedb
         test -x ${foundation}/bin/flexnetos-redb-owner
+        test -x ${foundation}/bin/yazelix-stack-bootstrap
+        grep -F 'bootstrap_owned_stack()?' ${./runtime/yzx/cli.rs}
+        grep -F 'USB-only vault unlock' ${./runtime/yzx_stack_bootstrap.rs}
+        grep -F 'FLEXNETOS_RUNNER_STATE_DIR' ${./runtime/yzx_stack_bootstrap.rs}
         test -x ${foundation}/bin/fxrun
         test ! -e ${foundation}/bin/fxrun-actions
         test -x ${foundation}/bin/fxrun-dispatch
         test ! -e ${foundation}/bin/flexnetos_runner_policy
         test ! -e ${foundation}/bin/flexnetos_runner_service
         test -x ${foundation}/bin/flexnetos-runner-start
+        test -x ${foundation}/bin/yazelix-stack-bootstrap
         test -x ${foundation}/bin/envctl
         test -x ${foundation}/bin/secretctl
         test -x ${foundation}/bin/secretd
         ${foundation}/bin/envctl --version | grep -Fx 'envctl 0.1.0'
         ${foundation}/bin/secretd --version | grep -Fx 'secretd 0.1.0'
         ${foundation}/bin/secretctl --help | grep -F 'mint-github'
-        test -x ${foundation}/bin/yazelix_host_policy
         test -x ${foundation}/bin/yazelix_volatile_runtime
         test -x ${foundation}/bin/kache
         test -x ${foundation}/bin/kache-rustc-wrapper
         test -x ${foundation}/bin/nix
         test -x ${foundation}/bin/nix-daemon
         test -x ${foundation}/bin/nix-store
-        test -x ${foundation}/bin/journalctl
         test -x ${foundation}/bin/ln
-        test -x ${foundation}/bin/systemctl
-        test -x ${foundation}/bin/usermod
         test -x ${foundation}/toolbin/nu
         test -x ${foundation}/bin/yazelix_profile_check
         test -x ${foundation}/bin/yazelix_profile_migrate
@@ -2436,32 +2452,6 @@
         fi
         # The durable Codex home must be what replaced them.
         grep -q -e '/home/flexnetos/meta/var/lib/codex' ${foundation}/bin/fxrun
-        YAZELIX_HOST_POLICY_ROOT=${foundation}/share/yazelix/host-policy \
-          ${foundation}/bin/yazelix_host_policy check-bundle
-        host_policy_test_root="$TMPDIR/host-policy-root"
-        YAZELIX_HOST_POLICY_ROOT=${foundation}/share/yazelix/host-policy \
-          YAZELIX_HOST_POLICY_TARGET_ROOT="$host_policy_test_root" \
-          ${foundation}/bin/yazelix_host_policy apply-nix
-        YAZELIX_HOST_POLICY_ROOT=${foundation}/share/yazelix/host-policy \
-          YAZELIX_HOST_POLICY_TARGET_ROOT="$host_policy_test_root" \
-          ${foundation}/bin/yazelix_host_policy check-files
-        YAZELIX_HOST_POLICY_ROOT=${foundation}/share/yazelix/host-policy \
-          YAZELIX_HOST_POLICY_TARGET_ROOT="$host_policy_test_root" \
-          ${foundation}/bin/yazelix_host_policy apply-logs
-        YAZELIX_HOST_POLICY_ROOT=${foundation}/share/yazelix/host-policy \
-          YAZELIX_HOST_POLICY_TARGET_ROOT="$host_policy_test_root" \
-          ${foundation}/bin/yazelix_host_policy check-log-files
-        grep -Fx 'substitute = true' ${foundation}/share/yazelix/host-policy/nix.conf
-        grep -E '^substituters = https://cache\.nixos\.org https://nix-community\.' ${foundation}/share/yazelix/host-policy/nix.conf
-        grep -Fx 'trusted-substituters =' ${foundation}/share/yazelix/host-policy/nix.conf
-        grep -Fx 'keep-build-log = false' ${foundation}/share/yazelix/host-policy/nix.conf
-        grep -Fx 'compress-build-log = false' ${foundation}/share/yazelix/host-policy/nix.conf
-        grep -F '"endpoint": null' ${foundation}/share/yazelix/host-policy/determinate-config.json
-        grep -Fx '/home/flexnetos/.nix-profile/toolbin/nu' ${foundation}/share/yazelix/host-policy/shells
-        grep -Fx 'Storage=none' ${foundation}/share/yazelix/host-policy/journald-no-storage.conf
-        grep -F '"log-driver": "none"' ${foundation}/share/yazelix/host-policy/docker-daemon.json
-        grep -F '"GenAILocalFoundationalModelSettings": 1' ${foundation}/share/yazelix/host-policy/chrome-storage.json
-        grep -F '"DiskCacheDir": "/run/user/1001/yazelix/volatile/cache/google-chrome"' ${foundation}/share/yazelix/host-policy/chrome-storage.json
         # Upstream Yazelix ships no systemd: at upstream/main 78d18c94 a tree scan
         # for unit extensions returns nothing, and it creates directories in-process
         # while resolving state from YAZELIX_STATE_DIR or $XDG_DATA_HOME/yazelix.

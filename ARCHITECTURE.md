@@ -11,13 +11,15 @@ Manager config system, or a main-Yazelix compatibility layer.
 ## Runtime chain
 
 ```text
-yzx launch  →  Mars  →  yzx-welcome  →  Yazelix Zellij  →  Yazi sidebar + work panes
-yzx enter   →  yzx-welcome  →  Yazelix Zellij  →  same layout
+yzx launch  →  Yazelix stack bootstrap (sqld/PostgreSQL/secretd/USB vault/runner)
+            →  Mars  →  yzx-welcome  →  Yazelix Zellij  →  managed agents + RTK
+yzx enter   →  the same stack bootstrap  →  yzx-welcome  →  managed Zellij
 yzx run     →  prepared Yazelix environment  →  exact child argv/status
 yzx yazi-config materialize  →  private materializer  →  effective Yazi config path
 ```
 
-Bare `yzx` prints help. `launch` is the only Mars route.
+Bare `yzx` prints help. `launch` is the Mars route, and both launch modes own the
+complete ordered runtime before any managed session is admitted.
 `enter` is the headless/SSH route and requires an interactive host terminal, not
 a display server. `yazelix-no-helix` retains the Mars route and delegates
 editing to an installed host command. `yazelix-no-mars` compiles the Mars route
