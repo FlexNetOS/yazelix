@@ -42,7 +42,7 @@ jobs:
           test -x "$app"
           "$app" doctor
       - name: Nushell step (foundation shell law)
-        shell: nu {0}
+        shell: /home/flexnetos/.nix-profile/toolbin/nu {0}
         run: |
           let runtime = '/home/flexnetos/meta/var/lib/yazelix/runtime/profile'
           if not ($runtime | path exists) { error make {msg: $"missing Yazelix profile runtime: ($runtime)"} }
