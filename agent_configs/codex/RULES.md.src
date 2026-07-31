@@ -51,7 +51,7 @@ instead of preserving parallel control paths.
 Start every shell execution through the profile-owned `rtk` frontdoor. Use
 `rtk proxy` when complete raw evidence is required. Keep RTK telemetry disabled.
 <!-- /rtk-instructions -->
-Use Bun and Bunx exclusively for JavaScript package management and execution.
+Use `bun` and `bun x` exclusively for JavaScript package management and execution.
 
 Before modifying code, prove repository and commit identity and refresh the
 applicable code-intelligence surface. Use GitKB for durable tasks, documents,

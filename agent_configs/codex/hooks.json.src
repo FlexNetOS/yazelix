@@ -1,5 +1,5 @@
 {
-  "description": "FlexNetOS profile-owned RTK, ICM, and agent-guard lifecycle hooks. The guard runs on Codex's PreToolUse for parity with Claude: without it the identical destructive command was denied for Claude and allowed for Codex. Review command hooks through /hooks before enabling them.",
+  "description": "FlexNetOS profile-owned RTK, ICM, and agent-guard lifecycle hooks. RTK and ICM inspect Bash; agent-guard receives every supported Codex PreToolUse event so shell, apply_patch, local-function, and MCP filesystem writes share one path law. Review command hooks through /hooks before enabling them.",
   "hooks": {
     "SessionStart": [
       {
@@ -22,7 +22,12 @@
           {
             "type": "command",
             "command": "/home/flexnetos/.nix-profile/bin/icm hook pre"
-          },
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
           {
             "type": "command",
             "command": "/home/flexnetos/.nix-profile/bin/agent guard"

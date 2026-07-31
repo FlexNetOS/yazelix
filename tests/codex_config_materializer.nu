@@ -105,8 +105,26 @@ def main [root: path] {
     if ($hooks_declared.hooks | columns | sort) != $required_events {
         fail "reviewed hooks input does not declare the exact lifecycle event set"
     }
-    if $hooks_declared.hooks.PreToolUse.0.matcher != "^Bash$" {
-        fail "reviewed PreToolUse hook does not match only Bash"
+    let bash_pretool = (
+        $hooks_declared.hooks.PreToolUse
+        | where {|group| ($group.matcher? | default "") == "^Bash$" }
+    )
+    let guard_pretool = (
+        $hooks_declared.hooks.PreToolUse
+        | where {|group| ($group.matcher? | default "") == "*" }
+    )
+    let bash_commands = (try { $bash_pretool.0.hooks | get command | sort } catch { [] })
+    let guard_commands = (try { $guard_pretool.0.hooks | get command | sort } catch { [] })
+    if ($bash_pretool | length) != 1 or $bash_commands != [
+        "/home/flexnetos/.nix-profile/bin/icm hook pre"
+        "/home/flexnetos/.nix-profile/bin/rtk hook codex"
+    ] {
+        fail "reviewed PreToolUse Bash route does not contain exact RTK and ICM hooks"
+    }
+    if ($guard_pretool | length) != 1 or $guard_commands != [
+        "/home/flexnetos/.nix-profile/bin/agent guard"
+    ] {
+        fail "reviewed agent-guard route does not match every supported Codex tool"
     }
     let hook_commands = ($hooks_declared.hooks | values | flatten | get hooks | flatten | get command | sort)
     let required_commands = [

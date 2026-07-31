@@ -204,11 +204,25 @@ def main [
             ($commands | where {|candidate| $candidate == $command } | length) == 1
         })
         let pretool_exact = (try {
-            $hook_map.PreToolUse | any {|group|
-                let matcher_exact = ($group.matcher? | default "") == "^Bash$"
-                let command_exact = ($group.hooks | any {|handler| ($handler.command? | default "") == "/home/flexnetos/.nix-profile/bin/rtk hook codex" })
-                $matcher_exact and $command_exact
-            }
+            let bash_groups = (
+                $hook_map.PreToolUse
+                | where {|group| ($group.matcher? | default "") == "^Bash$" }
+            )
+            let guard_groups = (
+                $hook_map.PreToolUse
+                | where {|group| ($group.matcher? | default "") == "*" }
+            )
+            let bash_commands = (try { $bash_groups.0.hooks | get command | sort } catch { [] })
+            let guard_commands = (try { $guard_groups.0.hooks | get command | sort } catch { [] })
+            ($bash_groups | length) == 1
+                and $bash_commands == [
+                    "/home/flexnetos/.nix-profile/bin/icm hook pre"
+                    "/home/flexnetos/.nix-profile/bin/rtk hook codex"
+                ]
+                and ($guard_groups | length) == 1
+                and $guard_commands == [
+                    "/home/flexnetos/.nix-profile/bin/agent guard"
+                ]
         } catch { false })
         let posttool_exact = (try {
             $hook_map.PostToolUse | any {|group|

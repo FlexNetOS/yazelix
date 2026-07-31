@@ -79,9 +79,9 @@ def main [
 ] {
     for source in [$settings_src $claude_src $rtk_src] { validate-source $source }
     validate-guard-source $guard_src
-    try { open --raw $settings_src | from json | ignore } catch {
+    let settings_declared = (try { open --raw $settings_src | from json } catch {
         fail $"reviewed Claude settings are invalid JSON: ($settings_src)"
-    }
+    })
     let settings = (open --raw $settings_src)
     for required in [
         "/home/flexnetos/.nix-profile/toolbin/rtk hook claude"
@@ -92,6 +92,18 @@ def main [
         if not ($settings | str contains $required) {
             fail $"reviewed Claude settings omit required profile hook: ($required)"
         }
+    }
+    let guard_routes_all_tools = (try {
+        $settings_declared.hooks.PreToolUse | any {|group|
+            let matcher_omitted = ("matcher" not-in ($group | columns))
+            let command_exact = ($group.hooks | any {|handler|
+                ($handler.command? | default "") == "/home/flexnetos/.nix-profile/toolbin/agent guard"
+            })
+            $matcher_omitted and $command_exact
+        }
+    } catch { false })
+    if not $guard_routes_all_tools {
+        fail "reviewed Claude agent-guard hook must omit matcher and receive every PreToolUse event"
     }
 
     let output_directories = (

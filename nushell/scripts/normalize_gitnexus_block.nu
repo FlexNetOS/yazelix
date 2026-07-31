@@ -12,13 +12,13 @@
 const BLOCK_START = "<!-- gitnexus:start -->"
 const BLOCK_END = "<!-- gitnexus:end -->"
 const STALE_INDEX_PREFIX = "> Index stale?"
-const CANONICAL_STALE_INDEX = "> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root. No `.gitnexus/run.cjs` yet? Regenerate it with profile-owned `bunx gitnexus@latest analyze`; never use a global package-manager install."
+const CANONICAL_STALE_INDEX = "> Index stale? Run `rtk node .gitnexus/run.cjs analyze` from the project root. No `.gitnexus/run.cjs` yet? Regenerate it with `rtk bun x --bun gitnexus@latest analyze`; never use a global package-manager install."
 const DEFAULT_TARGETS = ["AGENTS.md" "CLAUDE.md"]
 
 # Runner spellings the profile does not carry. Their presence anywhere in the
 # block after normalization means the upstream template grew a second bootstrap
 # mention, which this step would otherwise leave in place unnoticed.
-const RETIRED_LANES = ["npx " "pnpm dlx" "pnpm add -g" "npm i -g" "npm install -g"]
+const RETIRED_LANES = ["npx " "bunx " "pnpm dlx" "pnpm add -g" "npm i -g" "npm install -g"]
 
 def fail [message: string] {
     print --stderr $"gitnexus block normalizer: ($message)"

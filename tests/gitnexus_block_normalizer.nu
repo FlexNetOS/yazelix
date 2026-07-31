@@ -10,7 +10,7 @@ def run [nu_bin: path, source: path, targets: list<string>] {
     do { ^$nu_bin $source ...$targets } | complete
 }
 
-const CANONICAL = "> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root. No `.gitnexus/run.cjs` yet? Regenerate it with profile-owned `bunx gitnexus@latest analyze`; never use a global package-manager install."
+const CANONICAL = "> Index stale? Run `rtk node .gitnexus/run.cjs analyze` from the project root. No `.gitnexus/run.cjs` yet? Regenerate it with `rtk bun x --bun gitnexus@latest analyze`; never use a global package-manager install."
 
 # The line `gitnexus analyze` emits once the upstream bun lane exists. The step
 # must replace it wholesale rather than patch it, so an upstream rewording of

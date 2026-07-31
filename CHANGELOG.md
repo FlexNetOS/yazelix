@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Route every supported Claude and Codex `PreToolUse` event through the
+  profile-owned agent guard. Claude's guard group now omits its matcher, while
+  Codex keeps RTK and ICM on Bash and gives agent-guard a separate wildcard
+  group. This closes the prior `apply_patch`, local-function, and namespaced MCP
+  filesystem-write bypass without adding prompts: a denial returns the exact
+  executable remedy to the agent and unattended auto mode remains unattended.
+
 - Own the GitNexus invocation lane named by generated agent documentation.
   `gitnexus analyze` rewrites its whole `<!-- gitnexus:start -->` block from the
   upstream template on every run, which restores a package-manager bootstrap
@@ -124,7 +131,7 @@
   authoring Codex auth, sessions, databases, trust state, or user preferences.
 - Package the canonical Nushell RTK dispatcher with the foundation profile so
   Codex and Cargo routing have one profile-owned source.
-- Package Neovim as the alternate Engine Room editor, and enforce Bun/Bunx as
+- Package Neovim as the alternate Engine Room editor, and enforce `bun`/`bun x` as
   the only JavaScript package frontdoors by removing npm, npx, pnpm, Yarn, and
   Corepack from the foundation profile.
 - Advance the profile-owned ICM source to the blueprint-verified FlexNetOS main

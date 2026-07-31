@@ -3,7 +3,7 @@
 
 This project is indexed by GitNexus as **yazelix-archbp-1b1db7ac** (1640 symbols, 4525 relationships, 136 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root. No `.gitnexus/run.cjs` yet? Regenerate it with profile-owned `bunx gitnexus@latest analyze`; never use a global package-manager install.
+> Index stale? Run `rtk node .gitnexus/run.cjs analyze` from the project root. No `.gitnexus/run.cjs` yet? Regenerate it with `rtk bun x --bun gitnexus@latest analyze`; never use a global package-manager install.
 
 ## Always Do
 

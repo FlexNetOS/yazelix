@@ -46,6 +46,7 @@ const REQUIRED_HOOKS = {
     PreToolUse: [{matcher: "^Bash$", hooks: [
         {type: "command", command: "/home/flexnetos/.nix-profile/bin/rtk hook codex"}
         {type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook pre"}
+    ]} {matcher: "*", hooks: [
         {type: "command", command: "/home/flexnetos/.nix-profile/bin/agent guard"}
     ]}]
     PreCompact: [{hooks: [{type: "command", command: "/home/flexnetos/.nix-profile/bin/icm hook compact"}]}]
