@@ -8,14 +8,14 @@ use "@rtkWrappers@" *
 
 # The installed FlexNetOS product has one Nushell owner. Refuse to publish a
 # different shell path when running under the real product home.
-if (($env.HOME? | default "") == "/home/flexnetos") {
+if (($env.HOME? | default "") == "@productHome@") {
     let profile_nu = "@profileNu@"
     if not ($profile_nu | path exists) {
         error make { msg: $"profile-owned Nushell is missing: ($profile_nu)" }
     }
     $env.SHELL = $profile_nu
 
-    let volatile_root = (($env.XDG_RUNTIME_DIR? | default "/run/user/1001") | path join "yazelix" "volatile")
+    let volatile_root = (($env.XDG_RUNTIME_DIR? | default "@runtimeDir@") | path join "yazelix" "volatile")
     let volatile_cache = ($volatile_root | path join "cache")
     let volatile_tmp = ($volatile_root | path join "tmp")
     # The Rust toolchain comes from fenix (flake.nix: flexnetosRustToolchain =
@@ -34,17 +34,17 @@ if (($env.HOME? | default "") == "/home/flexnetos") {
     # environment.d, silently won -- so every build landed on tmpfs and vanished on
     # reboot, which is why `./target/debug/<bin>` read as "not found" while cargo
     # reported success.
-    let cargo_home = "/home/flexnetos/meta/var/cache/cargo-home"
-    let cargo_target = "/home/flexnetos/meta/var/cargo-target"
+    let cargo_home = "@cargoHome@"
+    let cargo_target = "@cargoTargetDir@"
     # Durable cache root on persistent home storage. Volatile tmpfs is correct
     # for mutable/session caches (browser, editor, webviews) but WRONG for
     # immutable, expensive-to-refetch artifacts (model weights, browser binaries)
     # and for starship's log dir, which must survive a reboot and always be
     # writable regardless of XDG_CACHE_HOME export order.
-    let durable_cache = "/home/flexnetos/.cache"
-    let profile_data = "/home/flexnetos/meta/var/xdg-data"
-    let profile_state = "/home/flexnetos/meta/var/xdg-state"
-    let yazelix_state = "/run/user/1001/yazelix/profile-runtime/yazelix"
+    let durable_cache = "@durableCache@"
+    let profile_data = "@dataHome@"
+    let profile_state = "@stateHome@"
+    let yazelix_state = "@yazelixStateDir@"
     for path in [$volatile_cache $volatile_tmp $cargo_home $cargo_target $durable_cache $profile_data $profile_state $yazelix_state] {
         mkdir $path
     }
@@ -79,9 +79,9 @@ if (($env.HOME? | default "") == "/home/flexnetos") {
     # Starship's log dir must exist and be writable even before XDG_CACHE_HOME is
     # exported (early prompt), so pin it to the durable, always-created root.
     $env.STARSHIP_CACHE = ($durable_cache | path join "starship")
-    $env.KACHE_CACHE_DIR = "/home/flexnetos/.cache/kache"
-    $env.RUSTC_WRAPPER = "/home/flexnetos/.nix-profile/bin/kache-rustc-wrapper"
-    $env.CARGO_BUILD_RUSTC_WRAPPER = "/home/flexnetos/.nix-profile/bin/kache-rustc-wrapper"
+    $env.KACHE_CACHE_DIR = "@kacheCacheDir@"
+    $env.RUSTC_WRAPPER = "@rustcWrapper@"
+    $env.CARGO_BUILD_RUSTC_WRAPPER = "@rustcWrapper@"
     $env.NIX_SENTRY_ENDPOINT = ""
     $env.DETSYS_IDS_TELEMETRY = "disabled"
 }

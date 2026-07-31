@@ -193,6 +193,31 @@
       mkdir -p "$out/bin"
       rustc --edition=2024 ${src} -o "$out/bin/${name}"
     '';
+    # Single owner for the shell-scope layer's substituted paths. Upstream's startup
+    # boundary is "Nix substitutes paths; Rust owns wiring and exec", so every path this
+    # layer publishes is produced by the derivation and never pinned in the .nu source.
+    # It lives at this level because the package and checks blocks are separate eachSystem
+    # scopes; defining it in either would make the other a duplicate owner. replaceVars is
+    # fail-closed -- an unsubstituted placeholder breaks the build instead of shipping a
+    # literal.
+    flexnetosNuConfigFor = pkgs:
+      pkgs.replaceVars ./nushell/config/config.nu {
+        stackPromptGuard = "${./nushell/config/stack_prompt_guard.nu}";
+        flexnetosInit = "${./nushell/scripts/flexnetos_init.nu}";
+        rtkWrappers = "${./nushell/config/rtk_wrappers.nu}";
+        profileNu = "/home/flexnetos/.nix-profile/toolbin/nu";
+        productHome = "/home/flexnetos";
+        runtimeDir = "/run/user/1001";
+        cargoHome = "/home/flexnetos/meta/var/cache/cargo-home";
+        cargoTargetDir = "/home/flexnetos/meta/var/cargo-target";
+        durableCache = "/home/flexnetos/.cache";
+        dataHome = "/home/flexnetos/meta/var/xdg-data";
+        stateHome = "/home/flexnetos/meta/var/xdg-state";
+        yazelixStateDir = "/run/user/1001/yazelix/profile-runtime/yazelix";
+        kacheCacheDir = "/home/flexnetos/.cache/kache";
+        rustcWrapper = "/home/flexnetos/.nix-profile/bin/kache-rustc-wrapper";
+      };
+
     nuApplicationFor = pkgs: name: source: replacements:
       pkgs.writeTextFile {
         inherit name;
@@ -244,12 +269,7 @@
         starship = "${pkgs.starship}/bin/starship";
         zoxideInit = "${yzxZoxideInit}";
       };
-      flexnetosNuConfig = pkgs.replaceVars ./nushell/config/config.nu {
-        stackPromptGuard = "${./nushell/config/stack_prompt_guard.nu}";
-        flexnetosInit = "${./nushell/scripts/flexnetos_init.nu}";
-        profileNu = "/home/flexnetos/.nix-profile/toolbin/nu";
-        rtkWrappers = "${./nushell/config/rtk_wrappers.nu}";
-      };
+      flexnetosNuConfig = flexnetosNuConfigFor pkgs;
       yzxNuConfig = pkgs.runCommand "yzx-nu-config" {} ''
         install -D -m 644 ${yzxNuConfigNu} "$out/config.nu"
         install -D -m 644 ${./defaults/nu/env.nu} "$out/env.nu"
@@ -991,7 +1011,9 @@
         paths = [flexnetosKacheBase flexnetosKacheWrappers];
       };
       flexnetosHostPolicy = nuApplication "yazelix_host_policy" ./nushell/system/host_policy.nu {};
-      flexnetosVolatileRuntime = nuApplication "yazelix_volatile_runtime" ./nushell/system/volatile_runtime.nu {};
+      flexnetosVolatileRuntime = nuApplication "yazelix_volatile_runtime" ./nushell/system/volatile_runtime.nu {
+        cargoConfig = "/home/flexnetos/meta/.cargo/config.toml";
+      };
       flexnetosHostPolicyBundle = pkgs.symlinkJoin {
         name = "yazelix-host-policy";
         paths = [
@@ -1069,6 +1091,10 @@
       metaWorkspaceRoot = "/home/flexnetos/meta";
       codexStateHome = "${metaWorkspaceRoot}/var/lib/codex";
       claudeStateHome = "${metaWorkspaceRoot}/var/lib/claude";
+      # The profile frontdoor root. Named here so the Nu scripts this flake writes
+      # interpolate it the way they already interpolate codexStateHome, instead of
+      # each heredoc pinning the literal itself.
+      profileRoot = "/home/flexnetos/.nix-profile";
       profileEnvironmentFrontdoor = name: payload: nuApplication name ./nushell/system/profile_environment_frontdoor.nu {
         tool = name;
         inherit payload;
@@ -1317,7 +1343,7 @@
         #!${pkgs.nushell}/bin/nu
         def --wrapped main [...args] {
           if (\$args | is-empty) or \$args == ["--recover-only"] {
-            let profile = "/home/flexnetos/.nix-profile"
+            let profile = "${profileRoot}"
             let codex_home = "${codexStateHome}"
             exec ${pkgs.nushell}/bin/nu \
               "$out/share/yazelix/nushell/scripts/materialize_codex_config.nu" \
@@ -1368,7 +1394,7 @@
         #!${pkgs.nushell}/bin/nu
         def --wrapped main [...args] {
           if (\$args | is-empty) {
-            let profile = "/home/flexnetos/.nix-profile"
+            let profile = "${profileRoot}"
             let claude_home = "${claudeStateHome}"
             exec ${pkgs.nushell}/bin/nu \
               "$out/share/yazelix/nushell/scripts/materialize_claude_config.nu" \
@@ -2141,12 +2167,9 @@
     } // pkgs.lib.optionalAttrs (system == "x86_64-linux") {
       flexnetos_foundation_contracts = let
         foundation = self.packages.${system}.lifeos_foundation_yzx;
-        flexnetosNuConfig = pkgs.replaceVars ./nushell/config/config.nu {
-          stackPromptGuard = "${./nushell/config/stack_prompt_guard.nu}";
-          flexnetosInit = "${./nushell/scripts/flexnetos_init.nu}";
-          profileNu = "/home/flexnetos/.nix-profile/toolbin/nu";
-          rtkWrappers = "${./nushell/config/rtk_wrappers.nu}";
-        };
+        # Reuses the single flexnetosNuConfigFor owner rather than repeating the
+        # attribute set, which upstream's Method 6 counts as a duplicate owner.
+        flexnetosNuConfig = flexnetosNuConfigFor pkgs;
       in pkgs.runCommand "flexnetos-foundation-contracts" {} ''
         test -x ${foundation}/bin/yzx
         test -x ${foundation}/bin/br

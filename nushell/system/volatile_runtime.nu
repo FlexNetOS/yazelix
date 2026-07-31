@@ -119,7 +119,7 @@ def ensure [] {
         }
     }
 
-    let cargo_config = "/home/flexnetos/meta/.cargo/config.toml"
+    let cargo_config = "@cargoConfig@"
     if ($cargo_config | path exists) {
         let begin = "# >>> envctl kache (Epic H TASK-0055) >>>"
         let end = "# <<< envctl kache (Epic H TASK-0055) <<<"
@@ -231,7 +231,7 @@ def check [] {
             error make {msg: $"legacy Kache delivery artifact must not exist: ($path)"}
         }
     }
-    let cargo_config = "/home/flexnetos/meta/.cargo/config.toml"
+    let cargo_config = "@cargoConfig@"
     if (($cargo_config | path exists) and ((open --raw $cargo_config) | str contains "envctl kache (Epic H TASK-0055)")) {
         error make {msg: $"legacy Kache Cargo block must not exist: ($cargo_config)"}
     }
