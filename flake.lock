@@ -3,17 +3,17 @@
     "agent_source": {
       "flake": false,
       "locked": {
-        "lastModified": 1785484630,
-        "narHash": "sha256-gaRRtyQ/2E32bRy2oKe31RQ4K/gztmRb0miMrEeTVjY=",
+        "lastModified": 1785486289,
+        "narHash": "sha256-RxkS8CRcR7273h4Nr97gCCnHNiBi8LV33Yd93+/Phgw=",
         "owner": "FlexNetOS",
         "repo": "agent",
-        "rev": "47a1b06778cbe273a4435920766c32da5c1521ec",
+        "rev": "1f28498690e374f8dbfe5ba42078c333f73b5561",
         "type": "github"
       },
       "original": {
         "owner": "FlexNetOS",
         "repo": "agent",
-        "rev": "47a1b06778cbe273a4435920766c32da5c1521ec",
+        "rev": "1f28498690e374f8dbfe5ba42078c333f73b5561",
         "type": "github"
       }
     },
@@ -381,18 +381,18 @@
       },
       "locked": {
         "dir": "nix/gha-runner",
-        "lastModified": 1784860279,
-        "narHash": "sha256-ZK9Lf4Q/2aBYAImW8bPiuyNqS8Aip1iLv8aqzzz+gAg=",
+        "lastModified": 1785484944,
+        "narHash": "sha256-pnNGzML8akJBF+8t+KEW0F0gQbvILRf7GxfivmybQSg=",
         "owner": "FlexNetOS",
         "repo": "flexnetos_runner",
-        "rev": "998c3db9bbf5b0d79045b94f34b850cdc3482091",
+        "rev": "26835dac7c57a9fd0fd51881ff4b8322f0118cc5",
         "type": "github"
       },
       "original": {
         "dir": "nix/gha-runner",
         "owner": "FlexNetOS",
         "repo": "flexnetos_runner",
-        "rev": "998c3db9bbf5b0d79045b94f34b850cdc3482091",
+        "rev": "26835dac7c57a9fd0fd51881ff4b8322f0118cc5",
         "type": "github"
       }
     },
