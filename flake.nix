@@ -1580,6 +1580,7 @@
           mosquitto = "${pkgs.mosquitto}/bin/mosquitto";
           nmcli = "${pkgs.networkmanager}/bin/nmcli";
           runner = "${flexnetosGhaRunnerStart}/bin/flexnetos-runner-start";
+          runnerListener = "${ghaRunner.packages.${system}.substrate}/lib/github-runner/Runner.Listener";
         };
       flexnetosStackBootstrap =
         rustBin "yazelix-stack-bootstrap" flexnetosStackBootstrapSource;
