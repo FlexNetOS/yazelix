@@ -146,17 +146,17 @@
     "envctl_source": {
       "flake": false,
       "locked": {
-        "lastModified": 1785529000,
-        "narHash": "sha256-ase8VSYyyirwsDtGn/wRgUHYbFY6HlHeT+pzIcGIbjw=",
+        "lastModified": 1785531011,
+        "narHash": "sha256-5TaOwhsg+hfZdZvRxRj3Hg+f+ZtwHNt11IR+AFMfaKQ=",
         "owner": "FlexNetOS",
         "repo": "envctl",
-        "rev": "dde613610003919012d416f898b38c3aba574ae5",
+        "rev": "f1222f643b5f64fbffb0c4d7bc8f52b3da9ed25a",
         "type": "github"
       },
       "original": {
         "owner": "FlexNetOS",
         "repo": "envctl",
-        "rev": "dde613610003919012d416f898b38c3aba574ae5",
+        "rev": "f1222f643b5f64fbffb0c4d7bc8f52b3da9ed25a",
         "type": "github"
       }
     },
