@@ -35,6 +35,7 @@ const ICM_CONFIG: &str = "@icmConfig@";
 const MOSQUITTO: &str = "@mosquitto@";
 const NMCLI: &str = "@nmcli@";
 const RUNNER: &str = "@runner@";
+const RUNNER_LISTENER: &str = "@runnerListener@";
 
 unsafe extern "C" {
     fn setsid() -> i32;
@@ -74,26 +75,86 @@ fn ensure_runtime() -> io::Result<()> {
         Duration::from_secs(2),
         |_| true,
     )?;
-    ensure_background(
-        "runner",
-        RUNNER,
-        std::iter::empty::<&OsStr>(),
-        &[
-            ("SECRETCTL_BIN", SECRETCTL),
-            (
-                "FLEXNETOS_RUNNER_STATE_DIR",
-                "/home/flexnetos/meta/var/lib/yazelix/runtime/runner/state",
-            ),
-            (
-                "FLEXNETOS_RUNNER_WORK_DIR",
-                "/home/flexnetos/meta/var/lib/yazelix/runtime/runner/work",
-            ),
-        ],
-        Duration::from_secs(4),
-        Duration::from_secs(3),
-        |_| true,
-    )?;
+    ensure_runner()?;
     Ok(())
+}
+
+fn ensure_runner() -> io::Result<()> {
+    let pid_file = Path::new(RUNTIME_ROOT).join("runner.pid");
+    let listener = Path::new(RUNNER_LISTENER);
+    if process_identity_alive(&pid_file, listener)? {
+        return Ok(());
+    }
+    retire_recorded_process(&pid_file)?;
+    let existing = find_exact_processes(listener)?;
+    match existing.as_slice() {
+        [pid] => {
+            write_process_identity(&pid_file, *pid)?;
+            return Ok(());
+        }
+        [] => {}
+        _ => {
+            return Err(io::Error::other(format!(
+                "multiple Yazelix runner listeners are active: {existing:?}"
+            )))
+        }
+    }
+
+    let log_path = Path::new(LOG_ROOT).join("runner.log");
+    let stdout = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)?;
+    let stderr = stdout.try_clone()?;
+    let mut command = Command::new(RUNNER);
+    command
+        .env("SECRETCTL_BIN", SECRETCTL)
+        .env(
+            "FLEXNETOS_RUNNER_STATE_DIR",
+            "/home/flexnetos/meta/var/lib/yazelix/runtime/runner/state",
+        )
+        .env(
+            "FLEXNETOS_RUNNER_WORK_DIR",
+            "/home/flexnetos/meta/var/lib/yazelix/runtime/runner/work",
+        )
+        .stdin(Stdio::null())
+        .stdout(Stdio::from(stdout))
+        .stderr(Stdio::from(stderr));
+    unsafe {
+        command.pre_exec(|| {
+            if setsid() < 0 {
+                return Err(io::Error::last_os_error());
+            }
+            Ok(())
+        });
+    }
+    let mut child = command.spawn()?;
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Err(io::Error::other(format!(
+                "runner exited during Yazelix startup with {status}; see {}",
+                log_path.display()
+            )));
+        }
+        let listeners = find_exact_processes(listener)?;
+        if let [pid] = listeners.as_slice() {
+            write_process_identity(&pid_file, *pid)?;
+            return Ok(());
+        }
+        if listeners.len() > 1 {
+            return Err(io::Error::other(format!(
+                "runner start produced multiple listeners: {listeners:?}"
+            )));
+        }
+        if Instant::now() >= deadline {
+            return Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                format!("runner listener did not start; see {}", log_path.display()),
+            ));
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
 }
 
 fn secure_dir(path: &Path) -> io::Result<()> {
@@ -598,7 +659,12 @@ fn reject_competing_listener(name: &str, program: &str, port: u16) -> io::Result
 }
 
 fn find_exact_process(program: &str) -> io::Result<Option<u32>> {
-    let expected = fs::canonicalize(program)?;
+    Ok(find_exact_processes(Path::new(program))?.into_iter().next())
+}
+
+fn find_exact_processes(expected: &Path) -> io::Result<Vec<u32>> {
+    let expected = fs::canonicalize(expected)?;
+    let mut matches = Vec::new();
     for entry in fs::read_dir("/proc")? {
         let Ok(entry) = entry else {
             continue;
@@ -611,10 +677,11 @@ fn find_exact_process(program: &str) -> io::Result<Option<u32>> {
             continue;
         };
         if exact_process(pid, &expected) {
-            return Ok(Some(pid));
+            matches.push(pid);
         }
     }
-    Ok(None)
+    matches.sort_unstable();
+    Ok(matches)
 }
 
 fn exact_process(pid: u32, expected: &Path) -> bool {
