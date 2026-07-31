@@ -42,17 +42,25 @@ if (($env.HOME? | default "") == "@productHome@") {
     # and for starship's log dir, which must survive a reboot and always be
     # writable regardless of XDG_CACHE_HOME export order.
     let durable_cache = "@durableCache@"
+    let profile_config = "@configHome@"
     let profile_data = "@dataHome@"
     let profile_state = "@stateHome@"
     let yazelix_state = "@yazelixStateDir@"
-    for path in [$volatile_cache $volatile_tmp $cargo_home $cargo_target $durable_cache $profile_data $profile_state $yazelix_state] {
+    let icm_db = "@icmDb@"
+    let claude_config = "@claudeConfigDir@"
+    let codex_home = "@codexHome@"
+    for path in [$profile_config $volatile_cache $volatile_tmp $cargo_home $cargo_target $durable_cache $profile_data $profile_state $yazelix_state ($icm_db | path dirname) $claude_config $codex_home] {
         mkdir $path
     }
 
+    $env.XDG_CONFIG_HOME = $profile_config
     $env.XDG_DATA_HOME = $profile_data
     $env.XDG_STATE_HOME = $profile_state
     $env.XDG_CACHE_HOME = $volatile_cache
     $env.YAZELIX_STATE_DIR = $yazelix_state
+    $env.ICM_DB = $icm_db
+    $env.CLAUDE_CONFIG_DIR = $claude_config
+    $env.CODEX_HOME = $codex_home
     $env.NIX_CACHE_HOME = ($volatile_cache | path join "nix")
     $env.TMPDIR = $volatile_tmp
     $env.TMP = $volatile_tmp

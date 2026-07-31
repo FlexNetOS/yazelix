@@ -34,6 +34,7 @@ def main [
 ] {
     let real_home = ($root | path join "home")
     let data_home = ($root | path join "meta" "var" "lib")
+    let config_home = ($root | path join "meta" "config")
     let state_home = ($root | path join "meta" "var" "state")
     let cache_home = ($root | path join "run" "cache")
     let runtime_dir = ($root | path join "run")
@@ -59,11 +60,13 @@ def main [
         tool: "fixture"
         payload: ($payload | into string)
         realHome: ($real_home | into string)
+        configHome: ($config_home | into string)
         dataHome: ($data_home | into string)
         stateHome: ($state_home | into string)
         cacheHome: ($cache_home | into string)
         runtimeDir: ($runtime_dir | into string)
         yazelixStateDir: ($yazelix_state | into string)
+        icmDb: (($data_home | path join "icm" "memories.db") | into string)
         profileNu: ($nu_bin | into string)
         chmod: ($chmod_bin | into string)
     }
