@@ -2512,6 +2512,14 @@
           echo 'ERROR: cargo must not point at the XDG_RUNTIME_DIR tmpfs' >&2
           exit 1
         fi
+        # fenix composes the toolchain and replaces the toolchain manager, so no
+        # toolchain-manager home belongs in session scope. One was carried in the
+        # volatile drop-in from 66973f69 until 2026-07-30, pointing at the very tmpfs
+        # the cargo rule above exists to prevent, while nothing on the host read it.
+        if grep -qE '^RUSTUP_' "$session_env" "$volatile_env"; then
+          echo 'ERROR: fenix owns the toolchain; no toolchain-manager home in environment.d' >&2
+          exit 1
+        fi
         grep -Fx 'ICM_DB=/home/flexnetos/meta/var/xdg-data/icm/memories.db' "$session_env"
 
         # PostgreSQL/RuVector is the Swarm Primary Runtime (hard rule 1). The profile
