@@ -100,17 +100,17 @@ git ls-files
 | --- | ---: |
 | Ignore (`.gitignore`) | 18 |
 | License | 201 |
-| Markdown | 2959 |
-| Nix | 3305 |
-| Shell | 0 |
+| Markdown | 4135 |
+| Nix | 3844 |
+| Patches | 138 |
 | YAML | 374 |
-| TOML | 254 |
-| KDL | 272 |
-| Nu | 3944 |
-| Lua | 253 |
-| Rust | 16390 |
-| Reviewed agent inputs (`*.src`) | 356 |
+| TOML | 472 |
+| KDL | 288 |
+| Nu | 4395 |
+| Lua | 245 |
+| Rust | 19302 |
+| Reviewed agent inputs (`*.src`) | 381 |
 | Text fixtures | 41 |
-| Host policy (conf/JSON/shells) | 103 |
-| Systemd units | 66 |
-| Total | 28536 |
+| Host policy (conf/JSON/shells) | 80 |
+| Systemd units | 0 |
+| Total | 33914 |

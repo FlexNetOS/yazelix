@@ -51,7 +51,7 @@ ownership summary at lines 6312–6318.
 | YZX-BP-011 | Optional Home Manager module and every package/config ownership path are required | `yazelix`: `home-manager/module.nix`, flake fixtures | enable/default, package override, runtime package, and managed config-file paths | `checks.home_manager` plus all-system evaluation | Implemented |
 | YZX-BP-012 | Optional sparse root, Mars, Starship, Nu/mise/user, Helix, Yazi, and Zellij sidecars must all work | `yazelix`: config defaults/materializers and `checks/` | every supported absent/present/override/reject path remains contract-driven | `checks.contracts`, sidecar parity, config crate tests, runtime materialization | Implemented |
 | YZX-BP-013 | Neovim remains an alternate Engine Room editor (lines 45, 66, 596–598, row 6091) | `yazelix` foundation executable map | profile-owned `nvim`; host/editor selection bypasses the Helix bridge without losing the managed environment | `nvim --version`, editor-selection unit and integration tests | Implemented |
-| YZX-BP-014 | Bun owns JavaScript/TypeScript package execution | `yazelix` foundation executable map | pinned Bun 1.3.14 and Bunx; npm, npx, pnpm, Yarn, and Corepack are not profile frontdoors | exact Bun version and profile absence contract | Implemented |
+| YZX-BP-014 | Bun owns JavaScript/TypeScript package execution | `yazelix` foundation executable map | pinned Bun 1.3.14 provides `bun` and `bun x`; npm, npx, pnpm, Yarn, and Corepack are not profile frontdoors | exact Bun version and profile absence contract | Implemented |
 | YZX-BP-015 | RTK is pinned and native; `rtk_nu` supplies byte-exact pre-transform envelopes (§3.4, R06/R07, row 5733) | reviewed `FlexNetOS/rtk-tokenkill` feature revision `99c3751…` consumed by `yazelix` | one source provides `rtk` 0.43.0, native Codex interception, and merged `rtk_nu`; profile exports both; canonical Nu dispatcher remains packaged | RTK version/help/config, proxy operation, `rtk_nu` format fixtures, fresh-shell resolution | Implemented |
 | YZX-BP-016 | GitKB is durable context, graph, task, provenance, and code intelligence (D21, row 6070) | Meta KB plus profile `git-kb` | exact four repos indexed; task/crosswalk current; document board/graph/search and deep Rust/Lua call graph exercised | `git-kb doctor`, `fsck`, `status`, board, graph, code stats/doctor/symbol/caller/impact operations | Implemented |
 | YZX-BP-017 | ICM supplies persistent memory/retrieval surfaces (D21, row 6068) | profile ICM pinned to `03d63a9…`; `.codex/config.toml` MCP owner | recall/contextual recall, topics/list, health, store/update, decisions, resolved errors, progress and completion memories; service/MCP inventory | version/help/health plus real operations and fresh-shell resolution | Implemented |
@@ -74,7 +74,7 @@ ownership summary at lines 6312–6318.
 | ccboard and CodeDB tools | manifests, binaries, plugin, and profile resolution | child package plus foundation contract |
 | Session/runtime switches | launch and enter; attach/create; named session; bridge session; full and Mars-free packages | main runtime contracts |
 | Neovim alternate editor | profile binary and editor-command bypass path | foundation and open contracts |
-| JavaScript package route | Bun and Bunx only | foundation ownership contract |
+| JavaScript package route | `bun` and `bun x` only | foundation ownership contract |
 
 ## Non-Yazelix owner boundary ledger
 
