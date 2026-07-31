@@ -99,6 +99,24 @@ source hashes. Credentials, sessions, histories, databases, and plugin state
 remain untouched. Both agent wrappers reject a competing inherited state owner
 before invoking their immutable payload.
 
+GitNexus generated documentation is owned the same way, but after the fact
+rather than before: `gitnexus analyze` rewrites its whole
+`<!-- gitnexus:start -->` … `<!-- gitnexus:end -->` block from the upstream
+template on every run, so the bootstrap command it names is whatever that
+template ships. Run the profile-owned `yazelix_gitnexus_normalize` after any
+analyze to restore the reviewed lane:
+
+```nu
+yazelix_gitnexus_normalize             # AGENTS.md and CLAUDE.md in the current repo
+yazelix_gitnexus_normalize docs/AI.md  # or explicit targets
+```
+
+It rewrites only the stale-index line inside the block, leaves every other byte
+and the file's line endings alone, is safe to re-run, and treats an absent
+target or a document with no block as a no-op. If the upstream template ever
+moves a runner mention out of that line, it fails rather than reporting success
+over a bootstrap this profile cannot run.
+
 The profile selector itself must likewise be a direct, relative Nix generation:
 `/home/flexnetos/.nix-profile -> .nix-profile-<generation>-link`. Any alias
 through a retired user XDG selector is a second ownership layer and fails the

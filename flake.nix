@@ -81,7 +81,7 @@
     # build directory dies the moment that directory is a tmpfs, which is the
     # exact failure its own path-law patterns exist to deny.
     agent_source = {
-      url = "github:FlexNetOS/agent/0c4414c8ebb6d356c5f60b7f5817b16eb571694a";
+      url = "github:FlexNetOS/agent/c1b2ada9d209d39c88acdc88e3957aa85d772414";
       flake = false;
     };
     grit_source = {
@@ -1361,6 +1361,23 @@
         EOF
         chmod +x "$out/bin/yazelix_codex_materialize"
       '';
+      # `gitnexus analyze` rewrites its generated block from the upstream template
+      # on every run, restoring a package-manager bootstrap this profile does not
+      # carry. This owner re-applies the reviewed Bun lane, so the invocation the
+      # generated agent docs name stays ours across a `gitnexus@latest` bump.
+      flexnetosGitnexusBlockOwner = pkgs.runCommand "yazelix-gitnexus-block-owner" {} ''
+        mkdir -p "$out/bin" "$out/share/yazelix/nushell/scripts"
+        install -m 644 ${./nushell/scripts/normalize_gitnexus_block.nu} \
+          "$out/share/yazelix/nushell/scripts/normalize_gitnexus_block.nu"
+        cat > "$out/bin/yazelix_gitnexus_normalize" <<EOF
+        #!${pkgs.nushell}/bin/nu
+        def --wrapped main [...args] {
+          exec ${pkgs.nushell}/bin/nu \
+            "$out/share/yazelix/nushell/scripts/normalize_gitnexus_block.nu" ...\$args
+        }
+        EOF
+        chmod +x "$out/bin/yazelix_gitnexus_normalize"
+      '';
       flexnetosClaudeConfigOwner = pkgs.runCommand "yazelix-claude-config-owner" {} ''
         mkdir -p "$out/bin" "$out/share/yazelix/agent_configs/claude" \
           "$out/share/yazelix/nushell/scripts"
@@ -1486,7 +1503,7 @@
 
       lifeosFoundationYzx = assert flexnetosTerminalSupportContract; pkgs.symlinkJoin {
         name = "lifeos-foundation-yzx";
-        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosCodexConfigOwner flexnetosClaudeConfigOwner flexnetosDesktopSource flexnetosClaudeDesktopSource flexnetosTerminalSupport flexnetosGhaRunnerStart flexnetosHostPolicyBundle flexnetosVolatileRuntimeBundle flexnetosPostgresRuvector];
+        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosCodexConfigOwner flexnetosClaudeConfigOwner flexnetosGitnexusBlockOwner flexnetosDesktopSource flexnetosClaudeDesktopSource flexnetosTerminalSupport flexnetosGhaRunnerStart flexnetosHostPolicyBundle flexnetosVolatileRuntimeBundle flexnetosPostgresRuvector];
         nativeBuildInputs = [pkgs.desktop-file-utils];
         postBuild = ''
           install -D -m 644 ${flexnetosZellijLayout}/layout.kdl \
@@ -1777,6 +1794,15 @@
           ${./nushell/agent/icm_profile_frontdoor.nu} \
           ${pkgs.nushell}/bin/nu \
           ${pkgs.coreutils}/bin/chmod
+        touch "$out"
+      '';
+      gitnexus_block_normalizer = pkgs.runCommand "gitnexus-block-normalizer" {
+        nativeBuildInputs = [pkgs.nushell pkgs.coreutils];
+      } ''
+        ${pkgs.nushell}/bin/nu ${./tests/gitnexus_block_normalizer.nu} \
+          "$TMPDIR" \
+          ${./nushell/scripts/normalize_gitnexus_block.nu} \
+          ${pkgs.nushell}/bin/nu
         touch "$out"
       '';
       strict_profile_sources = pkgs.runCommand "strict-profile-sources" {
@@ -2289,6 +2315,17 @@
           '.schema == "yazelix.claude-config-generation.v2" and (.sources | length == 4)' \
           "$claude_test_runtime/.yazelix-claude-generation.json"
         test "$claude_credentials_before" = "$(${pkgs.coreutils}/bin/sha256sum "$claude_test_runtime/.credentials.json")"
+        test -f ${foundation}/share/yazelix/nushell/scripts/normalize_gitnexus_block.nu
+        gitnexus_test_runtime="$TMPDIR/gitnexus-block-runtime"
+        mkdir -p "$gitnexus_test_runtime"
+        {
+          echo '<!-- gitnexus:start -->'
+          echo '> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root. No `.gitnexus/run.cjs` yet? Bootstrap with `npx`, `bunx`, or `pnpm dlx`.'
+          echo '<!-- gitnexus:end -->'
+        } > "$gitnexus_test_runtime/AGENTS.md"
+        ${foundation}/bin/yazelix_gitnexus_normalize "$gitnexus_test_runtime/AGENTS.md"
+        grep -F 'profile-owned `bunx gitnexus@latest analyze`' "$gitnexus_test_runtime/AGENTS.md"
+        grep -F 'never use a global package-manager install' "$gitnexus_test_runtime/AGENTS.md"
         test ! -e ${foundation}/bin/yzx-desktop-launch
         test ! -e ${foundation}/bin/yzx-agent-workspace-launch
 

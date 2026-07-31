@@ -82,6 +82,14 @@ One owner per concern. Paths are the durable map.
 | `tests/codex_config_materializer.nu` | Determinism, unrelated-hook preservation, v1/v2 recovery, and fail-closed materialization contract |
 | `tests/codex_config_provenance.nu` | Deployed-input, exact lexical profile selector, source-hash/mode, hook-command, and generated-runtime parity gate |
 
+### GitNexus generated-block ownership
+
+| Path | Owns |
+| --- | --- |
+| `flexnetosGitnexusBlockOwner` in `flake.nix` | Profile-owned normalizer source and the `yazelix_gitnexus_normalize` frontdoor |
+| `nushell/scripts/normalize_gitnexus_block.nu` | Restores the reviewed Bun invocation lane in the `gitnexus:start`/`gitnexus:end` block that `gitnexus analyze` regenerates, rewriting only the stale-index line |
+| `tests/gitnexus_block_normalizer.nu` | Idempotence, CRLF preservation, outside-the-block immutability, and fail-closed template-drift contract |
+
 ### Front door and helpers
 
 | Path | Owns |

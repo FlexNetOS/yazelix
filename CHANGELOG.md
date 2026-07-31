@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Own the GitNexus invocation lane named by generated agent documentation.
+  `gitnexus analyze` rewrites its whole `<!-- gitnexus:start -->` block from the
+  upstream template on every run, which restores a package-manager bootstrap
+  this profile does not carry — the flake contract asserts npm, npx, pnpm,
+  corepack and yarn are absent. The new profile-owned
+  `yazelix_gitnexus_normalize` restores the reviewed Bun lane in `AGENTS.md` and
+  `CLAUDE.md` after any analyze, rewriting only the stale-index line inside the
+  block and leaving every other byte, the file's line endings, and everything
+  outside the markers untouched. It is idempotent, treats an absent target or a
+  block-free document as a no-op, and fails loudly rather than silently
+  succeeding when the upstream template moves a runner mention out of the line
+  it rewrites. `tests/gitnexus_block_normalizer.nu` covers the contract and the
+  foundation contracts exercise the installed binary end to end.
+
 - Package RuVector PostgreSQL 0.3.1 through a fixed Nix source patch that adds
   the native `rvf_crypto::shake256_256` SQL binding and the 0.3.0-to-0.3.1
   extension upgrade. Fresh installs use the maintained valid base SQL plus the
