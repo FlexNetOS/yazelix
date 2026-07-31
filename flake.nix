@@ -120,7 +120,7 @@
       flake = false;
     };
     ghaRunner = {
-      url = "github:FlexNetOS/flexnetos_runner/26835dac7c57a9fd0fd51881ff4b8322f0118cc5?dir=nix/gha-runner";
+      url = "github:FlexNetOS/flexnetos_runner/9e0c5b620feac8c91ebddbce401291f5fd96cd9b?dir=nix/gha-runner";
     };
     zjstatus = {
       url = "github:luccahuguet/zjstatus/yazelix-tab-activity-pipe";
