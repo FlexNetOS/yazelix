@@ -53,6 +53,7 @@ fn ensure_runtime() -> io::Result<()> {
         [OsStr::new("serve"), OsStr::new(REDB_ROOT)],
         &[],
         Duration::from_secs(2),
+        Duration::from_secs(2),
         |_| true,
     )?;
     ensure_background(
@@ -71,6 +72,7 @@ fn ensure_runtime() -> io::Result<()> {
             ),
         ],
         Duration::from_secs(4),
+        Duration::from_secs(3),
         |_| true,
     )?;
     Ok(())
@@ -106,6 +108,7 @@ fn ensure_sqld() -> io::Result<()> {
         ],
         &[],
         Duration::from_secs(20),
+        Duration::ZERO,
         |_| tcp_ready(8080),
     )
 }
@@ -139,6 +142,7 @@ fn ensure_secretd() -> io::Result<()> {
             ("SECRETD_LIBSQL_AUTH_TOKEN_FILE", SQLD_CLIENT_TOKEN),
         ],
         Duration::from_secs(30),
+        Duration::ZERO,
         |command| {
             command
                 .env("XDG_RUNTIME_DIR", "/run/user/1001")
@@ -170,7 +174,7 @@ fn ensure_postgres() -> io::Result<()> {
             .next()
             .and_then(|value| value.parse::<u32>().ok())
             .ok_or_else(|| io::Error::other("PostgreSQL status is up but postmaster.pid is invalid"))?;
-        let expected = Path::new(PG_CTL).with_file_name("postgres");
+        let expected = Path::new(PG_CTL).canonicalize()?.with_file_name("postgres");
         if exact_process(pid, &expected) {
             return Ok(());
         }
@@ -224,6 +228,7 @@ fn ensure_background<I, S, F>(
     args: I,
     environment: &[(&str, &str)],
     timeout: Duration,
+    minimum_alive: Duration,
     mut ready: F,
 ) -> io::Result<()>
 where
@@ -269,7 +274,15 @@ where
     }
     let mut child = command.spawn()?;
     write_process_identity(&pid_file, child.id())?;
-    wait_until_ready(name, &pid_file, &log_path, timeout, &mut child, &mut ready)
+    wait_until_ready(
+        name,
+        &pid_file,
+        &log_path,
+        timeout,
+        minimum_alive,
+        &mut child,
+        &mut ready,
+    )
 }
 
 fn wait_until_ready<F>(
@@ -277,13 +290,15 @@ fn wait_until_ready<F>(
     pid_file: &Path,
     log_path: &Path,
     timeout: Duration,
+    minimum_alive: Duration,
     child: &mut Child,
     ready: &mut F,
 ) -> io::Result<()>
 where
     F: FnMut(&mut Command) -> bool,
 {
-    let deadline = Instant::now() + timeout;
+    let started = Instant::now();
+    let deadline = started + timeout;
     loop {
         if let Some(status) = child.try_wait()? {
             let _ = fs::remove_file(pid_file);
@@ -293,7 +308,7 @@ where
             )));
         }
         let mut probe = Command::new(SECRETCTL);
-        if ready(&mut probe) {
+        if ready(&mut probe) && started.elapsed() >= minimum_alive {
             return Ok(());
         }
         if Instant::now() >= deadline {

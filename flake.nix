@@ -119,6 +119,10 @@
       url = "github:FlexNetOS/meta_plugin_protocol/7d65eeac3bba8e9702eb0590ba9476e4e420bfb3";
       flake = false;
     };
+    pgrx_source = {
+      url = "github:pgcentralfoundation/pgrx/a21888973a18b787fa2c09f86936ea9c4a20de4b";
+      flake = false;
+    };
     ghaRunner = {
       url = "github:FlexNetOS/flexnetos_runner/9e0c5b620feac8c91ebddbce401291f5fd96cd9b?dir=nix/gha-runner";
     };
@@ -160,6 +164,7 @@
     envctl_source,
     loop_lib_source,
     meta_plugin_protocol_source,
+    pgrx_source,
     ghaRunner,
     autoLayoutYazi,
     starshipYazi,
@@ -211,11 +216,15 @@
         cargoHome = "/home/flexnetos/meta/var/cache/cargo-home";
         cargoTargetDir = "/home/flexnetos/meta/var/cargo-target";
         durableCache = "/home/flexnetos/.cache";
+        configHome = "/home/flexnetos/meta/.config";
         dataHome = "/home/flexnetos/meta/var/xdg-data";
         stateHome = "/home/flexnetos/meta/var/xdg-state";
         yazelixStateDir = "/run/user/1001/yazelix/profile-runtime/yazelix";
         kacheCacheDir = "/home/flexnetos/.cache/kache";
         rustcWrapper = "/home/flexnetos/.nix-profile/bin/kache-rustc-wrapper";
+        icmDb = "/home/flexnetos/meta/var/xdg-data/icm/memories.db";
+        claudeConfigDir = "/home/flexnetos/meta/var/lib/claude";
+        codexHome = "/home/flexnetos/meta/var/lib/codex";
       };
 
     nuApplicationFor = pkgs: name: source: replacements:
@@ -270,6 +279,24 @@
         zoxideInit = "${yzxZoxideInit}";
       };
       flexnetosNuConfig = flexnetosNuConfigFor pkgs;
+      # The blueprint pins cargo-pgrx independently of nixpkgs.  Do not expose
+      # pkgs.cargo-pgrx here: nixpkgs currently resolves it to 0.18.x, while
+      # the PostgreSQL/RuVector extension contract is cargo-pgrx 0.12.9.
+      flexnetosCargoPgrx = pkgs.rustPlatform.buildRustPackage {
+        pname = "cargo-pgrx";
+        version = "0.12.9";
+        src = pgrx_source;
+        cargoLock.lockFile = "${pgrx_source}/Cargo.lock";
+        cargoBuildFlags = ["-p" "cargo-pgrx"];
+        doCheck = false;
+        nativeBuildInputs = [pkgs.pkg-config];
+        buildInputs = [pkgs.openssl pkgs.zlib];
+        installPhase = ''
+          runHook preInstall
+          install -Dm755 target/release/cargo-pgrx "$out/bin/cargo-pgrx"
+          runHook postInstall
+        '';
+      };
       yzxNuConfig = pkgs.runCommand "yzx-nu-config" {} ''
         install -D -m 644 ${yzxNuConfigNu} "$out/config.nu"
         install -D -m 644 ${./defaults/nu/env.nu} "$out/env.nu"
@@ -1089,8 +1116,10 @@
         tool = name;
         inherit payload;
         realHome = "/home/flexnetos";
+        configHome = "/home/flexnetos/meta/.config";
         dataHome = "/home/flexnetos/meta/var/xdg-data";
         stateHome = "/home/flexnetos/meta/var/xdg-state";
+        icmDb = "/home/flexnetos/meta/var/xdg-data/icm/memories.db";
         cacheHome = "/run/user/1001/yazelix/volatile/cache";
         runtimeDir = "/run/user/1001";
         yazelixStateDir = "/run/user/1001/yazelix/profile-runtime/yazelix";
@@ -1121,6 +1150,7 @@
         cargo-fmt = "${flexnetosRustToolchain}/bin/cargo-fmt";
         "cargo-msrv-1.89" = "${flexnetosRust189Lane}/bin/cargo-msrv-1.89";
         cargo-tauri = "${pkgs.cargo-tauri}/bin/cargo-tauri";
+        cargo-pgrx = "${flexnetosCargoPgrx}/bin/cargo-pgrx";
         cc = "${pkgs.stdenv.cc}/bin/cc";
         ccboard = flexnetosCcboard;
         cat = "${pkgs.coreutils}/bin/cat";
@@ -1182,6 +1212,7 @@
         nu_plugin_codedb = flexnetosNuPluginCodedb;
         obscura = "${flexnetosObscura}/bin/obscura";
         openssl = "${pkgs.openssl}/bin/openssl";
+        pg_config = "${pkgs.postgresql_17.pg_config}/bin/pg_config";
         pkg-config = "${pkgs.pkg-config}/bin/pkg-config";
         python3 = "${flexnetosPython}/bin/python3";
         readlink = "${pkgs.coreutils}/bin/readlink";
@@ -1264,7 +1295,10 @@
         ''
         + pkgs.lib.concatStringsSep "\n" (
           pkgs.lib.mapAttrsToList (name: executable: ''
-            test -x ${pkgs.lib.escapeShellArg executable}
+            test -x ${pkgs.lib.escapeShellArg executable} || {
+              echo ${pkgs.lib.escapeShellArg "missing foundation executable: ${name} -> ${executable}"} >&2
+              exit 1
+            }
             ln -s ${pkgs.lib.escapeShellArg executable} "$out/bin/${name}"
             ln -s ${pkgs.lib.escapeShellArg executable} "$out/toolbin/${name}"
           '') flexnetosExecutables
@@ -1274,6 +1308,11 @@
             for executable in "$package"/bin/*; do
               test -x "$executable" || continue
               name="''${executable##*/}"
+              case "$name" in
+                systemctl|journalctl|loginctl|systemd|systemd-run|systemd-analyze)
+                  continue
+                  ;;
+              esac
               if ! test -e "$out/bin/$name"; then
                 ln -s "$executable" "$out/bin/$name"
               fi
@@ -1507,7 +1546,7 @@
           sqldData = "/home/flexnetos/meta/var/lib/sqld";
           pgCtl = "${flexnetosPostgresRuvector}/bin/pg_ctl";
           pgData = "/home/flexnetos/meta/var/lib/postgresql/17";
-          pgSocket = "/home/flexnetos/meta/var/run/postgresql";
+          pgSocket = "/home/flexnetos/meta/var/lib/postgresql";
           redbOwner = flexnetosRedbOwner;
           redbRoot = "/home/flexnetos/meta/var/lib/redb";
           runner = "${flexnetosGhaRunnerStart}/bin/flexnetos-runner-start";

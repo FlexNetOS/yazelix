@@ -587,6 +587,23 @@
         "type": "github"
       }
     },
+    "pgrx_source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1732292740,
+        "narHash": "sha256-LXcL4zGRDA5NlznrFZeNnfVYX/waUPGvlqtSUXnJoys=",
+        "owner": "pgcentralfoundation",
+        "repo": "pgrx",
+        "rev": "a21888973a18b787fa2c09f86936ea9c4a20de4b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pgcentralfoundation",
+        "repo": "pgrx",
+        "rev": "a21888973a18b787fa2c09f86936ea9c4a20de4b",
+        "type": "github"
+      }
+    },
     "ratconfig": {
       "flake": false,
       "locked": {
@@ -621,6 +638,7 @@
         "meta_plugin_protocol_source": "meta_plugin_protocol_source",
         "nixpkgs": "nixpkgs_2",
         "obscura_source": "obscura_source",
+        "pgrx_source": "pgrx_source",
         "ratconfig": "ratconfig",
         "rtk_source": "rtk_source",
         "starshipYazi": "starshipYazi",
