@@ -284,19 +284,6 @@ fn ensure_sqld() -> io::Result<()> {
 }
 
 fn ensure_secretd() -> io::Result<()> {
-    let daemon_reachable = {
-        let mut command = Command::new(SECRETCTL);
-        command
-            .env("XDG_RUNTIME_DIR", XDG_RUNTIME_DIR)
-            .arg("--json")
-            .arg("status");
-        command.output().is_ok_and(|output| output.status.success())
-    };
-    if daemon_reachable && find_exact_process(SECRETD)?.is_none() {
-        return Err(io::Error::other(
-            "secretd socket is owned by a non-Yazelix binary; retire the competing runtime owner",
-        ));
-    }
     ensure_background(
         "secretd",
         SECRETD,
