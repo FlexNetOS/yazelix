@@ -17,6 +17,8 @@ const LOG_ROOT: &str = "@logRoot@";
 const CONFIG_HOME: &str = "@configHome@";
 const DATA_HOME: &str = "@dataHome@";
 const STATE_HOME: &str = "@stateHome@";
+const CACHE_HOME: &str = "@cacheHome@";
+const YAZELIX_STATE_DIR: &str = "@yazelixStateDir@";
 const SQLD: &str = "@sqld@";
 const SECRETD: &str = "@secretd@";
 const SECRETCTL: &str = "@secretctl@";
@@ -57,6 +59,7 @@ fn ensure_runtime() -> io::Result<()> {
     secure_dir(Path::new(RUNTIME_ROOT))?;
     secure_dir(Path::new(XDG_RUNTIME_DIR))?;
     secure_dir(Path::new(LOG_ROOT))?;
+    secure_dir(&Path::new(RUNTIME_ROOT).join("tmp"))?;
     refresh_seed_ca()?;
     ensure_seed_network()?;
     ensure_sqld()?;
@@ -107,6 +110,7 @@ fn ensure_runner() -> io::Result<()> {
         .open(&log_path)?;
     let stderr = stdout.try_clone()?;
     let mut command = Command::new(RUNNER);
+    prepare_managed_command(&mut command);
     command
         .env("SECRETCTL_BIN", SECRETCTL)
         .env(
@@ -411,6 +415,7 @@ fn ensure_seed_monitor() -> io::Result<()> {
         .open(&log_path)?;
     let stderr = stdout.try_clone()?;
     let mut command = Command::new(env::current_exe()?);
+    prepare_managed_command(&mut command);
     command
         .arg("--seed-monitor")
         .stdin(Stdio::null())
@@ -491,17 +496,23 @@ fn ensure_postgres() -> io::Result<()> {
                 io::Error::other("PostgreSQL status is up but postmaster.pid is invalid")
             })?;
         let expected = Path::new(PG_CTL).canonicalize()?.with_file_name("postgres");
-        if exact_process(pid, &expected) {
+        if exact_process(pid, &expected) && process_environment_obeys_path_law(pid) {
             return Ok(());
         }
-        return Err(io::Error::other(
-            "PostgreSQL is running from a competing binary outside the Yazelix closure",
-        ));
+        if exact_process(pid, &expected) {
+            pg_ctl("stop", &[OsStr::new("-m"), OsStr::new("fast")])?;
+        } else {
+            return Err(io::Error::other(
+                "PostgreSQL is running from a competing binary outside the Yazelix closure",
+            ));
+        }
     }
     let log = Path::new(LOG_ROOT).join("postgresql.log");
     let options =
         format!("-c unix_socket_directories='{PG_SOCKET}' -c listen_addresses='127.0.0.1'");
-    let output = Command::new(PG_CTL)
+    let mut command = Command::new(PG_CTL);
+    prepare_managed_command(&mut command);
+    let output = command
         .arg("-D")
         .arg(PG_DATA)
         .arg("start")
@@ -521,7 +532,9 @@ fn ensure_postgres() -> io::Result<()> {
 }
 
 fn pg_ctl(operation: &str, extra: &[&OsStr]) -> io::Result<()> {
-    let output = Command::new(PG_CTL)
+    let mut command = Command::new(PG_CTL);
+    prepare_managed_command(&mut command);
+    let output = command
         .arg("-D")
         .arg(PG_DATA)
         .arg(operation)
@@ -577,6 +590,7 @@ where
         .open(&log_path)?;
     let stderr = stdout.try_clone()?;
     let mut command = Command::new(program);
+    prepare_managed_command(&mut command);
     command
         .args(args)
         .envs(environment.iter().copied())
@@ -706,8 +720,39 @@ fn process_identity_alive(path: &Path, expected_executable: &Path) -> io::Result
         return Ok(false);
     };
     Ok(process_start_time(pid)
-        .map(|actual| actual == expected_start && exact_process(pid, expected_executable))
+        .map(|actual| {
+            actual == expected_start
+                && exact_process(pid, expected_executable)
+                && process_environment_obeys_path_law(pid)
+        })
         .unwrap_or(false))
+}
+
+fn process_environment_obeys_path_law(pid: u32) -> bool {
+    fs::read(format!("/proc/{pid}/environ"))
+        .map(|environment| {
+            !environment
+                .windows(b"/run/user/".len())
+                .any(|window| window == b"/run/user/")
+        })
+        .unwrap_or(false)
+}
+
+fn prepare_managed_command(command: &mut Command) {
+    for (key, value) in env::vars_os() {
+        if value.to_string_lossy().contains("/run/user/") {
+            command.env_remove(key);
+        }
+    }
+    command
+        .env("XDG_RUNTIME_DIR", XDG_RUNTIME_DIR)
+        .env("XDG_DATA_HOME", DATA_HOME)
+        .env("XDG_STATE_HOME", STATE_HOME)
+        .env("XDG_CACHE_HOME", CACHE_HOME)
+        .env("YAZELIX_STATE_DIR", YAZELIX_STATE_DIR)
+        .env("TMPDIR", Path::new(RUNTIME_ROOT).join("tmp"))
+        .env("TMP", Path::new(RUNTIME_ROOT).join("tmp"))
+        .env("TEMP", Path::new(RUNTIME_ROOT).join("tmp"));
 }
 
 fn read_process_identity(path: &Path) -> io::Result<Option<(u32, String)>> {

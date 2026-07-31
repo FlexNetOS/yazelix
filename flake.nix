@@ -1562,6 +1562,8 @@
           configHome = "/home/flexnetos/meta/.config";
           dataHome = "/home/flexnetos/meta/var/xdg-data";
           stateHome = "/home/flexnetos/meta/var/xdg-state";
+          cacheHome = "/home/flexnetos/meta/var/cache";
+          yazelixStateDir = "${flexnetosRuntimeRoot}/state";
           sqld = "${pkgs.sqld}/bin/sqld";
           secretd = "${flexnetosEnvctl}/bin/secretd";
           secretctl = "${flexnetosEnvctl}/bin/secretctl";
@@ -2294,6 +2296,9 @@
         grep -F 'bootstrap_owned_stack()?' ${./runtime/yzx/cli.rs}
         grep -F 'USB-only vault unlock' ${./runtime/yzx_stack_bootstrap.rs}
         grep -F 'FLEXNETOS_RUNNER_STATE_DIR' ${./runtime/yzx_stack_bootstrap.rs}
+        grep -F 'prepare_managed_command(&mut command)' ${./runtime/yzx_stack_bootstrap.rs}
+        grep -F 'process_environment_obeys_path_law(pid)' ${./runtime/yzx_stack_bootstrap.rs}
+        grep -F 'value.to_string_lossy().contains("/run/user/")' ${./runtime/yzx_stack_bootstrap.rs}
         test -x ${foundation}/bin/fxrun
         test ! -e ${foundation}/bin/fxrun-actions
         test -x ${foundation}/bin/fxrun-dispatch
