@@ -113,7 +113,7 @@
       flake = false;
     };
     envctl_source = {
-      url = "github:FlexNetOS/envctl/dde613610003919012d416f898b38c3aba574ae5";
+      url = "github:FlexNetOS/envctl/f1222f643b5f64fbffb0c4d7bc8f52b3da9ed25a";
       flake = false;
     };
     loop_lib_source = {
