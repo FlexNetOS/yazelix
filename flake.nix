@@ -81,7 +81,7 @@
     # build directory dies the moment that directory is a tmpfs, which is the
     # exact failure its own path-law patterns exist to deny.
     agent_source = {
-      url = "github:FlexNetOS/agent/47a1b06778cbe273a4435920766c32da5c1521ec";
+      url = "github:FlexNetOS/agent/1f28498690e374f8dbfe5ba42078c333f73b5561";
       flake = false;
     };
     grit_source = {
@@ -120,7 +120,7 @@
       flake = false;
     };
     ghaRunner = {
-      url = "github:FlexNetOS/flexnetos_runner/998c3db9bbf5b0d79045b94f34b850cdc3482091?dir=nix/gha-runner";
+      url = "github:FlexNetOS/flexnetos_runner/26835dac7c57a9fd0fd51881ff4b8322f0118cc5?dir=nix/gha-runner";
     };
     zjstatus = {
       url = "github:luccahuguet/zjstatus/yazelix-tab-activity-pipe";
