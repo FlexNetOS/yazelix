@@ -39,7 +39,9 @@ jobs:
         shell: nu {0}
         run: |
           with-env {PATH: '/home/flexnetos/.nix-profile/bin:/home/flexnetos/.nix-profile/toolbin:/usr/bin:/bin'} {
-            ^/home/flexnetos/.nix-profile/bin/nix run ".#gha-runner" -- doctor
+            let app = (^/home/flexnetos/.nix-profile/bin/nix eval .#apps.x86_64-linux.gha-runner.program --raw | str trim)
+            if not ($app | path exists) { error make {msg: $"missing canonical runner app: ($app)"} }
+            ^$app doctor
           }
           if $env.LAST_EXIT_CODE != 0 { exit $env.LAST_EXIT_CODE }
       - name: Nushell step (foundation shell law)
