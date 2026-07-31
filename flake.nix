@@ -999,36 +999,9 @@
           (pkgs.writeTextDir "share/yazelix/host-policy/nix.custom.conf" (builtins.readFile ./host-policy/nix.custom.conf))
           (pkgs.writeTextDir "share/yazelix/host-policy/determinate-config.json" (builtins.readFile ./host-policy/determinate-config.json))
           (pkgs.writeTextDir "share/yazelix/host-policy/shells" (builtins.readFile ./host-policy/shells))
-          (pkgs.writeTextDir "share/yazelix/host-policy/nix-daemon.service" (builtins.readFile ./host-policy/nix-daemon.service))
-          (pkgs.writeTextDir "share/yazelix/host-policy/nix-daemon.socket" (builtins.readFile ./host-policy/nix-daemon.socket))
           (pkgs.writeTextDir "share/yazelix/host-policy/journald-no-storage.conf" (builtins.readFile ./host-policy/journald-no-storage.conf))
           (pkgs.writeTextDir "share/yazelix/host-policy/docker-daemon.json" (builtins.readFile ./host-policy/docker-daemon.json))
           (pkgs.writeTextDir "share/yazelix/host-policy/chrome-storage.json" (builtins.readFile ./host-policy/chrome-storage.json))
-          (pkgs.writeTextDir "lib/systemd/system/yazelix_host_policy.service" (builtins.readFile ./systemd/system/yazelix_host_policy.service))
-          (pkgs.writeTextDir "lib/systemd/system/yazelix_host_policy.path" (builtins.readFile ./systemd/system/yazelix_host_policy.path))
-        ];
-      };
-      flexnetosVolatileRuntimeBundle = pkgs.symlinkJoin {
-        name = "yazelix-volatile-runtime";
-        paths = [
-          # No environment.d drop-in is delivered. That directory is read by the systemd
-          # USER MANAGER, the parent of gnome-session and every desktop app, so anything
-          # placed there owns the whole graphical session rather than a dev shell.
-          # Upstream Yazelix has no such layer: it configures the GUI through the desktop
-          # entry (contract C8 -- the entry starts yzx by its absolute profile path, so
-          # launching never depends on a session PATH) and reuses the prepared environment
-          # through `yzx run` (C1). Shell scope is owned by nushell/config/config.nu, which
-          # runs per-shell and already sets every value the drop-ins used to carry.
-          (pkgs.writeTextDir "lib/systemd/user/yazelix_volatile_runtime.service" (builtins.readFile ./systemd/user/yazelix_volatile_runtime.service))
-          # GitKB sync servers. Upstream gitkb/meta ignores .kb/store/ because the store
-          # is meant to travel over GitKB's own sync protocol rather than as git-tracked
-          # files; the sync remote itself lives in the tracked .kb/config.toml, so every
-          # worktree and clone inherits it. That only works if a server is actually
-          # listening, so the three KB-owning repos get profile-owned units instead of
-          # the transient `systemd-run` ones used to prove the design.
-          (pkgs.writeTextDir "lib/systemd/user/gitkb-serve-meta.service" (builtins.readFile ./systemd/user/gitkb-serve-meta.service))
-          (pkgs.writeTextDir "lib/systemd/user/gitkb-serve-lifeos.service" (builtins.readFile ./systemd/user/gitkb-serve-lifeos.service))
-          (pkgs.writeTextDir "lib/systemd/user/gitkb-serve-envctl.service" (builtins.readFile ./systemd/user/gitkb-serve-envctl.service))
         ];
       };
       flexnetosRustToolchain = fenixPkgs.combine (
@@ -1503,7 +1476,7 @@
 
       lifeosFoundationYzx = assert flexnetosTerminalSupportContract; pkgs.symlinkJoin {
         name = "lifeos-foundation-yzx";
-        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosCodexConfigOwner flexnetosClaudeConfigOwner flexnetosGitnexusBlockOwner flexnetosDesktopSource flexnetosClaudeDesktopSource flexnetosTerminalSupport flexnetosGhaRunnerStart flexnetosHostPolicyBundle flexnetosVolatileRuntimeBundle flexnetosPostgresRuvector];
+        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosCodexConfigOwner flexnetosClaudeConfigOwner flexnetosGitnexusBlockOwner flexnetosDesktopSource flexnetosClaudeDesktopSource flexnetosTerminalSupport flexnetosGhaRunnerStart flexnetosHostPolicyBundle flexnetosPostgresRuvector];
         nativeBuildInputs = [pkgs.desktop-file-utils];
         postBuild = ''
           install -D -m 644 ${flexnetosZellijLayout}/layout.kdl \
@@ -2450,24 +2423,13 @@
         grep -F '"log-driver": "none"' ${foundation}/share/yazelix/host-policy/docker-daemon.json
         grep -F '"GenAILocalFoundationalModelSettings": 1' ${foundation}/share/yazelix/host-policy/chrome-storage.json
         grep -F '"DiskCacheDir": "/run/user/1001/yazelix/volatile/cache/google-chrome"' ${foundation}/share/yazelix/host-policy/chrome-storage.json
-        grep -Fx 'ExecStart=/home/flexnetos/.nix-profile/bin/yazelix_host_policy apply-nix' ${foundation}/lib/systemd/system/yazelix_host_policy.service
-        grep -Fx 'ExecStart=/home/flexnetos/.nix-profile/bin/yazelix_host_policy apply-logs' ${foundation}/lib/systemd/system/yazelix_host_policy.service
-        test -f ${foundation}/lib/systemd/system/yazelix_host_policy.path
-        test -f ${foundation}/lib/systemd/user/yazelix_volatile_runtime.service
-        grep -Fx 'ExecStart=/home/flexnetos/.nix-profile/bin/yazelix_volatile_runtime ensure' ${foundation}/lib/systemd/user/yazelix_volatile_runtime.service
-        # GitKB sync servers must ship for all three KB-owning repos, on distinct
-        # ports, each rooted at its own repo -- a shared port or a wrong WorkingDirectory
-        # would silently serve the wrong knowledge base.
-        for kb in meta lifeos envctl; do
-          test -f ${foundation}/lib/systemd/user/gitkb-serve-$kb.service
-          grep -q 'ExecStart=/home/flexnetos/.nix-profile/bin/git-kb serve --host 127.0.0.1 --port' \
-            ${foundation}/lib/systemd/user/gitkb-serve-$kb.service
-        done
-        grep -Fx 'WorkingDirectory=/home/flexnetos/meta' ${foundation}/lib/systemd/user/gitkb-serve-meta.service
-        grep -Fx 'WorkingDirectory=/home/flexnetos/meta/src/lifeos' ${foundation}/lib/systemd/user/gitkb-serve-lifeos.service
-        grep -Fx 'WorkingDirectory=/home/flexnetos/meta/src/envctl' ${foundation}/lib/systemd/user/gitkb-serve-envctl.service
-        test "$(cat ${foundation}/lib/systemd/user/gitkb-serve-*.service | grep -c '^ExecStart=')" = 3
-        test "$(cat ${foundation}/lib/systemd/user/gitkb-serve-*.service | grep -oE '\-\-port [0-9]+' | sort -u | wc -l)" = 3
+        # Upstream Yazelix ships no systemd: at upstream/main 78d18c94 a tree scan
+        # for unit extensions returns nothing, and it creates directories in-process
+        # while resolving state from YAZELIX_STATE_DIR or $XDG_DATA_HOME/yazelix.
+        # Every unit this foundation used to deliver was a fork addition, so the
+        # parity contract is that it now delivers NONE. Asserting the whole tree is
+        # absent means a reintroduction fails here rather than at runtime.
+        ! test -e ${foundation}/lib/systemd
         # No environment.d drop-in may be delivered. That directory is read by the systemd
         # USER MANAGER, the parent of gnome-session and every desktop app, so a file placed
         # there owns the whole graphical session rather than a dev shell -- which is how a

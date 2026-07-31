@@ -6,8 +6,6 @@ const OWNED_FILES = [
     { source: "nix.custom.conf", target: "/etc/nix/nix.custom.conf" }
     { source: "determinate-config.json", target: "/etc/determinate/config.json" }
     { source: "shells", target: "/etc/shells" }
-    { source: "nix-daemon.service", target: "/etc/systemd/system/nix-daemon.service" }
-    { source: "nix-daemon.socket", target: "/etc/systemd/system/nix-daemon.socket" }
     { source: "chrome-storage.json", target: "/etc/opt/chrome/policies/managed/yazelix-storage.json" }
 ]
 const LOG_POLICY_FILES = [
@@ -156,10 +154,6 @@ def check_targets [] {
         if ($determinate.stdout | str trim) != "masked" {
             error make {msg: "Determinate Nix cache injector socket is not masked"}
         }
-        let daemon_unit = (^$systemctl cat nix-daemon.service | complete)
-        if not ($daemon_unit.stdout | str contains "ExecStart=@/home/flexnetos/.nix-profile/bin/nix-daemon nix-daemon --daemon") {
-            error make {msg: "Nix daemon is not profile-owned"}
-        }
     }
 }
 
@@ -187,8 +181,6 @@ def apply_nix [] {
     if (live_target) {
         let systemctl = $"($PROFILE_ROOT)/bin/systemctl"
         ^$systemctl disable --now determinate-nixd.socket
-        ^$systemctl stop nix-daemon.socket
-        ^$systemctl stop nix-daemon.service
     }
     for owned in $OWNED_FILES {
         apply_owned_file (source_path $owned.source) (target_path $owned.target)
@@ -214,12 +206,6 @@ def apply_nix [] {
     }
     ensure_login_shell
     check_targets
-    if (live_target) {
-        let systemctl = $"($PROFILE_ROOT)/bin/systemctl"
-        ^$systemctl enable nix-daemon.service nix-daemon.socket
-        ^$systemctl reset-failed nix-daemon.service nix-daemon.socket
-        ^$systemctl restart nix-daemon.socket
-    }
 }
 
 def purge_logs [] {
