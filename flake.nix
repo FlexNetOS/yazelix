@@ -1011,10 +1011,14 @@
       flexnetosVolatileRuntimeBundle = pkgs.symlinkJoin {
         name = "yazelix-volatile-runtime";
         paths = [
-          (pkgs.writeTextDir "share/yazelix/environment.d/10-yazelix-volatile.conf" (builtins.readFile ./host-policy/10-yazelix-volatile.conf))
-          # Sorts after /usr/lib/environment.d/{99-environment,990-snapd}.conf, both of
-          # which assign PATH; a lower prefix is silently overridden. See the file header.
-          (pkgs.writeTextDir "share/yazelix/environment.d/99z-session-restore.conf" (builtins.readFile ./host-policy/99z-session-restore.conf))
+          # No environment.d drop-in is delivered. That directory is read by the systemd
+          # USER MANAGER, the parent of gnome-session and every desktop app, so anything
+          # placed there owns the whole graphical session rather than a dev shell.
+          # Upstream Yazelix has no such layer: it configures the GUI through the desktop
+          # entry (contract C8 -- the entry starts yzx by its absolute profile path, so
+          # launching never depends on a session PATH) and reuses the prepared environment
+          # through `yzx run` (C1). Shell scope is owned by nushell/config/config.nu, which
+          # runs per-shell and already sets every value the drop-ins used to carry.
           (pkgs.writeTextDir "lib/systemd/user/yazelix_volatile_runtime.service" (builtins.readFile ./systemd/user/yazelix_volatile_runtime.service))
           # GitKB sync servers. Upstream gitkb/meta ignores .kb/store/ because the store
           # is meant to travel over GitKB's own sync protocol rather than as git-tracked
@@ -2427,63 +2431,20 @@
         grep -Fx 'WorkingDirectory=/home/flexnetos/meta/src/envctl' ${foundation}/lib/systemd/user/gitkb-serve-envctl.service
         test "$(cat ${foundation}/lib/systemd/user/gitkb-serve-*.service | grep -c '^ExecStart=')" = 3
         test "$(cat ${foundation}/lib/systemd/user/gitkb-serve-*.service | grep -oE '\-\-port [0-9]+' | sort -u | wc -l)" = 3
-        volatile_env=${foundation}/share/yazelix/environment.d/10-yazelix-volatile.conf
-        # Session-scope guard. environment.d is applied by the systemd user manager to
-        # the entire graphical session, so the generic XDG roots must NOT appear here:
-        # XDG_DATA_HOME re-homes the GNOME keyring/icons/launchers/Trash, and
-        # XDG_CACHE_HOME puts the mesa shader cache on the XDG_RUNTIME_DIR tmpfs.
-        # Dev-shell scoping for these lives in nushell profile-path.nu instead.
-        if grep -qE '^XDG_(DATA|STATE|CACHE)_HOME=' "$volatile_env"; then
-          echo 'ERROR: 10-yazelix-volatile.conf must not set generic XDG roots (session scope)' >&2
+        # No environment.d drop-in may be delivered. That directory is read by the systemd
+        # USER MANAGER, the parent of gnome-session and every desktop app, so a file placed
+        # there owns the whole graphical session rather than a dev shell -- which is how a
+        # redirected data root once handed GNOME a fresh empty login keyring.
+        #
+        # Upstream Yazelix has no such layer. It configures the GUI through the desktop
+        # entry (contract C8: the entry starts yzx by its absolute profile path, so
+        # launching never depends on a session PATH) and reuses the prepared environment
+        # through `yzx run` (C1). Shell scope is owned by nushell/config/config.nu, which
+        # runs per-shell and sets every value these drop-ins used to carry.
+        if [ -e ${foundation}/share/yazelix/environment.d ]; then
+          echo 'ERROR: no environment.d drop-in may be delivered; the GUI is owned by the desktop entry (C8)' >&2
           exit 1
         fi
-        # Build artifacts are durable; /run/user/1001 is XDG_RUNTIME_DIR, not scratch.
-        grep -Fx 'CARGO_HOME=/home/flexnetos/meta/var/cache/cargo-home' "$volatile_env"
-        grep -Fx 'CARGO_TARGET_DIR=/home/flexnetos/meta/var/cargo-target' "$volatile_env"
-        grep -Fx 'YAZELIX_STATE_DIR=/run/user/1001/yazelix/profile-runtime/yazelix' "$volatile_env"
-        grep -Fx 'TMPDIR=/run/user/1001/yazelix/volatile/tmp' "$volatile_env"
-        grep -Fx 'KACHE_CACHE_DIR=/home/flexnetos/.cache/kache' "$volatile_env"
-        grep -Fx 'RUSTC_WRAPPER=/home/flexnetos/.nix-profile/bin/kache-rustc-wrapper' "$volatile_env"
-
-        # Session-restore drop-in. Its filename is load-bearing: systemd merges all
-        # environment.d dirs into one lexically-sorted namespace, and Ubuntu ships
-        # /usr/lib/environment.d/99-environment.conf plus 990-snapd.conf, both of which
-        # assign PATH. A prefix below "990" is silently overridden for PATH.
-        session_env=${foundation}/share/yazelix/environment.d/99z-session-restore.conf
-        test -f "$session_env"
-        case "$(basename "$session_env")" in
-          99z-*) : ;;
-          *) echo 'ERROR: session-restore drop-in must sort after 990-snapd.conf' >&2; exit 1 ;;
-        esac
-        # The profile must remain the frontdoor (first), without amputating the system.
-        grep -qE '^PATH=/home/flexnetos/\.nix-profile/toolbin:/home/flexnetos/\.nix-profile/bin:' "$session_env"
-        for required in /usr/bin /snap/bin; do
-          grep -qE "^PATH=.*(:|=)$required(:|$)" "$session_env" || {
-            echo "ERROR: session-restore PATH is missing $required" >&2; exit 1; }
-        done
-        # Session XDG roots must match the envctl canonical table exactly.
-        # The tool-state tier, not the database payload tier. Re-homing the session onto
-        # meta/var/lib is what cost the keyring, icons, Trash and launchers; meta/var/xdg-*
-        # is the documented migration target and carries them. Asserting the literal home
-        # dotted paths here previously put a forbidden owner string into this file and
-        # failed the strict profile source ownership gate.
-        grep -Fx 'XDG_DATA_HOME=/home/flexnetos/meta/var/xdg-data' "$session_env"
-        grep -Fx 'XDG_STATE_HOME=/home/flexnetos/meta/var/xdg-state' "$session_env"
-        grep -Fx 'XDG_CACHE_HOME=/home/flexnetos/.cache' "$session_env"
-        # Cargo must never resolve under XDG_RUNTIME_DIR.
-        if grep -qE '^CARGO_(HOME|TARGET_DIR)=/run/user/' "$session_env" "$volatile_env"; then
-          echo 'ERROR: cargo must not point at the XDG_RUNTIME_DIR tmpfs' >&2
-          exit 1
-        fi
-        # fenix composes the toolchain and replaces the toolchain manager, so no
-        # toolchain-manager home belongs in session scope. One was carried in the
-        # volatile drop-in from 66973f69 until 2026-07-30, pointing at the very tmpfs
-        # the cargo rule above exists to prevent, while nothing on the host read it.
-        if grep -qE '^RUSTUP_' "$session_env" "$volatile_env"; then
-          echo 'ERROR: fenix owns the toolchain; no toolchain-manager home in environment.d' >&2
-          exit 1
-        fi
-        grep -Fx 'ICM_DB=/home/flexnetos/meta/var/xdg-data/icm/memories.db' "$session_env"
 
         # PostgreSQL/RuVector is the Swarm Primary Runtime (hard rule 1). The profile
         # must expose the server AND client tools, and must carry ruvector.so in the
