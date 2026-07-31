@@ -788,7 +788,7 @@ fn retire_recorded_process(path: &Path) -> io::Result<()> {
             return Err(error);
         }
     }
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_secs(15);
     while Instant::now() < deadline {
         match process_start_time(pid) {
             Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
