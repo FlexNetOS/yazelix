@@ -95,7 +95,7 @@
   blueprint, with retired Claude shell hooks removed.
 - Enforce one installed-runtime owner for Yazelix, Codex, and Claude. The
   foundation profile now provides state-owning agent wrappers, exposes one
-  profile runtime link into `/run/user/1001/yazelix/profile-runtime`, rejects
+  Yazelix-owned runtime under `/home/flexnetos/meta/var/lib/yazelix/runtime`, rejects
   competing agent state variables, and installs both the visible Yazelix Agent
   launcher and the hidden Claude deep-link handler directly from the profile.
   Reviewed Claude settings and instruction sources now materialize through that

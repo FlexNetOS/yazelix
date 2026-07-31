@@ -47,6 +47,11 @@
     yazelixYaziAssets = {
       url = "github:FlexNetOS/yazelix-yazi-assets/ea4239c2c0b9ef6ab5a134fe80704eca89947bcd";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.codedbNuPlugin.follows = "codedbNuPlugin";
+    };
+    codedbNuPlugin = {
+      url = "github:FlexNetOS/nu_plugin/4d3c7819f6fcb07a9e365cfbe20da9c17167f6c6";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     yazelixTerminalSupport = {
       url = "github:FlexNetOS/yazelix-terminal-support/873f64b77eda3a39609d154bda192a2ad8405955";
@@ -78,10 +83,10 @@
     };
     # Supplies `agent guard`, the PreToolUse policy engine. It must be
     # profile-owned for the same reason rtk and icm are: a hook pointed at a
-    # build directory dies the moment that directory is a tmpfs, which is the
+    # build directory dies the moment that directory is transient, which is the
     # exact failure its own path-law patterns exist to deny.
     agent_source = {
-      url = "github:FlexNetOS/agent/b6f4df3984d6c35b603432e105522f8b683a1c46";
+        url = "github:FlexNetOS/agent/64a5cc26c6d47964536267a20f9ab1e8c1fce363";
       flake = false;
     };
     grit_source = {
@@ -89,7 +94,7 @@
       flake = false;
     };
     icm_source = {
-      url = "github:FlexNetOS/icm/dfeba4efa880f58ece6d91c3f1da4c8358c71564";
+      url = "github:FlexNetOS/icm/bcad640cf212f9c927bf9db57750d086bf920d13";
       flake = false;
     };
     weave_source = {
@@ -108,7 +113,7 @@
       flake = false;
     };
     envctl_source = {
-      url = "github:FlexNetOS/envctl/38f8abaf5a8dd5638196d34afcf7762bbb1fb7d4";
+      url = "github:FlexNetOS/envctl/dde613610003919012d416f898b38c3aba574ae5";
       flake = false;
     };
     loop_lib_source = {
@@ -124,7 +129,7 @@
       flake = false;
     };
     ghaRunner = {
-      url = "github:FlexNetOS/flexnetos_runner/ecab33320da39c401ba7ed6ed8601091dfc5bf9d?dir=nix/gha-runner";
+      url = "github:FlexNetOS/flexnetos_runner/4d7427f7f849662b2e794ff43c575dbc94cb6f30?dir=nix/gha-runner";
     };
     zjstatus = {
       url = "github:luccahuguet/zjstatus/yazelix-tab-activity-pipe";
@@ -150,6 +155,7 @@
     yazelixZellijPaneOrchestrator,
     yazelixScreen,
     yazelixYaziAssets,
+    codedbNuPlugin,
     yazelixTerminalSupport,
     ratconfig,
     beads_rust_source,
@@ -190,6 +196,13 @@
       assert compactNovaVersion "1.0.0" == "NOVA 1.0";
       compactNovaVersion novaVersion;
     supportedSystems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
+    # FlexNetOS runtime has one owner and one root. Durable application data keeps
+    # its existing Meta tiers, while every live socket, PID identity, generated
+    # session file, cache and temporary path stays below this Yazelix-owned tree.
+    flexnetosYazelixRoot = "/home/flexnetos/meta/var/lib/yazelix";
+    flexnetosRuntimeRoot = "${flexnetosYazelixRoot}/runtime";
+    flexnetosXdgRuntimeDir = "${flexnetosRuntimeRoot}/xdg";
+    flexnetosYazelixStateDir = "${flexnetosRuntimeRoot}/state";
     eachSystem = nixpkgs.lib.genAttrs supportedSystems;
     homeManagerModule = import ./home-manager/module.nix {
       defaultPackageFor = system: self.packages.${system}.yazelix;
@@ -212,15 +225,16 @@
         rtkWrappers = "${./nushell/config/rtk_wrappers.nu}";
         profileNu = "/home/flexnetos/.nix-profile/toolbin/nu";
         productHome = "/home/flexnetos";
-        runtimeDir = "/run/user/1001";
+        runtimeDir = flexnetosXdgRuntimeDir;
+        volatileRoot = "${flexnetosRuntimeRoot}/volatile";
         cargoHome = "/home/flexnetos/meta/var/cache/cargo-home";
         cargoTargetDir = "/home/flexnetos/meta/var/cargo-target";
-        durableCache = "/home/flexnetos/.cache";
+        durableCache = "${flexnetosRuntimeRoot}/cache/durable";
         configHome = "/home/flexnetos/meta/.config";
         dataHome = "/home/flexnetos/meta/var/xdg-data";
         stateHome = "/home/flexnetos/meta/var/xdg-state";
-        yazelixStateDir = "/run/user/1001/yazelix/profile-runtime/yazelix";
-        kacheCacheDir = "/home/flexnetos/.cache/kache";
+        yazelixStateDir = flexnetosYazelixStateDir;
+        kacheCacheDir = "${flexnetosRuntimeRoot}/cache/kache";
         rustcWrapper = "/home/flexnetos/.nix-profile/bin/kache-rustc-wrapper";
         icmDb = "/home/flexnetos/meta/var/xdg-data/icm/memories.db";
         claudeConfigDir = "/home/flexnetos/meta/var/lib/claude";
@@ -994,6 +1008,9 @@
         inherit pkgs;
         icmSource = icm_source;
       };
+      flexnetosIcmConfig = pkgs.writeText "yazelix-icm-config.toml" (
+        builtins.readFile ./tool_configs/icm/config.toml
+      );
       flexnetosAgent = import ./packaging/agent_release.nix {
         inherit pkgs;
         agentSource = agent_source;
@@ -1044,6 +1061,8 @@
       };
       flexnetosVolatileRuntime = nuApplication "yazelix_volatile_runtime" ./nushell/system/volatile_runtime.nu {
         cargoConfig = "/home/flexnetos/meta/.cargo/config.toml";
+        runtimeRoot = "${flexnetosRuntimeRoot}/volatile";
+        profileRuntimeRoot = "${flexnetosRuntimeRoot}/profile";
       };
       flexnetosRustToolchain = fenixPkgs.combine (
         [
@@ -1102,8 +1121,8 @@
       # by byte-for-byte string comparison) and once by that agent's materializer
       # wrapper -- so they are bound here rather than written out at each site.
       # These must stay byte-identical to DEFAULT_CODEX_HOME in flexnetos_runner's
-      # crates/runner-cli/src/forge_loop.rs. Neither may live on tmpfs: /run/user/1001
-      # is wiped on reboot, which previously destroyed the Codex credentials.
+      # crates/runner-cli/src/forge_loop.rs. Neither may live in the host runtime,
+      # which is wiped on reboot and previously destroyed the Codex credentials.
       # The meta workspace root -- the directory holding the .meta.yaml marker.
       # The retired /home/flexnetos/FlexNetOS mirror is gone; anything that used it
       # as a working directory belongs here.
@@ -1122,9 +1141,9 @@
         dataHome = "/home/flexnetos/meta/var/xdg-data";
         stateHome = "/home/flexnetos/meta/var/xdg-state";
         icmDb = "/home/flexnetos/meta/var/xdg-data/icm/memories.db";
-        cacheHome = "/run/user/1001/yazelix/volatile/cache";
-        runtimeDir = "/run/user/1001";
-        yazelixStateDir = "/run/user/1001/yazelix/profile-runtime/yazelix";
+        cacheHome = "${flexnetosRuntimeRoot}/cache";
+        runtimeDir = flexnetosXdgRuntimeDir;
+        yazelixStateDir = flexnetosYazelixStateDir;
         profileNu = "/home/flexnetos/.nix-profile/toolbin/nu";
         chmod = "${pkgs.coreutils}/bin/chmod";
       };
@@ -1457,6 +1476,7 @@
       flexnetosIcmFrontdoor = nuApplication "icm" ./nushell/agent/icm_profile_frontdoor.nu {
         payload = "${flexnetosIcm}/bin/icm";
         defaultDb = "/home/flexnetos/meta/var/xdg-data/icm/memories.db";
+        defaultConfig = "${flexnetosIcmConfig}";
       };
       flexnetosDesktopSource = pkgs.makeDesktopItem {
         name = "com.flexnetos.Yazelix.Agent";
@@ -1498,7 +1518,7 @@
         nuConfig = flexnetosYzxNuConfig;
         shellPackage = flexnetosYzxShell;
         extraPathPrefix = [flexnetosTools];
-        defaultStateDir = "/run/user/1001/yazelix/profile-runtime/yazelix";
+        defaultStateDir = flexnetosYazelixStateDir;
         stackBootstrap = "${flexnetosStackBootstrap}/bin/yazelix-stack-bootstrap";
       };
       # PostgreSQL/RuVector is the Swarm Primary Runtime (blueprint hard rule 1), yet
@@ -1525,8 +1545,10 @@
       };
       # Same buildEnv the original bundle used -- postgresql-and-plugins-17.10 -- so
       # bin/ and lib/ stay co-located for the argv[0] pkglibdir resolution above.
-      flexnetosPostgresRuvector =
-        pkgs.postgresql_17.withPackages (_: [flexnetosRuvectorPostgres]);
+      flexnetosPostgresRuvector = pkgs.postgresql_17.withPackages (postgresPackages: [
+        flexnetosRuvectorPostgres
+        postgresPackages.pgvector
+      ]);
 
       # The Yazelix runtime, not systemd or a manual operator step, owns the
       # complete FlexNetOS stack. This launcher starts only profile/Nix-owned
@@ -1534,8 +1556,9 @@
       # unlock before the managed Zellij session is allowed to start.
       flexnetosStackBootstrapSource =
         pkgs.replaceVars ./runtime/yzx_stack_bootstrap.rs {
-          runtimeRoot = "/run/user/1001/yazelix/profile-runtime/services";
-          logRoot = "/home/flexnetos/meta/var/xdg-state/yazelix/runtime-logs";
+          runtimeRoot = "${flexnetosRuntimeRoot}/services";
+          xdgRuntimeDir = flexnetosXdgRuntimeDir;
+          logRoot = "${flexnetosRuntimeRoot}/logs";
           configHome = "/home/flexnetos/meta/.config";
           dataHome = "/home/flexnetos/meta/var/xdg-data";
           stateHome = "/home/flexnetos/meta/var/xdg-state";
@@ -1548,9 +1571,14 @@
           sqldData = "/home/flexnetos/meta/var/lib/sqld";
           pgCtl = "${flexnetosPostgresRuvector}/bin/pg_ctl";
           pgData = "/home/flexnetos/meta/var/lib/postgresql/17";
-          pgSocket = "/home/flexnetos/meta/var/lib/postgresql";
+          pgSocket = "${flexnetosRuntimeRoot}/services/postgresql";
           redbOwner = flexnetosRedbOwner;
           redbRoot = "/home/flexnetos/meta/var/lib/redb";
+          icm = "${flexnetosIcm}/bin/icm";
+          icmDb = "/home/flexnetos/meta/var/xdg-data/icm/memories.db";
+          icmConfig = "${flexnetosIcmConfig}";
+          mosquitto = "${pkgs.mosquitto}/bin/mosquitto";
+          nmcli = "${pkgs.networkmanager}/bin/nmcli";
           runner = "${flexnetosGhaRunnerStart}/bin/flexnetos-runner-start";
         };
       flexnetosStackBootstrap =
@@ -1558,7 +1586,7 @@
 
       lifeosFoundationYzx = assert flexnetosTerminalSupportContract; pkgs.symlinkJoin {
         name = "lifeos-foundation-yzx";
-        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosCodexConfigOwner flexnetosClaudeConfigOwner flexnetosGitnexusBlockOwner flexnetosDesktopSource flexnetosClaudeDesktopSource flexnetosTerminalSupport flexnetosGhaRunnerStart flexnetosPostgresRuvector flexnetosStackBootstrap];
+        paths = [flexnetosYzxBase flexnetosTools flexnetosProfileTools flexnetosCodexConfigOwner flexnetosClaudeConfigOwner flexnetosGitnexusBlockOwner flexnetosDesktopSource flexnetosClaudeDesktopSource flexnetosTerminalSupport flexnetosGhaRunnerStart flexnetosPostgresRuvector flexnetosStackBootstrap pkgs.mosquitto pkgs.networkmanager];
         nativeBuildInputs = [pkgs.desktop-file-utils];
         postBuild = ''
           install -D -m 644 ${flexnetosZellijLayout}/layout.kdl \
@@ -2528,6 +2556,10 @@
         test -f ${foundation}/lib/ruvector.so || {
           echo 'ERROR: ruvector.so must sit beside postgres in the profile output' >&2
           exit 1; }
+        test -f ${foundation}/lib/vector.so || {
+          echo 'ERROR: vector.so must sit beside postgres in the profile output' >&2
+          exit 1
+        }
         # Catalog binding is not proof; the library must actually export the symbols the
         # installed extension resolves against.
         grep -qa 'ruvector_version_wrapper' ${foundation}/lib/ruvector.so || {
@@ -2535,7 +2567,7 @@
           exit 1; }
         grep -F 'legacy Kache root must not exist' ${./nushell/system/volatile_runtime.nu}
         grep -F 'legacy Kache delivery artifact must not exist' ${./nushell/system/volatile_runtime.nu}
-        grep -F 'const PROFILE_RUNTIME_ROOT = "/run/user/1001/yazelix/profile-runtime"' ${./nushell/system/volatile_runtime.nu}
+        grep -F 'const PROFILE_RUNTIME_ROOT = "@profileRuntimeRoot@"' ${./nushell/system/volatile_runtime.nu}
 
         export HOME="$TMPDIR/home"
         export YAZELIX_CONFIG_HOME="$TMPDIR/config"
@@ -2748,7 +2780,7 @@
           type = "app";
           program = "${self.packages.${system}.yzx-envelope}/bin/yzx-envelope";
         };
-      }
+        }
       // nixpkgs.lib.optionalAttrs (builtins.match ".*-linux" system != null) {
         gha-runner = ghaRunner.apps.${system}.runner;
         gha-runner-start = ghaRunner.apps.${system}.start;

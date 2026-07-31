@@ -9,17 +9,18 @@ use std::{
 };
 
 use crate::{
-    AGENT_POPUP_KDL_CONFIG_PATH, CUSTOM_POPUP_KEYBINDINGS_KDL_CONFIG_PATH,
-    CUSTOM_POPUPS_KDL_CONFIG_PATH, MANAGED_KEYBINDING_SPECS, MARS, YAZELIX_ZELLIJ_BAR_WASM,
-    YAZELIX_ZELLIJ_PANE_ORCHESTRATOR_WASM, YAZELIX_ZELLIJ_POPUP_WASM, YZX_CONFIG, YZX_CONFIG_KDL,
-    YZX_EDITOR, YZX_HELIX, YZX_MARS_CONFIG, YZX_RUNTIME_IDENTITY, YZX_ZELLIJ_CONFIG, ZELLIJ,
     command::{
         create_dir_all_checked, run_checked, seed_permission_checked, touch_checked, trim_output,
     },
-    error::{AppError, path_error, startup},
+    error::{path_error, startup, AppError},
     paths::{config_home, home_dir, nonempty_env, parent, runtime_path, state_dir},
     yazi::YaziRuntime,
     zellij::{active_layout, active_zellij_config},
+    AGENT_POPUP_KDL_CONFIG_PATH, CUSTOM_POPUPS_KDL_CONFIG_PATH,
+    CUSTOM_POPUP_KEYBINDINGS_KDL_CONFIG_PATH, MANAGED_KEYBINDING_SPECS, MARS,
+    YAZELIX_ZELLIJ_BAR_WASM, YAZELIX_ZELLIJ_PANE_ORCHESTRATOR_WASM, YAZELIX_ZELLIJ_POPUP_WASM,
+    YZX_CONFIG, YZX_CONFIG_KDL, YZX_EDITOR, YZX_HELIX, YZX_MARS_CONFIG, YZX_RUNTIME_IDENTITY,
+    YZX_ZELLIJ_CONFIG, ZELLIJ,
 };
 
 pub(crate) struct Runtime {
@@ -427,7 +428,7 @@ mod tests {
     #[test]
     fn helix_bridge_root_has_one_explicit_short_owner() {
         let state_dir = Path::new("/very/deep/generated/runtime/state");
-        let runtime_dir = Path::new("/run/user/1001");
+        let runtime_dir = Path::new("/owned/yazelix/runtime/xdg");
         assert_eq!(
             select_helix_bridge_root(None, Some(runtime_dir), state_dir),
             runtime_dir.join("yazelix/helix_bridge")

@@ -286,7 +286,7 @@ Packaged first, unless a surface opts into native replacement.
 
 Override the source-input root with `YAZELIX_CONFIG_HOME`. Runtime state uses
 `YAZELIX_STATE_DIR` or `$XDG_RUNTIME_DIR/yazelix`; the profile-owned FlexNetOS
-foundation fixes it at `/run/user/1001/yazelix/profile-runtime/yazelix`.
+foundation fixes it at `/home/flexnetos/meta/var/lib/yazelix/runtime/state`.
 
 | Surface | Layering |
 | --- | --- |

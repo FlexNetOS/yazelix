@@ -22,7 +22,7 @@ def sha256_of [file: path] {
 def main [
     root: path
     --fixture-root: path = ""
-    --config-home: path = "/run/user/1001/yazelix/profile-runtime/codex"
+    --config-home: path = "/home/flexnetos/meta/var/lib/codex"
     --deployed-rules-src: path = "/home/flexnetos/.nix-profile/share/yazelix/agent_configs/codex/RULES.md.src"
 ] {
     let simulated = (not ($fixture_root | is-empty))

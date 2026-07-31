@@ -15,7 +15,8 @@ if (($env.HOME? | default "") == "@productHome@") {
     }
     $env.SHELL = $profile_nu
 
-    let volatile_root = (($env.XDG_RUNTIME_DIR? | default "@runtimeDir@") | path join "yazelix" "volatile")
+    let runtime_dir = "@runtimeDir@"
+    let volatile_root = "@volatileRoot@"
     let volatile_cache = ($volatile_root | path join "cache")
     let volatile_tmp = ($volatile_root | path join "tmp")
     # The Rust toolchain comes from fenix (flake.nix: flexnetosRustToolchain =
@@ -24,23 +25,21 @@ if (($env.HOME? | default "") == "@productHome@") {
     # so RUSTUP_HOME was never a real setting here and is dropped.
     #
     # What cargo genuinely needs is a registry cache and a build target dir, and both
-    # must be DURABLE. Cargo MUST NOT resolve under /run/user/1001 -- that is
-    # XDG_RUNTIME_DIR, whose tmpfs budget is shared with the wayland socket, dconf,
-    # dbus and gnome-keyring. A single workspace build reached 30G there and drove the
-    # tmpfs to 84%.
+    # must be DURABLE. Cargo MUST NOT resolve under the host XDG runtime directory,
+    # whose transient budget is shared with the wayland socket, dconf, dbus and
+    # gnome-keyring. A single workspace build reached 30G there and exhausted it.
     #
     # This file is the sole owner of both values. It once put them under
     # $volatile_root while a session-env layer also set them, and running per-shell it
-    # silently won -- so every build landed on tmpfs and vanished on reboot, which is
+    # silently won -- so every build landed on transient storage and vanished on reboot, which is
     # why `./target/debug/<bin>` read as "not found" while cargo reported success.
     # That session-env layer is retired; nothing outside this file sets them now.
     let cargo_home = "@cargoHome@"
     let cargo_target = "@cargoTargetDir@"
-    # Durable cache root on persistent home storage. Volatile tmpfs is correct
-    # for mutable/session caches (browser, editor, webviews) but WRONG for
-    # immutable, expensive-to-refetch artifacts (model weights, browser binaries)
-    # and for starship's log dir, which must survive a reboot and always be
-    # writable regardless of XDG_CACHE_HOME export order.
+    # Persistent cache root inside the Yazelix-owned runtime. Immutable,
+    # expensive-to-refetch artifacts (model weights and browser binaries) use
+    # a separate subtree from disposable session caches while retaining the
+    # same runtime owner.
     let durable_cache = "@durableCache@"
     let profile_config = "@configHome@"
     let profile_data = "@dataHome@"
@@ -56,6 +55,7 @@ if (($env.HOME? | default "") == "@productHome@") {
     $env.XDG_CONFIG_HOME = $profile_config
     $env.XDG_DATA_HOME = $profile_data
     $env.XDG_STATE_HOME = $profile_state
+    $env.XDG_RUNTIME_DIR = $runtime_dir
     $env.XDG_CACHE_HOME = $volatile_cache
     $env.YAZELIX_STATE_DIR = $yazelix_state
     $env.ICM_DB = $icm_db
@@ -78,8 +78,8 @@ if (($env.HOME? | default "") == "@productHome@") {
     $env.GOMODCACHE = ($volatile_cache | path join "go-mod")
     $env.GRADLE_USER_HOME = ($volatile_cache | path join "gradle")
     $env.DENO_DIR = ($volatile_cache | path join "deno")
-    # Model weights and browser binaries are immutable and expensive to refetch:
-    # keep them on durable home storage, not the tmpfs that a reboot wipes.
+    # Model weights and browser binaries are immutable and expensive to refetch;
+    # keep them in Yazelix's persistent cache subtree.
     $env.HF_HOME = ($durable_cache | path join "huggingface")
     $env.TORCH_HOME = ($durable_cache | path join "torch")
     $env.CUDA_CACHE_PATH = ($volatile_cache | path join "cuda")
