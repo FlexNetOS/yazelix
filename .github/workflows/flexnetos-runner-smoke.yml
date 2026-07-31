@@ -38,7 +38,9 @@ jobs:
       - name: Canonical pinned closure doctors on the substrate
         shell: nu {0}
         run: |
-          ^nix run ".#gha-runner" -- doctor
+          with-env {PATH: '/home/flexnetos/.nix-profile/bin:/home/flexnetos/.nix-profile/toolbin:/usr/bin:/bin'} {
+            ^/home/flexnetos/.nix-profile/bin/nix run ".#gha-runner" -- doctor
+          }
           if $env.LAST_EXIT_CODE != 0 { exit $env.LAST_EXIT_CODE }
       - name: Nushell step (foundation shell law)
         shell: nu {0}
