@@ -40,7 +40,6 @@ const LEGACY_KACHE_ROOTS = [
 const LEGACY_KACHE_ARTIFACTS = [
     "/home/flexnetos/meta/.toolchains/kache"
     "/home/flexnetos/meta/usr/bin/kache"
-    "/home/flexnetos/meta/.config/systemd/user/kache.service"
 ]
 # Durable agent homes. Codex credentials, history and sqlite state used to live at
 # profile-runtime/codex on tmpfs, so every reboot destroyed auth.json and forced a
