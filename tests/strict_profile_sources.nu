@@ -6,17 +6,15 @@ def main [root: path] {
     # Patterns stay assembled from parts because this gate scans its own source.
     let retired_home_tree = (["/home/flexnetos/" "." "local"] | str join)
     let retired_home_tree_tilde = (["~/" "." "local"] | str join)
-    # Same reasoning as the retired home tree above, applied to the agent overlays.
-    # The bare "/" + "." + name form matched any path that merely CONTAINS the
-    # segment -- including a reference into a pinned input, such as installing that
-    # input's own committed policy file from its store path. That is a path inside
-    # another repository, not an agent home on this host. The retired shadows are
-    # home-rooted (see nushell/system/volatile_runtime.nu), so the absolute and
-    # tilde forms are the only two ways a source file can actually name them.
-    let retired_agent_home = (["/home/flexnetos/" "." "codex"] | str join)
-    let retired_agent_home_tilde = (["~/" "." "codex"] | str join)
-    let retired_claude_home = (["/home/flexnetos/" "." "claude"] | str join)
-    let retired_claude_home_tilde = (["~/" "." "claude"] | str join)
+    # The bare form is deliberate and stays. It was briefly narrowed to the home
+    # forms because a pinned input shipped its own policy inside an agent-overlay
+    # directory and the flake installed it from there, so the gate matched. That
+    # narrowing was a loophole: it let ANY variable- or store-rooted overlay
+    # reference through. The reference was the defect, and it was fixed at the
+    # cause -- that input now ships its policy at a non-overlay path -- so the gate
+    # returns to matching the segment wherever it appears.
+    let root_agent_overlay = (["/" "." "codex"] | str join)
+    let root_claude_overlay = (["/" "." "claude"] | str join)
     let text_extensions = ["" "conf" "json" "kdl" "lua" "md" "nix" "nu" "path" "rs" "service" "socket" "src" "toml" "yaml" "yml"]
     let candidates = (
         glob --no-dir ($source_root | path join "**/*")
@@ -52,7 +50,7 @@ def main [root: path] {
     for path in $candidates {
         let raw = (open --raw $path)
         if ($raw | describe) == "string" {
-            for pattern in [$retired_home_tree $retired_home_tree_tilde $retired_agent_home $retired_agent_home_tilde $retired_claude_home $retired_claude_home_tilde] {
+            for pattern in [$retired_home_tree $retired_home_tree_tilde $root_agent_overlay $root_claude_overlay] {
                 if ($raw | str contains $pattern) {
                     $failures = ($failures | append {
                         path: ($path | path relative-to $source_root)
