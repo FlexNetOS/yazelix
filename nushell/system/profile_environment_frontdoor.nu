@@ -9,11 +9,13 @@
 const TOOL = "@tool@"
 const PAYLOAD = "@payload@"
 const REAL_HOME = "@realHome@"
+const CONFIG_HOME = "@configHome@"
 const DATA_HOME = "@dataHome@"
 const STATE_HOME = "@stateHome@"
 const CACHE_HOME = "@cacheHome@"
 const RUNTIME_DIR = "@runtimeDir@"
 const YAZELIX_STATE_DIR = "@yazelixStateDir@"
+const ICM_DB = "@icmDb@"
 const PROFILE_NU = "@profileNu@"
 const CHMOD = "@chmod@"
 
@@ -37,11 +39,13 @@ def --env activate-profile-environment [] {
         }
     }
 
+    $env.XDG_CONFIG_HOME = $CONFIG_HOME
     $env.XDG_DATA_HOME = $DATA_HOME
     $env.XDG_STATE_HOME = $STATE_HOME
     $env.XDG_CACHE_HOME = $CACHE_HOME
     $env.XDG_RUNTIME_DIR = $RUNTIME_DIR
     $env.YAZELIX_STATE_DIR = $YAZELIX_STATE_DIR
+    $env.ICM_DB = $ICM_DB
     $env.SHELL = $PROFILE_NU
 }
 

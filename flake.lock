@@ -381,18 +381,18 @@
       },
       "locked": {
         "dir": "nix/gha-runner",
-        "lastModified": 1785487716,
-        "narHash": "sha256-esRsdN9aMHMJ0Rg3UtOX82mPjteAC585FG5F+AmKep0=",
+        "lastModified": 1785488918,
+        "narHash": "sha256-X94HJwUOHy0LW5a30NBgvd0PtKMlmuY5AZzQyVl0W0Q=",
         "owner": "FlexNetOS",
         "repo": "flexnetos_runner",
-        "rev": "9e0c5b620feac8c91ebddbce401291f5fd96cd9b",
+        "rev": "ecab33320da39c401ba7ed6ed8601091dfc5bf9d",
         "type": "github"
       },
       "original": {
         "dir": "nix/gha-runner",
         "owner": "FlexNetOS",
         "repo": "flexnetos_runner",
-        "rev": "9e0c5b620feac8c91ebddbce401291f5fd96cd9b",
+        "rev": "ecab33320da39c401ba7ed6ed8601091dfc5bf9d",
         "type": "github"
       }
     },
@@ -587,6 +587,23 @@
         "type": "github"
       }
     },
+    "pgrx_source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1732292740,
+        "narHash": "sha256-LXcL4zGRDA5NlznrFZeNnfVYX/waUPGvlqtSUXnJoys=",
+        "owner": "pgcentralfoundation",
+        "repo": "pgrx",
+        "rev": "a21888973a18b787fa2c09f86936ea9c4a20de4b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pgcentralfoundation",
+        "repo": "pgrx",
+        "rev": "a21888973a18b787fa2c09f86936ea9c4a20de4b",
+        "type": "github"
+      }
+    },
     "ratconfig": {
       "flake": false,
       "locked": {
@@ -621,6 +638,7 @@
         "meta_plugin_protocol_source": "meta_plugin_protocol_source",
         "nixpkgs": "nixpkgs_2",
         "obscura_source": "obscura_source",
+        "pgrx_source": "pgrx_source",
         "ratconfig": "ratconfig",
         "rtk_source": "rtk_source",
         "starshipYazi": "starshipYazi",
