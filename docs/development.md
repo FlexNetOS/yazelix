@@ -50,7 +50,7 @@ nix run --override-input yazelixHelix ../yazelix-helix
 nix run --override-input yazelixZellijPopup ../yazelix-zellij-popup
 nix run --override-input yazelixZellijBar ../yazelix-zellij-bar
 nix run --override-input yazelixZellijPaneOrchestrator ../yazelix-zellij-pane-orchestrator
-nix build --override-input flexnetos_runner_source ../flexnetos_runner .#lifeos_foundation_yzx
+nix build --override-input flexnetos_runner_source /home/flexnetos/meta/flexnetos_runner .#lifeos_foundation_yzx
 ```
 
 Useful local checks:
